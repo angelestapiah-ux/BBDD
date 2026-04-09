@@ -63,7 +63,7 @@ export function SeguimientoForm({ open, onOpenChange, onSubmit }: Props) {
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit" disabled={saving} className="bg-emerald-600 hover:bg-emerald-700">
+            <Button type="submit" disabled={saving} className="bg-orange-600 hover:bg-orange-700">
               {saving ? 'Guardando...' : 'Guardar'}
             </Button>
           </DialogFooter>

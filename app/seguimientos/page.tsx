@@ -57,7 +57,7 @@ export default function SeguimientosPage() {
                 </div>
                 <Link
                   href={`/clientes/${s.cliente_id}`}
-                  className="text-xs text-emerald-600 hover:underline whitespace-nowrap"
+                  className="text-xs text-orange-600 hover:underline whitespace-nowrap"
                 >
                   Ver cliente →
                 </Link>

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 const accesos = [
-  { href: '/clientes', label: 'Gestionar Clientes', desc: 'Ver, crear y editar clientes', icon: Users, color: 'text-emerald-600' },
+  { href: '/clientes', label: 'Gestionar Clientes', desc: 'Ver, crear y editar clientes', icon: Users, color: 'text-orange-600' },
   { href: '/seguimientos', label: 'Seguimientos', desc: 'Registro de contactos y llamadas', icon: Calendar, color: 'text-blue-600' },
   { href: '/pagos', label: 'Pagos', desc: 'Registrar y consultar pagos', icon: DollarSign, color: 'text-amber-600' },
   { href: '/importar', label: 'Importar Excel', desc: 'Migrar base de datos actual', icon: Upload, color: 'text-purple-600' },

@@ -1,14 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Search, Download } from 'lucide-react'
 import * as XLSX from 'xlsx'
+import { Actividad } from '@/lib/types'
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
@@ -20,36 +22,37 @@ export default function ReportesPage() {
   const [cumpleaneros, setCumpleaneros] = useState<Record<string, string>[]>([])
   const [procedencias, setProcedencias] = useState<{ procedencia: string; cantidad: number }[]>([])
   const [loading, setLoading] = useState<string | null>(null)
+  const [actividades, setActividades] = useState<Actividad[]>([])
+
+  useEffect(() => {
+    fetch('/api/actividades').then(r => r.json()).then(d => setActividades(Array.isArray(d) ? d : []))
+  }, [])
 
   async function buscarAsistentes() {
     setLoading('asistentes')
     const res = await fetch(`/api/reportes?tipo=asistentes_actividad&actividad=${encodeURIComponent(actividadQ)}`)
-    const data = await res.json()
-    setAsistentes(data || [])
+    setAsistentes(await res.json() || [])
     setLoading(null)
   }
 
   async function buscarPagos() {
     setLoading('pagos')
     const res = await fetch(`/api/reportes?tipo=pagos_actividad&actividad=${encodeURIComponent(actividadQ)}`)
-    const data = await res.json()
-    setPagosData(data)
+    setPagosData(await res.json())
     setLoading(null)
   }
 
   async function buscarCumpleaneros() {
     setLoading('cumpleanos')
     const res = await fetch(`/api/reportes?tipo=cumpleanos_mes&mes=${mesQ}`)
-    const data = await res.json()
-    setCumpleaneros(data || [])
+    setCumpleaneros(await res.json() || [])
     setLoading(null)
   }
 
   async function buscarProcedencias() {
     setLoading('procedencias')
     const res = await fetch('/api/reportes?tipo=procedencias')
-    const data = await res.json()
-    setProcedencias(data || [])
+    setProcedencias(await res.json() || [])
     setLoading(null)
   }
 
@@ -58,6 +61,38 @@ export default function ReportesPage() {
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Reporte')
     XLSX.writeFile(wb, `${nombre}.xlsx`)
+  }
+
+  // Selector de actividad compartido para asistentes y pagos
+  function SelectorActividad({ onBuscar }: { onBuscar: () => void }) {
+    return (
+      <div className="flex gap-2 flex-wrap">
+        <div className="flex-1 min-w-48">
+          <Select value={actividadQ || '__todas__'} onValueChange={v => setActividadQ(v === '__todas__' ? '' : (v || ''))}>
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar del catálogo..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__todas__">— Todas las actividades —</SelectItem>
+              {actividades.map(a => (
+                <SelectItem key={a.id} value={a.nombre}>{a.nombre}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex-1 min-w-40">
+          <Input
+            placeholder="O escribe para filtrar..."
+            value={actividadQ}
+            onChange={e => setActividadQ(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && onBuscar()}
+          />
+        </div>
+        <Button onClick={onBuscar}>
+          <Search className="h-4 w-4 mr-2" /> Buscar
+        </Button>
+      </div>
+    )
   }
 
   return (
@@ -78,17 +113,8 @@ export default function ReportesPage() {
           <Card>
             <CardHeader><CardTitle className="text-base">¿Quién asistió a una actividad?</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Nombre de la actividad..."
-                  value={actividadQ}
-                  onChange={e => setActividadQ(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && buscarAsistentes()}
-                />
-                <Button onClick={buscarAsistentes} disabled={loading === 'asistentes'}>
-                  <Search className="h-4 w-4 mr-2" /> Buscar
-                </Button>
-              </div>
+              <SelectorActividad onBuscar={buscarAsistentes} />
+              {loading === 'asistentes' && <p className="text-sm text-gray-400">Buscando...</p>}
               {asistentes.length > 0 && (
                 <>
                   <div className="flex items-center justify-between">
@@ -125,21 +151,12 @@ export default function ReportesPage() {
           <Card>
             <CardHeader><CardTitle className="text-base">Pagos por actividad</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Nombre de la actividad..."
-                  value={actividadQ}
-                  onChange={e => setActividadQ(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && buscarPagos()}
-                />
-                <Button onClick={buscarPagos} disabled={loading === 'pagos'}>
-                  <Search className="h-4 w-4 mr-2" /> Buscar
-                </Button>
-              </div>
+              <SelectorActividad onBuscar={buscarPagos} />
+              {loading === 'pagos' && <p className="text-sm text-gray-400">Buscando...</p>}
               {pagosData && (
                 <>
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-emerald-700">
+                    <p className="text-sm font-semibold text-orange-700">
                       Total recaudado: ${pagosData.total.toLocaleString()}
                     </p>
                     <Button size="sm" variant="outline" onClick={() => exportar(pagosData.pagos, `pagos_${actividadQ}`)}>
@@ -153,6 +170,7 @@ export default function ReportesPage() {
                         <th className="text-left p-2 font-medium text-gray-600">Actividad</th>
                         <th className="text-left p-2 font-medium text-gray-600">Monto</th>
                         <th className="text-left p-2 font-medium text-gray-600">Estado</th>
+                        <th className="text-left p-2 font-medium text-gray-600">Comentarios</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -164,6 +182,7 @@ export default function ReportesPage() {
                           <td className="p-2">
                             <Badge variant={p.estado === 'pagado' ? 'default' : 'secondary'}>{p.estado}</Badge>
                           </td>
+                          <td className="p-2 text-gray-500">{p.notas || '—'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -178,7 +197,7 @@ export default function ReportesPage() {
           <Card>
             <CardHeader><CardTitle className="text-base">Cumpleaños del mes</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex gap-2 items-end">
+              <div className="flex gap-2 items-end flex-wrap">
                 <div>
                   <Label>Mes</Label>
                   <select
@@ -198,18 +217,28 @@ export default function ReportesPage() {
                   </Button>
                 )}
               </div>
+              {loading === 'cumpleanos' && <p className="text-sm text-gray-400">Buscando...</p>}
               {cumpleaneros.length > 0 ? (
-                <ul className="space-y-2">
-                  {cumpleaneros.map((c, i) => (
-                    <li key={i} className="flex items-center justify-between text-sm border rounded-lg px-3 py-2">
-                      <span className="font-medium">{c.nombre}</span>
-                      <div className="flex items-center gap-4 text-gray-400">
-                        <span>{c.telefono || c.correo || ''}</span>
-                        <span>{c.cumpleanos}</span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="text-left p-2 font-medium text-gray-600">Nombre</th>
+                      <th className="text-left p-2 font-medium text-gray-600">Correo</th>
+                      <th className="text-left p-2 font-medium text-gray-600">Teléfono</th>
+                      <th className="text-left p-2 font-medium text-gray-600">Cumpleaños</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {cumpleaneros.map((c, i) => (
+                      <tr key={i}>
+                        <td className="p-2 font-medium">{c.nombre}</td>
+                        <td className="p-2 text-gray-500">{c.correo || '—'}</td>
+                        <td className="p-2 text-gray-500">{c.telefono || '—'}</td>
+                        <td className="p-2 text-gray-400">{c.cumpleanos}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               ) : (
                 <p className="text-sm text-gray-400">Haz clic en Buscar para ver los cumpleaños del mes</p>
               )}

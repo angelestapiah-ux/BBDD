@@ -34,11 +34,23 @@ export interface Cliente {
   id: string
   nombre: string
   correo: string | null
+  correo2: string | null
   telefono: string | null
+  telefono2: string | null
   comentario: string | null
   procedencia: string | null
   cumpleanos: string | null
   fecha_incorporacion: string | null
+  genero: 'femenino' | 'masculino' | 'otro' | null
+  tipos_cliente: string[] | null
+  modalidad_paciente: 'online' | 'presencial' | null
+  terapeuta: string | null
+  edad: number | null
+  documento_identidad: string | null
+  estado_civil: 'Soltero/a' | 'Casado/a' | 'Separado/a' | 'Divorciado/a' | 'Acuerdo Unión Civil' | 'Viudo/a' | null
+  profesion: string | null
+  ciudad: string | null
+  pais: string | null
   created_at: string
   updated_at: string
 }
@@ -76,6 +88,7 @@ export interface Pago {
   metodo_pago: string | null
   estado: 'pagado' | 'pendiente' | 'parcial'
   notas: string | null
+  requiere_factura: boolean
   created_at: string
 }
 

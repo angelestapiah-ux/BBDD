@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Upload, FileSpreadsheet, CheckCircle, AlertCircle } from 'lucide-react'
+import { Upload, FileSpreadsheet, CheckCircle, AlertCircle, Download } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface Resultado {
@@ -46,11 +46,18 @@ export default function ImportarPage() {
 
   return (
     <div className="p-6 max-w-2xl">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Importar desde Excel</h2>
-        <p className="text-gray-500 mt-1">
-          Importa clientes desde los reportes de RENOVA. Se detectan automáticamente las columnas y hojas del archivo.
-        </p>
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Importar desde Excel</h2>
+          <p className="text-gray-500 mt-1">
+            Importa clientes desde los reportes de RENOVA. Se detectan automáticamente las columnas y hojas del archivo.
+          </p>
+        </div>
+        <a href="/api/plantilla" download>
+          <Button variant="outline" size="sm">
+            <Download className="h-4 w-4 mr-2" /> Descargar plantilla
+          </Button>
+        </a>
       </div>
 
       <Card className="mb-6">
@@ -69,7 +76,7 @@ export default function ImportarPage() {
       </Card>
 
       <div
-        className="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-emerald-400 hover:bg-emerald-50 transition-colors mb-4"
+        className="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-orange-400 hover:bg-orange-50 transition-colors mb-4"
         onDrop={handleDrop}
         onDragOver={e => e.preventDefault()}
         onClick={() => inputRef.current?.click()}
@@ -84,7 +91,7 @@ export default function ImportarPage() {
         <FileSpreadsheet className="h-10 w-10 text-gray-300 mx-auto mb-3" />
         {file ? (
           <div>
-            <p className="font-medium text-emerald-700">{file.name}</p>
+            <p className="font-medium text-orange-700">{file.name}</p>
             <p className="text-sm text-gray-400">{(file.size / 1024).toFixed(1)} KB</p>
           </div>
         ) : (
@@ -98,7 +105,7 @@ export default function ImportarPage() {
       <Button
         disabled={!file || loading}
         onClick={handleImport}
-        className="w-full bg-emerald-600 hover:bg-emerald-700"
+        className="w-full bg-orange-600 hover:bg-orange-700"
         size="lg"
       >
         <Upload className="h-4 w-4 mr-2" />
@@ -109,7 +116,7 @@ export default function ImportarPage() {
         <Card className="mt-6">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-emerald-500" />
+              <CheckCircle className="h-5 w-5 text-orange-500" />
               Resultado de importación
             </CardTitle>
           </CardHeader>
@@ -119,9 +126,9 @@ export default function ImportarPage() {
                 <p className="text-2xl font-bold text-gray-900">{resultado.total}</p>
                 <p className="text-gray-500">Encontrados</p>
               </div>
-              <div className="bg-emerald-50 rounded-lg p-3">
-                <p className="text-2xl font-bold text-emerald-700">{resultado.importados}</p>
-                <p className="text-emerald-600">Importados</p>
+              <div className="bg-orange-50 rounded-lg p-3">
+                <p className="text-2xl font-bold text-orange-700">{resultado.importados}</p>
+                <p className="text-orange-600">Importados</p>
               </div>
               <div className="bg-amber-50 rounded-lg p-3">
                 <p className="text-2xl font-bold text-amber-700">{resultado.duplicados}</p>

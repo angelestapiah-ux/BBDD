@@ -5,10 +5,11 @@ import { Cliente } from '@/lib/types'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Search, Plus, ChevronRight } from 'lucide-react'
+import { Search, Plus, FileSpreadsheet, FileText } from 'lucide-react'
 import Link from 'next/link'
 import { ClienteFormDialog } from '@/components/clientes/ClienteFormDialog'
 import { toast } from 'sonner'
+import { exportarClientesExcel, exportarClientesPDF, exportarTodoExcel } from '@/lib/export'
 
 export default function ClientesPage() {
   const [clientes, setClientes] = useState<Cliente[]>([])
@@ -34,6 +35,24 @@ export default function ClientesPage() {
     return () => clearTimeout(t)
   }, [fetchClientes])
 
+  async function exportarTodos(tipo: 'excel' | 'pdf') {
+    toast.info('Preparando exportación...')
+    const res = await fetch(`/api/clientes?q=${q}&limit=9999&page=1`)
+    const json = await res.json()
+    const data = json.data || []
+    if (tipo === 'excel') exportarClientesExcel(data)
+    else await exportarClientesPDF(data)
+  }
+
+  async function exportarCompleto() {
+    toast.info('Generando base completa...')
+    const res = await fetch('/api/exportar')
+    if (!res.ok) { toast.error('Error al exportar'); return }
+    const data = await res.json()
+    exportarTodoExcel(data)
+    toast.success('Base completa exportada')
+  }
+
   async function handleCreate(data: Partial<Cliente>) {
     const res = await fetch('/api/clientes', {
       method: 'POST',
@@ -57,9 +76,20 @@ export default function ClientesPage() {
           <h2 className="text-2xl font-bold text-gray-900">Clientes</h2>
           <p className="text-sm text-gray-500">{total} clientes en total</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} className="bg-emerald-600 hover:bg-emerald-700">
-          <Plus className="h-4 w-4 mr-2" /> Nuevo cliente
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={exportarCompleto} className="border-orange-300 text-orange-700 hover:bg-orange-50">
+            <FileSpreadsheet className="h-4 w-4 mr-2" /> Base completa
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => exportarTodos('excel')}>
+            <FileSpreadsheet className="h-4 w-4 mr-2" /> Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => exportarTodos('pdf')}>
+            <FileText className="h-4 w-4 mr-2" /> PDF
+          </Button>
+          <Button onClick={() => setDialogOpen(true)} className="bg-orange-600 hover:bg-orange-700">
+            <Plus className="h-4 w-4 mr-2" /> Nuevo cliente
+          </Button>
+        </div>
       </div>
 
       <div className="relative mb-4">
@@ -101,9 +131,11 @@ export default function ClientesPage() {
                       <Badge variant="secondary" className="text-xs">{c.procedencia}</Badge>
                     )}
                   </td>
-                  <td className="px-4 py-3">
-                    <Link href={`/clientes/${c.id}`} className="flex items-center justify-end text-emerald-600 hover:text-emerald-700">
-                      <ChevronRight className="h-4 w-4" />
+                  <td className="px-4 py-3 text-right">
+                    <Link href={`/clientes/${c.id}`}>
+                      <Button size="sm" variant="outline" className="text-orange-600 border-orange-200 hover:bg-orange-50">
+                        Ver perfil
+                      </Button>
                     </Link>
                   </td>
                 </tr>
