@@ -65,7 +65,8 @@ export function SeguimientoForm({ open, onOpenChange, onSubmit }: Props) {
           </div>
           <div>
             <Label>Actividad relacionada</Label>
-            <Select value={actividadNombre || '__ninguna__'} onValueChange={v => setActividadNombre(v === '__ninguna__' ? '' : v)}>
+            <Select value={actividadNombre || '__ninguna__'} onValueChange={v => setActividadNombre(v === '__ninguna__' ? '' : (v ?? ''))}>
+
               <SelectTrigger><SelectValue placeholder="Sin actividad específica" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__ninguna__">— Sin actividad específica —</SelectItem>
