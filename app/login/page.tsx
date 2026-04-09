@@ -18,23 +18,15 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const url = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim()
-    const key = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '').trim()
-    console.log('url len:', url.length, 'key len:', key.length, 'url:', JSON.stringify(url))
-    if (!url || !key) {
-      setError('Variables de entorno no configuradas')
-      setLoading(false)
-      return
-    }
     try {
-      const res = await fetch(`${url}/auth/v1/token?grant_type=password`, {
+      const res = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': key, 'Authorization': `Bearer ${key}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error_description || data.msg || 'Error al iniciar sesión')
+        setError(data.error || 'Correo o contraseña incorrectos')
         setLoading(false)
       } else {
         router.push('/')
