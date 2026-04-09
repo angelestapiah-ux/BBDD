@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,17 +18,25 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      setError(error.message)
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    try {
+      const res = await fetch(`${url}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': key!, 'Authorization': `Bearer ${key}` },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error_description || data.msg || 'Error al iniciar sesión')
+        setLoading(false)
+      } else {
+        router.push('/')
+        router.refresh()
+      }
+    } catch (err: unknown) {
+      setError(String(err))
       setLoading(false)
-    } else {
-      router.push('/')
-      router.refresh()
     }
   }
 
