@@ -89,7 +89,7 @@ export default function ClienteDetailPage() {
     else toast.error('Error al guardar')
   }
 
-  async function addPago(data: Record<string, string>) {
+  async function addPago(data: Record<string, string | boolean>) {
     const res = await fetch('/api/pagos', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...data, cliente_id: id }),
@@ -285,7 +285,7 @@ export default function ClienteDetailPage() {
                         <div>
                           <span className="font-medium">{p.actividad_nombre}</span>
                           {p.monto && <span className="ml-2 text-orange-600 font-semibold">${p.monto.toLocaleString()}</span>}
-                          {p.requiere_factura && <Receipt className="inline h-3.5 w-3.5 text-orange-500 ml-1" title="Requiere factura" />}
+                          {p.requiere_factura && <span title="Requiere factura"><Receipt className="inline h-3.5 w-3.5 text-orange-500 ml-1" /></span>}
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant={p.estado === 'pagado' ? 'default' : p.estado === 'parcial' ? 'secondary' : 'outline'}>

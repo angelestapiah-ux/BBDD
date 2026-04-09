@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
         .select('actividad_nombre')
         .eq('cliente_id', clienteId)
 
-      const nombresExistentes = new Set((asistenciasExistentes ?? []).map(a => a.actividad_nombre))
+      const nombresExistentes = new Set((asistenciasExistentes ?? []).map((a: { actividad_nombre: string }) => a.actividad_nombre))
       const nuevas = fila.asistencias
         .filter(a => !nombresExistentes.has(a))
         .map(a => ({ cliente_id: clienteId, actividad_nombre: a, fecha_asistencia: null }))
