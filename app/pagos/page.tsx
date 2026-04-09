@@ -100,6 +100,10 @@ export default function PagosPage() {
   }
 
   const total = pagos.filter(p => p.estado === 'pagado').reduce((s, p) => s + (p.monto || 0), 0)
+  const totalPendiente = pagos.filter(p => p.estado === 'pendiente').reduce((s, p) => s + (p.monto || 0), 0)
+  const totalParcial = pagos.filter(p => p.estado === 'parcial').reduce((s, p) => s + (p.monto || 0), 0)
+  const countPendiente = pagos.filter(p => p.estado === 'pendiente').length
+  const countParcial = pagos.filter(p => p.estado === 'parcial').length
 
   return (
     <div className="p-6 max-w-5xl">
@@ -114,9 +118,23 @@ export default function PagosPage() {
       </div>
 
       {!loading && pagos.length > 0 && (
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6 inline-block">
-          <p className="text-sm text-orange-600">Total pagado registrado</p>
-          <p className="text-2xl font-bold text-orange-700">${total.toLocaleString()}</p>
+        <div className="flex flex-wrap gap-3 mb-6">
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+            <p className="text-sm text-orange-600">Total pagado</p>
+            <p className="text-2xl font-bold text-orange-700">${total.toLocaleString()}</p>
+          </div>
+          {countPendiente > 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p className="text-sm text-yellow-700">Pendientes ({countPendiente})</p>
+              <p className="text-2xl font-bold text-yellow-800">${totalPendiente.toLocaleString()}</p>
+            </div>
+          )}
+          {countParcial > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-700">Parciales ({countParcial})</p>
+              <p className="text-2xl font-bold text-blue-800">${totalParcial.toLocaleString()}</p>
+            </div>
+          )}
         </div>
       )}
 

@@ -101,6 +101,7 @@ export interface Seguimiento {
   tipo: 'llamada' | 'whatsapp' | 'correo' | 'visita' | 'otro'
   notas: string
   usuario: string | null
+  actividad_nombre: string | null
   created_at: string
 }
 

@@ -56,6 +56,38 @@ export default function ReportesPage() {
     setLoading(null)
   }
 
+  function exportarAsistentes(data: Record<string, unknown>[], nombre: string) {
+    const filas = data.map(a => ({
+      'Cliente': (a.clientes as Record<string, string>)?.nombre || '—',
+      'Correo': (a.clientes as Record<string, string>)?.correo || '',
+      'Teléfono': (a.clientes as Record<string, string>)?.telefono || '',
+      'Actividad': a.actividad_nombre || '',
+      'Fecha': a.fecha_asistencia || '',
+    }))
+    const ws = XLSX.utils.json_to_sheet(filas)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Reporte')
+    XLSX.writeFile(wb, `${nombre}.xlsx`)
+  }
+
+  function exportarPagos(data: Record<string, unknown>[], nombre: string) {
+    const filas = data.map(p => ({
+      'Cliente': (p.clientes as Record<string, string>)?.nombre || '—',
+      'Correo': (p.clientes as Record<string, string>)?.correo || '',
+      'Teléfono': (p.clientes as Record<string, string>)?.telefono || '',
+      'Actividad': p.actividad_nombre || '',
+      'Monto': p.monto ?? '',
+      'Fecha': p.fecha_pago || '',
+      'Método': p.metodo_pago || '',
+      'Estado': p.estado || '',
+      'Notas': p.notas || '',
+    }))
+    const ws = XLSX.utils.json_to_sheet(filas)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Reporte')
+    XLSX.writeFile(wb, `${nombre}.xlsx`)
+  }
+
   function exportar(data: Record<string, unknown>[], nombre: string) {
     const ws = XLSX.utils.json_to_sheet(data)
     const wb = XLSX.utils.book_new()
@@ -119,7 +151,7 @@ export default function ReportesPage() {
                 <>
                   <div className="flex items-center justify-between">
                     <p className="text-sm text-gray-500">{asistentes.length} resultado(s)</p>
-                    <Button size="sm" variant="outline" onClick={() => exportar(asistentes, `asistentes_${actividadQ}`)}>
+                    <Button size="sm" variant="outline" onClick={() => exportarAsistentes(asistentes, `asistentes_${actividadQ}`)}>
                       <Download className="h-3 w-3 mr-1" /> Exportar Excel
                     </Button>
                   </div>
@@ -159,7 +191,7 @@ export default function ReportesPage() {
                     <p className="text-sm font-semibold text-orange-700">
                       Total recaudado: ${pagosData.total.toLocaleString()}
                     </p>
-                    <Button size="sm" variant="outline" onClick={() => exportar(pagosData.pagos, `pagos_${actividadQ}`)}>
+                    <Button size="sm" variant="outline" onClick={() => exportarPagos(pagosData.pagos, `pagos_${actividadQ}`)}>
                       <Download className="h-3 w-3 mr-1" /> Exportar Excel
                     </Button>
                   </div>

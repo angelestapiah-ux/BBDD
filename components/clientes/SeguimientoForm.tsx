@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Actividad } from '@/lib/types'
 
 interface Props {
   open: boolean
@@ -19,13 +20,22 @@ export function SeguimientoForm({ open, onOpenChange, onSubmit }: Props) {
   const [notas, setNotas] = useState('')
   const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 16))
   const [usuario, setUsuario] = useState('')
+  const [actividadNombre, setActividadNombre] = useState('')
+  const [actividades, setActividades] = useState<Actividad[]>([])
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      fetch('/api/actividades').then(r => r.json()).then(d => setActividades(Array.isArray(d) ? d : []))
+    }
+  }, [open])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
-    await onSubmit({ tipo, notas, fecha, usuario })
+    await onSubmit({ tipo, notas, fecha, usuario, actividad_nombre: actividadNombre })
     setNotas('')
+    setActividadNombre('')
     setSaving(false)
   }
 
@@ -52,6 +62,18 @@ export function SeguimientoForm({ open, onOpenChange, onSubmit }: Props) {
               <Label>Fecha y hora</Label>
               <Input type="datetime-local" value={fecha} onChange={e => setFecha(e.target.value)} />
             </div>
+          </div>
+          <div>
+            <Label>Actividad relacionada</Label>
+            <Select value={actividadNombre || '__ninguna__'} onValueChange={v => setActividadNombre(v === '__ninguna__' ? '' : v)}>
+              <SelectTrigger><SelectValue placeholder="Sin actividad específica" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__ninguna__">— Sin actividad específica —</SelectItem>
+                {actividades.map(a => (
+                  <SelectItem key={a.id} value={a.nombre}>{a.nombre}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label>Responsable</Label>

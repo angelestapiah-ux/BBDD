@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const cliente_id = searchParams.get('cliente_id')
 
-  let query = supabase.from('seguimientos').select('*').order('fecha', { ascending: false })
+  let query = supabase.from('seguimientos').select('*, clientes(nombre, correo, telefono)').order('fecha', { ascending: false })
   if (cliente_id) query = query.eq('cliente_id', cliente_id)
 
   const { data, error } = await query
