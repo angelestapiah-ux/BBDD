@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { createBrowserClient } from '@supabase/ssr'
 import { toast } from 'sonner'
 import { Plus, Trash2, KeyRound, LogOut } from 'lucide-react'
 import { useRouter } from 'next/navigation'
@@ -35,11 +34,6 @@ export default function ConfiguracionPage() {
   const [nuevoTipo, setNuevoTipo] = useState('')
   const [savingTipo, setSavingTipo] = useState(false)
   const router = useRouter()
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
 
   const fetchUsuarios = useCallback(async () => {
     const res = await fetch('/api/admin/usuarios')
@@ -76,6 +70,11 @@ export default function ConfiguracionPage() {
   }
 
   async function handleLogout() {
+    const { createBrowserClient } = await import('@supabase/ssr')
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
     await supabase.auth.signOut()
     router.push('/login')
   }
