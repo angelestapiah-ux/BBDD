@@ -9,6 +9,7 @@ export interface ClienteExport {
   procedencia: string | null
   cumpleanos: string | null
   fecha_incorporacion: string | null
+  profesion: string | null
   comentario: string | null
 }
 
