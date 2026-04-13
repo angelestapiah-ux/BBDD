@@ -24,9 +24,10 @@ export function exportarClientesExcel(clientes: ClienteExport[]) {
     'Cumpleaños': c.cumpleanos || '',
     'Fecha Incorporación': c.fecha_incorporacion || '',
     'Comentario': c.comentario || '',
+    'Asistencia actividad': '',
   }))
   const ws = XLSX.utils.json_to_sheet(filas)
-  ws['!cols'] = [{ wch: 30 }, { wch: 30 }, { wch: 15 }, { wch: 12 }, { wch: 20 }, { wch: 12 }, { wch: 18 }, { wch: 40 }]
+  ws['!cols'] = [{ wch: 30 }, { wch: 30 }, { wch: 15 }, { wch: 12 }, { wch: 20 }, { wch: 12 }, { wch: 18 }, { wch: 40 }, { wch: 35 }]
   const wb = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(wb, ws, 'Clientes')
   XLSX.writeFile(wb, `clientes_renova_${new Date().toISOString().slice(0, 10)}.xlsx`)
