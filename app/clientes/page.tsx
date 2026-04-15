@@ -37,11 +37,23 @@ export default function ClientesPage() {
 
   async function exportarTodos(tipo: 'excel' | 'pdf') {
     toast.info('Preparando exportación...')
-    const res = await fetch(`/api/clientes?q=${q}&limit=9999&page=1`)
-    const json = await res.json()
-    const data = json.data || []
-    if (tipo === 'excel') exportarClientesExcel(data)
-    else await exportarClientesPDF(data)
+    if (tipo === 'excel') {
+      // Usa la nueva API que genera Excel completo con dropdowns server-side
+      const res = await fetch('/api/exportar-clientes')
+      if (!res.ok) { toast.error('Error al exportar'); return }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `clientes_renova_${new Date().toISOString().slice(0, 10)}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('Excel exportado')
+    } else {
+      const res = await fetch(`/api/clientes?q=${q}&limit=9999&page=1`)
+      const json = await res.json()
+      await exportarClientesPDF(json.data || [])
+    }
   }
 
   async function exportarCompleto() {
