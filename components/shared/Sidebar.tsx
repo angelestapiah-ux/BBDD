@@ -22,8 +22,8 @@ export function Sidebar() {
   return (
     <aside className="w-56 bg-white border-r border-gray-200 flex flex-col">
       <div className="p-5 border-b border-gray-200">
-        <h1 className="text-xl font-bold text-orange-700">RENOVA</h1>
-        <p className="text-xs text-gray-500 mt-0.5">CRM</p>
+        <h1 className="text-xl font-bold text-orange-700">Renovapp</h1>
+        <p className="text-xs text-gray-500 mt-0.5">— CRM</p>
       </div>
       <nav className="flex-1 p-3 space-y-1">
         {navItems.map(({ href, label, icon: Icon }) => (
@@ -43,7 +43,7 @@ export function Sidebar() {
         ))}
       </nav>
       <div className="p-4 border-t border-gray-200">
-        <p className="text-xs text-gray-400">RENOVA © {new Date().getFullYear()}</p>
+        <p className="text-xs text-gray-400">Renovapp © {new Date().getFullYear()}</p>
       </div>
     </aside>
   )

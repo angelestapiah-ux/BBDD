@@ -61,7 +61,7 @@ export default function LoginPage() {
       <div className="min-h-screen bg-orange-50 flex items-center justify-center p-4">
         <div className="w-full max-w-sm">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-orange-600">RENOVA</h1>
+            <h1 className="text-3xl font-bold text-orange-600">Renovapp</h1>
             <p className="text-gray-500 mt-1">Sistema CRM</p>
           </div>
           <Card>

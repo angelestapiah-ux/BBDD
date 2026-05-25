@@ -7,8 +7,8 @@ import { Sidebar } from '@/components/shared/Sidebar'
 const geist = Geist({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "RENOVA CRM",
-  description: "Gestión de clientes RENOVA",
+  title: "Renovapp - CRM",
+  description: "Gestión de clientes Renovapp",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

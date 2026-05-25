@@ -13,7 +13,7 @@ export default function HomePage() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900">Bienvenido a RENOVA CRM</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Bienvenido a Renovapp - CRM</h2>
         <p className="text-gray-500 mt-1">Gestiona tus clientes, actividades y pagos desde un solo lugar.</p>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl">
