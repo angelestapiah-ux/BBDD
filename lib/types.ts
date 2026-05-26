@@ -30,6 +30,17 @@ export type Database = {
   }
 }
 
+export type EtapaFunnel = 'nuevo' | 'contactado' | 'con_interes' | 'cotizacion_enviada' | 'negociando' | 'inscrito'
+
+export const ETAPAS_FUNNEL: { value: EtapaFunnel; label: string }[] = [
+  { value: 'nuevo',              label: 'Nuevo' },
+  { value: 'contactado',         label: 'Contactado' },
+  { value: 'con_interes',        label: 'Con interés' },
+  { value: 'cotizacion_enviada', label: 'Cotización enviada' },
+  { value: 'negociando',         label: 'Negociando' },
+  { value: 'inscrito',           label: 'Inscrito' },
+]
+
 export interface Cliente {
   id: string
   nombre: string
@@ -51,6 +62,7 @@ export interface Cliente {
   profesion: string | null
   ciudad: string | null
   pais: string | null
+  etapa: EtapaFunnel | null
   created_at: string
   updated_at: string
 }

@@ -1,23 +1,217 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
-import { Cliente } from '@/lib/types'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { Cliente, ETAPAS_FUNNEL, EtapaFunnel } from '@/lib/types'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Search, Plus, FileSpreadsheet, FileText } from 'lucide-react'
+import { Search, Plus, FileSpreadsheet, FileText, LayoutGrid, List, MessageSquare, Phone, Mail, CheckCircle2, X } from 'lucide-react'
 import Link from 'next/link'
 import { ClienteFormDialog } from '@/components/clientes/ClienteFormDialog'
 import { toast } from 'sonner'
 import { exportarClientesExcel, exportarClientesPDF, exportarTodoExcel } from '@/lib/export'
 
+type ClienteEnriquecido = Cliente & { ultimo_seguimiento: string | null }
+
+// ─── Colores por etapa ────────────────────────────────────────────────────
+const ETAPA_BADGE: Record<EtapaFunnel, { bg: string; text: string; label: string }> = {
+  nuevo:               { bg: 'bg-gray-100',   text: 'text-gray-600',   label: 'Nuevo' },
+  contactado:          { bg: 'bg-blue-100',   text: 'text-blue-700',   label: 'Contactado' },
+  con_interes:         { bg: 'bg-violet-100', text: 'text-violet-700', label: 'Con interés' },
+  cotizacion_enviada:  { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Cotización' },
+  negociando:          { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Negociando' },
+  inscrito:            { bg: 'bg-green-100',  text: 'text-green-700',  label: 'Inscrito' },
+}
+
+// ─── Semáforo por horas sin contacto ─────────────────────────────────────
+function calcSemaforo(c: ClienteEnriquecido): 'verde' | 'ambar' | 'rojo' {
+  const ref = c.ultimo_seguimiento || c.created_at
+  const horas = (Date.now() - new Date(ref).getTime()) / 3_600_000
+  if (horas < 48) return 'verde'
+  if (horas < 72) return 'ambar'
+  return 'rojo'
+}
+
+const SEMAFORO_DOT: Record<string, string> = {
+  verde: 'bg-green-400',
+  ambar: 'bg-yellow-400',
+  rojo:  'bg-red-500',
+}
+
+const SEMAFORO_TITLE: Record<string, string> = {
+  verde: 'Contactado hace menos de 48h',
+  ambar: 'Sin contacto 48-72h',
+  rojo:  'Sin contacto más de 72h',
+}
+
+// ─── Panel inline "Contactado" ────────────────────────────────────────────
+function ContactadoPanel({ clienteId, onSaved }: { clienteId: string; onSaved: () => void }) {
+  const [tipo, setTipo] = useState<'llamada' | 'whatsapp' | 'correo' | 'otro'>('whatsapp')
+  const [nota, setNota] = useState('')
+  const [saving, setSaving] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  async function guardar() {
+    setSaving(true)
+    const hoy = new Date().toISOString().slice(0, 10)
+    const res = await fetch('/api/seguimientos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cliente_id: clienteId, tipo, notas: nota || `${tipo} registrado`, fecha: hoy }),
+    })
+    setSaving(false)
+    if (res.ok) {
+      toast.success('Seguimiento registrado')
+      onSaved()
+    } else {
+      toast.error('Error al guardar')
+    }
+  }
+
+  return (
+    <div
+      ref={ref}
+      className="absolute right-0 top-full mt-1 z-50 bg-white rounded-xl shadow-xl border border-gray-200 p-3 w-64"
+      onClick={e => e.stopPropagation()}
+    >
+      <p className="text-xs font-semibold text-gray-700 mb-2">Registrar contacto</p>
+      <div className="flex gap-1.5 mb-2">
+        {(['llamada', 'whatsapp', 'correo', 'otro'] as const).map(t => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTipo(t)}
+            className={`px-2 py-1 rounded text-xs border capitalize transition-colors ${
+              tipo === t
+                ? 'bg-orange-600 text-white border-orange-600'
+                : 'bg-white text-gray-500 border-gray-200 hover:border-orange-300'
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+      <input
+        type="text"
+        placeholder="Nota breve (opcional)..."
+        value={nota}
+        onChange={e => setNota(e.target.value)}
+        className="w-full text-xs border border-gray-200 rounded px-2 py-1.5 mb-2 focus:outline-none focus:border-orange-400"
+        onKeyDown={e => e.key === 'Enter' && guardar()}
+      />
+      <button
+        onClick={guardar}
+        disabled={saving}
+        className="w-full bg-orange-600 hover:bg-orange-700 text-white text-xs py-1.5 rounded font-medium transition-colors disabled:opacity-50"
+      >
+        {saving ? 'Guardando...' : '✓ Guardar contacto'}
+      </button>
+    </div>
+  )
+}
+
+// ─── Kanban view ──────────────────────────────────────────────────────────
+function KanbanView({
+  clientes,
+  onEtapaChange,
+}: {
+  clientes: ClienteEnriquecido[]
+  onEtapaChange: (id: string, etapa: EtapaFunnel) => void
+}) {
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [overEtapa, setOverEtapa] = useState<EtapaFunnel | null>(null)
+
+  const porEtapa = ETAPAS_FUNNEL.reduce<Record<EtapaFunnel, ClienteEnriquecido[]>>((acc, e) => {
+    acc[e.value] = clientes.filter(c => (c.etapa || 'nuevo') === e.value)
+    return acc
+  }, {} as Record<EtapaFunnel, ClienteEnriquecido[]>)
+
+  return (
+    <div className="flex gap-3 overflow-x-auto pb-4 mt-2">
+      {ETAPAS_FUNNEL.map(etapa => {
+        const cfg = ETAPA_BADGE[etapa.value]
+        const cards = porEtapa[etapa.value]
+        const isOver = overEtapa === etapa.value
+
+        return (
+          <div
+            key={etapa.value}
+            className={`flex-shrink-0 w-52 rounded-xl border transition-colors ${
+              isOver ? 'border-orange-400 bg-orange-50' : 'border-gray-200 bg-gray-50'
+            }`}
+            onDragOver={e => { e.preventDefault(); setOverEtapa(etapa.value) }}
+            onDragLeave={() => setOverEtapa(null)}
+            onDrop={e => {
+              e.preventDefault()
+              setOverEtapa(null)
+              if (draggingId) onEtapaChange(draggingId, etapa.value)
+              setDraggingId(null)
+            }}
+          >
+            {/* Column header */}
+            <div className="px-3 py-2.5 flex items-center justify-between border-b border-gray-200">
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.text}`}>
+                {etapa.label}
+              </span>
+              <span className="text-xs text-gray-400 font-medium">{cards.length}</span>
+            </div>
+
+            {/* Cards */}
+            <div className="p-2 space-y-2 min-h-[80px]">
+              {cards.map(c => {
+                const sem = calcSemaforo(c)
+                return (
+                  <div
+                    key={c.id}
+                    draggable
+                    onDragStart={() => setDraggingId(c.id)}
+                    onDragEnd={() => setDraggingId(null)}
+                    className={`bg-white rounded-lg border border-gray-100 p-2.5 shadow-sm cursor-grab active:cursor-grabbing hover:border-orange-200 transition-all ${
+                      draggingId === c.id ? 'opacity-50 scale-95' : ''
+                    }`}
+                  >
+                    <div className="flex items-start gap-1.5">
+                      <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${SEMAFORO_DOT[sem]}`} title={SEMAFORO_TITLE[sem]} />
+                      <div className="min-w-0">
+                        <Link href={`/clientes/${c.id}`} className="text-xs font-semibold text-gray-800 hover:text-orange-600 leading-tight block truncate">
+                          {c.nombre}
+                        </Link>
+                        {c.procedencia && (
+                          <p className="text-xs text-gray-400 truncate">{c.procedencia}</p>
+                        )}
+                        {c.telefono && (
+                          <a
+                            href={`https://wa.me/${c.telefono.replace(/\D/g, '')}`}
+                            target="_blank" rel="noopener noreferrer"
+                            className="text-xs text-green-600 hover:underline mt-0.5 block"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            WhatsApp
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Página principal ─────────────────────────────────────────────────────
 export default function ClientesPage() {
-  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [clientes, setClientes] = useState<ClienteEnriquecido[]>([])
   const [total, setTotal] = useState(0)
   const [q, setQ] = useState('')
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [vista, setVista] = useState<'lista' | 'kanban'>('lista')
+  const [contactadoId, setContactadoId] = useState<string | null>(null)
   const limit = 50
 
   const fetchClientes = useCallback(async () => {
@@ -35,10 +229,19 @@ export default function ClientesPage() {
     return () => clearTimeout(t)
   }, [fetchClientes])
 
+  // Close contactado panel on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      const target = e.target as HTMLElement
+      if (!target.closest('[data-contactado-panel]')) setContactadoId(null)
+    }
+    document.addEventListener('click', handler)
+    return () => document.removeEventListener('click', handler)
+  }, [])
+
   async function exportarTodos(tipo: 'excel' | 'pdf') {
     toast.info('Preparando exportación...')
     if (tipo === 'excel') {
-      // Usa la nueva API que genera Excel completo con dropdowns server-side
       const res = await fetch('/api/exportar-clientes')
       if (!res.ok) { toast.error('Error al exportar'); return }
       const blob = await res.blob()
@@ -81,8 +284,23 @@ export default function ClientesPage() {
     }
   }
 
+  async function handleEtapaChange(id: string, etapa: EtapaFunnel) {
+    const res = await fetch(`/api/clientes/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ etapa }),
+    })
+    if (res.ok) {
+      setClientes(prev => prev.map(c => c.id === id ? { ...c, etapa } : c))
+      toast.success('Etapa actualizada')
+    } else {
+      toast.error('Error al actualizar etapa')
+    }
+  }
+
   return (
     <div className="p-6">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Clientes</h2>
@@ -104,60 +322,191 @@ export default function ClientesPage() {
         </div>
       </div>
 
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <Input
-          className="pl-9"
-          placeholder="Buscar por nombre, correo o teléfono..."
-          value={q}
-          onChange={e => { setQ(e.target.value); setPage(1) }}
-        />
+      {/* Buscador + toggle de vista */}
+      <div className="flex gap-3 mb-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            className="pl-9"
+            placeholder="Buscar por nombre, correo o teléfono..."
+            value={q}
+            onChange={e => { setQ(e.target.value); setPage(1) }}
+          />
+        </div>
+        <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+          <button
+            onClick={() => setVista('lista')}
+            className={`px-3 py-2 transition-colors ${vista === 'lista' ? 'bg-orange-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+            title="Vista lista"
+          >
+            <List size={16} />
+          </button>
+          <button
+            onClick={() => setVista('kanban')}
+            className={`px-3 py-2 transition-colors border-l border-gray-200 ${vista === 'kanban' ? 'bg-orange-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+            title="Vista kanban"
+          >
+            <LayoutGrid size={16} />
+          </button>
+        </div>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-gray-400">Cargando...</div>
-        ) : clientes.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">
-            {q ? 'No se encontraron clientes' : 'No hay clientes registrados'}
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Nombre</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Correo</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Teléfono</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Procedencia</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {clientes.map(c => (
-                <tr key={c.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-4 py-3 font-medium text-gray-900">{c.nombre}</td>
-                  <td className="px-4 py-3 text-gray-500">{c.correo || '—'}</td>
-                  <td className="px-4 py-3 text-gray-500">{c.telefono || '—'}</td>
-                  <td className="px-4 py-3">
-                    {c.procedencia && (
-                      <Badge variant="secondary" className="text-xs">{c.procedencia}</Badge>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link href={`/clientes/${c.id}`}>
-                      <Button size="sm" variant="outline" className="text-orange-600 border-orange-200 hover:bg-orange-50">
-                        Ver perfil
-                      </Button>
-                    </Link>
-                  </td>
+      {/* ─── VISTA KANBAN ─── */}
+      {vista === 'kanban' && !loading && (
+        <KanbanView clientes={clientes} onEtapaChange={handleEtapaChange} />
+      )}
+
+      {/* ─── VISTA LISTA ─── */}
+      {vista === 'lista' && (
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          {loading ? (
+            <div className="p-8 text-center text-gray-400">Cargando...</div>
+          ) : clientes.length === 0 ? (
+            <div className="p-8 text-center text-gray-400">
+              {q ? 'No se encontraron clientes' : 'No hay clientes registrados'}
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600 w-6"></th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Nombre</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Contacto</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Etapa</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Canal</th>
+                  <th className="px-4 py-3"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {clientes.map(c => {
+                  const sem = calcSemaforo(c)
+                  const etapaCfg = c.etapa ? ETAPA_BADGE[c.etapa] : null
+                  const isContactadoOpen = contactadoId === c.id
 
-      {total > limit && (
+                  return (
+                    <tr key={c.id} className="hover:bg-gray-50 transition-colors group">
+                      {/* Semáforo dot */}
+                      <td className="px-4 py-3">
+                        <div
+                          className={`w-2.5 h-2.5 rounded-full ${SEMAFORO_DOT[sem]}`}
+                          title={SEMAFORO_TITLE[sem]}
+                        />
+                      </td>
+
+                      {/* Nombre */}
+                      <td className="px-4 py-3 font-medium text-gray-900">
+                        {c.nombre}
+                      </td>
+
+                      {/* Contacto — correo / teléfono */}
+                      <td className="px-4 py-3 text-gray-500">
+                        <div className="flex flex-col gap-0.5">
+                          {c.correo && <span className="truncate max-w-[160px]">{c.correo}</span>}
+                          {c.telefono && <span>{c.telefono}</span>}
+                          {!c.correo && !c.telefono && <span>—</span>}
+                        </div>
+                      </td>
+
+                      {/* Etapa badge */}
+                      <td className="px-4 py-3">
+                        {etapaCfg ? (
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${etapaCfg.bg} ${etapaCfg.text}`}>
+                            {etapaCfg.label}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </td>
+
+                      {/* Canal */}
+                      <td className="px-4 py-3">
+                        {c.procedencia ? (
+                          <Badge variant="secondary" className="text-xs">{c.procedencia}</Badge>
+                        ) : (
+                          <span className="text-xs text-gray-300">—</span>
+                        )}
+                      </td>
+
+                      {/* Acciones */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1 justify-end">
+                          {/* Quick actions — visibles al hover */}
+                          {c.telefono && (
+                            <a
+                              href={`https://wa.me/${c.telefono.replace(/\D/g, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="WhatsApp"
+                              className="p-1.5 rounded-lg text-gray-300 hover:text-green-600 hover:bg-green-50 transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                              <MessageSquare size={14} />
+                            </a>
+                          )}
+                          {c.telefono && (
+                            <a
+                              href={`tel:${c.telefono}`}
+                              title="Llamar"
+                              className="p-1.5 rounded-lg text-gray-300 hover:text-blue-600 hover:bg-blue-50 transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                              <Phone size={14} />
+                            </a>
+                          )}
+                          {c.correo && (
+                            <a
+                              href={`mailto:${c.correo}`}
+                              title="Email"
+                              className="p-1.5 rounded-lg text-gray-300 hover:text-orange-600 hover:bg-orange-50 transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                              <Mail size={14} />
+                            </a>
+                          )}
+
+                          {/* Botón Contactado */}
+                          <div className="relative" data-contactado-panel>
+                            <button
+                              onClick={e => {
+                                e.stopPropagation()
+                                setContactadoId(isContactadoOpen ? null : c.id)
+                              }}
+                              title="Registrar contacto"
+                              className={`p-1.5 rounded-lg transition-colors opacity-0 group-hover:opacity-100 ${
+                                isContactadoOpen
+                                  ? 'text-orange-600 bg-orange-50'
+                                  : 'text-gray-300 hover:text-orange-600 hover:bg-orange-50'
+                              }`}
+                            >
+                              <CheckCircle2 size={14} />
+                            </button>
+                            {isContactadoOpen && (
+                              <ContactadoPanel
+                                clienteId={c.id}
+                                onSaved={() => {
+                                  setContactadoId(null)
+                                  fetchClientes()
+                                }}
+                              />
+                            )}
+                          </div>
+
+                          {/* Ver perfil */}
+                          <Link href={`/clientes/${c.id}`}>
+                            <Button size="sm" variant="outline" className="text-orange-600 border-orange-200 hover:bg-orange-50 opacity-0 group-hover:opacity-100 ml-1">
+                              Ver
+                            </Button>
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* Paginación */}
+      {vista === 'lista' && total > limit && (
         <div className="flex items-center justify-between mt-4">
           <p className="text-sm text-gray-500">
             Mostrando {Math.min((page - 1) * limit + 1, total)}–{Math.min(page * limit, total)} de {total}

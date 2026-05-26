@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createSupabaseAdminClient } from '@/lib/supabase-server'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const supabase = createSupabaseAdminClient()
   const { id } = await params
   const [clienteRes, asistenciasRes, pagosRes, seguimientosRes] = await Promise.all([
     supabase.from('clientes').select('*').eq('id', id).single(),
@@ -22,11 +23,16 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const supabase = createSupabaseAdminClient()
   const { id } = await params
   const body = await req.json()
 
-  // Solo los campos de la tabla clientes (excluir joins y campos autogenerados)
-  const { nombre, correo, correo2, telefono, telefono2, comentario, procedencia, cumpleanos, fecha_incorporacion, genero, tipos_cliente, modalidad_paciente, terapeuta, edad, documento_identidad, estado_civil, profesion, ciudad, pais } = body
+  const {
+    nombre, correo, correo2, telefono, telefono2, comentario, procedencia,
+    cumpleanos, fecha_incorporacion, genero, tipos_cliente, modalidad_paciente,
+    terapeuta, edad, documento_identidad, estado_civil, profesion, ciudad, pais, etapa,
+  } = body
+
   const campos = {
     nombre,
     correo: correo || null,
@@ -47,6 +53,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     profesion: profesion || null,
     ciudad: ciudad || null,
     pais: pais || null,
+    etapa: etapa || null,
   }
 
   const { data, error } = await supabase.from('clientes').update(campos).eq('id', id).select().single()
@@ -54,7 +61,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   return NextResponse.json(data)
 }
 
+// PATCH — partial update (etapa, procedencia, etc.)
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const supabase = createSupabaseAdminClient()
+  const { id } = await params
+  const body = await req.json()
+  const { data, error } = await supabase.from('clientes').update(body).eq('id', id).select().single()
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(data)
+}
+
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const supabase = createSupabaseAdminClient()
   const { id } = await params
   const { error } = await supabase.from('clientes').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
