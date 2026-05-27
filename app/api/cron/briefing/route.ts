@@ -150,9 +150,17 @@ export async function GET(req: NextRequest) {
   // ── Prospectos sin contacto ───────────────────────────────────────────────
 
   // Obtener ids con seguimiento reciente (post-48h)
+  type ProspectoRow = {
+    id: string
+    nombre?: string | null
+    correo?: string | null
+    telefono?: string | null
+    procedencia?: string | null
+    created_at: string
+  }
   const idsConSeguimiento = new Set<string>()
   if ((prospectosSinContactoRes.data ?? []).length > 0) {
-    const ids = prospectosSinContactoRes.data!.map(c => c.id)
+    const ids = prospectosSinContactoRes.data!.map((c: ProspectoRow) => c.id)
     const { data: segsRecientes } = await supabase
       .from('seguimientos')
       .select('cliente_id')
@@ -164,8 +172,8 @@ export async function GET(req: NextRequest) {
   }
 
   const prospectosSinContacto = (prospectosSinContactoRes.data ?? [])
-    .filter(c => !idsConSeguimiento.has(c.id))
-    .map(c => {
+    .filter((c: ProspectoRow) => !idsConSeguimiento.has(c.id))
+    .map((c: ProspectoRow) => {
       const horasSinContacto = Math.floor(
         (ahora.getTime() - new Date(c.created_at).getTime()) / (1000 * 60 * 60)
       )
