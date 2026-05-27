@@ -45,11 +45,10 @@ const SEMAFORO_TITLE: Record<string, string> = {
 }
 
 // ─── Panel inline "Contactado" ────────────────────────────────────────────
-function ContactadoPanel({ clienteId, onSaved }: { clienteId: string; onSaved: () => void }) {
+function ContactadoPanel({ clienteId, onSaved, pos }: { clienteId: string; onSaved: () => void; pos: { top: number; right: number } }) {
   const [tipo, setTipo] = useState<'llamada' | 'whatsapp' | 'correo' | 'otro'>('whatsapp')
   const [nota, setNota] = useState('')
   const [saving, setSaving] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
 
   async function guardar() {
     setSaving(true)
@@ -70,8 +69,8 @@ function ContactadoPanel({ clienteId, onSaved }: { clienteId: string; onSaved: (
 
   return (
     <div
-      ref={ref}
-      className="absolute right-0 top-full mt-1 z-50 bg-white rounded-xl shadow-xl border border-gray-200 p-3 w-64"
+      style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 9999 }}
+      className="bg-white rounded-xl shadow-xl border border-gray-200 p-3 w-64"
       onClick={e => e.stopPropagation()}
     >
       <p className="text-xs font-semibold text-gray-700 mb-2">Registrar contacto</p>
@@ -213,6 +212,7 @@ export default function ClientesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [vista, setVista] = useState<'lista' | 'kanban'>('lista')
   const [contactadoId, setContactadoId] = useState<string | null>(null)
+  const [contactadoPos, setContactadoPos] = useState<{ top: number; right: number } | null>(null)
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
   const exportMenuRef = useRef<HTMLDivElement>(null)
   const limit = 50
@@ -237,7 +237,10 @@ export default function ClientesPage() {
   useEffect(() => {
     function handler(e: MouseEvent) {
       const target = e.target as HTMLElement
-      if (!target.closest('[data-contactado-panel]')) setContactadoId(null)
+      if (!target.closest('[data-contactado-panel]')) {
+        setContactadoId(null)
+        setContactadoPos(null)
+      }
     }
     document.addEventListener('click', handler)
     return () => document.removeEventListener('click', handler)
@@ -529,7 +532,14 @@ export default function ClientesPage() {
                             <button
                               onClick={e => {
                                 e.stopPropagation()
-                                setContactadoId(isContactadoOpen ? null : c.id)
+                                if (isContactadoOpen) {
+                                  setContactadoId(null)
+                                  setContactadoPos(null)
+                                } else {
+                                  const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect()
+                                  setContactadoPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right })
+                                  setContactadoId(c.id)
+                                }
                               }}
                               title="Registrar contacto"
                               className={`p-1.5 rounded-lg transition-colors opacity-0 group-hover:opacity-100 ${
@@ -540,11 +550,13 @@ export default function ClientesPage() {
                             >
                               <CheckCircle2 size={14} />
                             </button>
-                            {isContactadoOpen && (
+                            {isContactadoOpen && contactadoPos && (
                               <ContactadoPanel
                                 clienteId={c.id}
+                                pos={contactadoPos}
                                 onSaved={() => {
                                   setContactadoId(null)
+                                  setContactadoPos(null)
                                   fetchClientes()
                                 }}
                               />
