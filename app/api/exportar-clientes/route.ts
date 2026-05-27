@@ -5,7 +5,7 @@ import ExcelJS from 'exceljs'
 const TIPOS = '"llamada,whatsapp,correo,visita,otro"'
 const RESPONSABLES = '"Ángeles Tapia,Miriam Torres,Álvaro Valdés"'
 
-const CLIENTE_COLS = 21 // columnas de datos del cliente (A..U)
+const CLIENTE_COLS = 22 // columnas de datos del cliente (A..V)
 
 // Columnas de tipo y responsable por seguimiento (1-indexed)
 // Seg1: col 22 (V) tipo, 24 (X) responsable
@@ -57,6 +57,7 @@ export async function GET() {
     { header: 'Ciudad', key: 'ciudad', width: 15 },
     { header: 'País', key: 'pais', width: 12 },
     { header: 'Procedencia', key: 'procedencia', width: 18 },
+    { header: 'Etapa Funnel', key: 'etapa', width: 20 },
     { header: 'Modalidad', key: 'modalidad_paciente', width: 12 },
     { header: 'Terapeuta', key: 'terapeuta', width: 20 },
     { header: 'Tipos Cliente', key: 'tipos_cliente', width: 25 },
@@ -92,6 +93,7 @@ export async function GET() {
       ciudad: c.ciudad ?? '',
       pais: c.pais ?? '',
       procedencia: c.procedencia ?? '',
+      etapa: c.etapa ?? '',
       modalidad_paciente: c.modalidad_paciente ?? '',
       terapeuta: c.terapeuta ?? '',
       tipos_cliente: (c.tipos_cliente ?? []).join(', '),

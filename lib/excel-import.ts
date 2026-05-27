@@ -1,4 +1,9 @@
 import * as XLSX from 'xlsx'
+import { EtapaFunnel } from './types'
+
+const ETAPAS_VALIDAS: EtapaFunnel[] = [
+  'nuevo', 'contactado', 'con_interes', 'cotizacion_enviada', 'negociando', 'inscrito',
+]
 
 export interface FilaCliente {
   nombre: string
@@ -20,6 +25,7 @@ export interface FilaCliente {
   procedencia: string | null
   cumpleanos: string | null
   fecha_incorporacion: string | null
+  etapa: EtapaFunnel | null
   asistencias: string[]
 }
 
@@ -90,6 +96,7 @@ function mapearColumnas(headerRow: unknown[]): Record<string, number> {
     else if (key.includes('procedencia')) map.procedencia = idx
     else if (key.includes('cumplea')) map.cumpleanos = idx
     else if (key.includes('incorporaci')) map.fecha_incorporacion = idx
+    else if (key.includes('etapa') || key.includes('funnel')) map.etapa = idx
     else if (key.includes('asistencia')) map.asistencias = idx
   })
   return map
@@ -122,6 +129,7 @@ function fusionarFilas(base: FilaCliente, nueva: FilaCliente): FilaCliente {
     procedencia: base.procedencia ?? nueva.procedencia,
     cumpleanos: base.cumpleanos ?? nueva.cumpleanos,
     fecha_incorporacion: base.fecha_incorporacion ?? nueva.fecha_incorporacion,
+    etapa: base.etapa ?? nueva.etapa,
     tipos_cliente: [...new Set([...base.tipos_cliente, ...nueva.tipos_cliente])],
     asistencias: [...new Set([...base.asistencias, ...nueva.asistencias])],
   }
@@ -186,6 +194,11 @@ export function parseExcelFile(buffer: ArrayBuffer): {
         procedencia: cols.procedencia !== undefined ? String(row[cols.procedencia] ?? '').trim() || null : null,
         cumpleanos: cols.cumpleanos !== undefined ? excelSerialToDate(row[cols.cumpleanos] as number) : null,
         fecha_incorporacion: cols.fecha_incorporacion !== undefined ? excelSerialToDate(row[cols.fecha_incorporacion] as number) : null,
+        etapa: (() => {
+          if (cols.etapa === undefined) return null
+          const v = String(row[cols.etapa] ?? '').trim().toLowerCase().replace(/\s+/g, '_') as EtapaFunnel
+          return ETAPAS_VALIDAS.includes(v) ? v : null
+        })(),
         asistencias: cols.asistencias !== undefined ? parsearLista(row[cols.asistencias]) : [],
       }
 

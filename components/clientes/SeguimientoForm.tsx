@@ -13,22 +13,25 @@ interface Props {
   open: boolean
   onOpenChange: (v: boolean) => void
   onSubmit: (data: Record<string, string>) => Promise<void>
+  defaultUsuario?: string   // P3: pre-fill con usuario logueado
 }
 
-export function SeguimientoForm({ open, onOpenChange, onSubmit }: Props) {
+export function SeguimientoForm({ open, onOpenChange, onSubmit, defaultUsuario }: Props) {
   const [tipo, setTipo] = useState('whatsapp')
   const [notas, setNotas] = useState('')
   const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 16))
-  const [usuario, setUsuario] = useState('')
+  const [usuario, setUsuario] = useState(defaultUsuario || '')
   const [actividadNombre, setActividadNombre] = useState('')
   const [actividades, setActividades] = useState<Actividad[]>([])
   const [saving, setSaving] = useState(false)
 
+  // Sincronizar defaultUsuario cuando cambie (o cuando abra el dialog)
   useEffect(() => {
     if (open) {
+      setUsuario(prev => prev || defaultUsuario || '')
       fetch('/api/actividades').then(r => r.json()).then(d => setActividades(Array.isArray(d) ? d : []))
     }
-  }, [open])
+  }, [open, defaultUsuario])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -66,7 +69,6 @@ export function SeguimientoForm({ open, onOpenChange, onSubmit }: Props) {
           <div>
             <Label>Actividad relacionada</Label>
             <Select value={actividadNombre || '__ninguna__'} onValueChange={v => setActividadNombre(v === '__ninguna__' ? '' : (v ?? ''))}>
-
               <SelectTrigger><SelectValue placeholder="Sin actividad específica" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__ninguna__">— Sin actividad específica —</SelectItem>
@@ -78,7 +80,11 @@ export function SeguimientoForm({ open, onOpenChange, onSubmit }: Props) {
           </div>
           <div>
             <Label>Responsable</Label>
-            <Input placeholder="Nombre de quien contactó" value={usuario} onChange={e => setUsuario(e.target.value)} />
+            <Input
+              placeholder="Nombre de quien contactó"
+              value={usuario}
+              onChange={e => setUsuario(e.target.value)}
+            />
           </div>
           <div>
             <Label>Notas *</Label>

@@ -33,6 +33,7 @@ export default function ConfiguracionPage() {
   const [tipos, setTipos] = useState<TipoCliente[]>([])
   const [nuevoTipo, setNuevoTipo] = useState('')
   const [savingTipo, setSavingTipo] = useState(false)
+  const [nombreResponsable, setNombreResponsable] = useState('')
   const router = useRouter()
 
   const fetchUsuarios = useCallback(async () => {
@@ -46,7 +47,18 @@ export default function ConfiguracionPage() {
     if (res.ok) setTipos(await res.json())
   }, [])
 
-  useEffect(() => { fetchUsuarios(); fetchTipos() }, [fetchUsuarios, fetchTipos])
+  useEffect(() => {
+    fetchUsuarios()
+    fetchTipos()
+    // Cargar preferencia guardada en este navegador
+    setNombreResponsable(localStorage.getItem('renova_responsable') || '')
+  }, [fetchUsuarios, fetchTipos])
+
+  function guardarNombreResponsable(e: React.FormEvent) {
+    e.preventDefault()
+    localStorage.setItem('renova_responsable', nombreResponsable.trim())
+    toast.success('Preferencia guardada')
+  }
 
   async function agregarTipo(e: React.FormEvent) {
     e.preventDefault()
@@ -241,6 +253,34 @@ export default function ConfiguracionPage() {
             <Button type="submit" disabled={savingTipo} size="sm" className="bg-orange-600 hover:bg-orange-700">
               <Plus className="h-4 w-4 mr-1" /> Agregar
             </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Preferencias personales */}
+      <Card className="mt-6">
+        <CardHeader className="py-4">
+          <CardTitle className="text-base">Mis preferencias</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={guardarNombreResponsable} className="space-y-3">
+            <div>
+              <Label htmlFor="nombre-responsable">Nombre por defecto como responsable</Label>
+              <p className="text-xs text-gray-400 mt-0.5 mb-2">
+                Se pre-llenará automáticamente en todos los nuevos seguimientos que registres desde este navegador.
+              </p>
+              <div className="flex gap-2 max-w-sm">
+                <Input
+                  id="nombre-responsable"
+                  placeholder="ej: Ángeles"
+                  value={nombreResponsable}
+                  onChange={e => setNombreResponsable(e.target.value)}
+                />
+                <Button type="submit" size="sm" className="bg-orange-600 hover:bg-orange-700 shrink-0">
+                  Guardar
+                </Button>
+              </div>
+            </div>
           </form>
         </CardContent>
       </Card>

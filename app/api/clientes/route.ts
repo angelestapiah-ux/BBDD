@@ -5,6 +5,7 @@ export async function GET(req: NextRequest) {
   const supabase = createSupabaseAdminClient()
   const { searchParams } = new URL(req.url)
   const q = searchParams.get('q') || ''
+  const etapa = searchParams.get('etapa') || ''
   const page = parseInt(searchParams.get('page') || '1')
   const limit = parseInt(searchParams.get('limit') || '50')
   const offset = (page - 1) * limit
@@ -17,6 +18,9 @@ export async function GET(req: NextRequest) {
 
   if (q) {
     query = query.or(`nombre.ilike.%${q}%,correo.ilike.%${q}%,telefono.ilike.%${q}%`)
+  }
+  if (etapa) {
+    query = query.eq('etapa', etapa)
   }
 
   const { data, error, count } = await query

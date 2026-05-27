@@ -262,11 +262,12 @@ export function exportarTodoExcel(data: {
     'Teléfono': c.telefono || '',
     'Género': c.genero || '',
     'Procedencia': c.procedencia || '',
+    'Etapa': c.etapa || '',
     'Cumpleaños': c.cumpleanos || '',
     'Fecha Incorporación': c.fecha_incorporacion || '',
     'Comentario': c.comentario || '',
   })))
-  wsClientes['!cols'] = [{ wch: 28 }, { wch: 28 }, { wch: 14 }, { wch: 12 }, { wch: 18 }, { wch: 12 }, { wch: 18 }, { wch: 40 }]
+  wsClientes['!cols'] = [{ wch: 28 }, { wch: 28 }, { wch: 14 }, { wch: 12 }, { wch: 18 }, { wch: 20 }, { wch: 12 }, { wch: 18 }, { wch: 40 }]
   XLSX.utils.book_append_sheet(wb, wsClientes, 'Clientes')
 
   // Hoja 2: Asistencias

@@ -12,12 +12,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Pencil, Trash2, Plus, FileSpreadsheet, FileText, Receipt, MessageSquare, Phone, Mail, MoreHorizontal } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, Plus, FileSpreadsheet, FileText, Receipt, MessageSquare, Phone, Mail, MoreHorizontal, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { ClienteFormDialog } from '@/components/clientes/ClienteFormDialog'
 import { exportarPerfilExcel, exportarPerfilPDF } from '@/lib/export'
 import { SeguimientoForm } from '@/components/clientes/SeguimientoForm'
+import { getSupabase } from '@/lib/supabase'
 import { PagoForm } from '@/components/clientes/PagoForm'
 import { AsistenciaForm } from '@/components/clientes/AsistenciaForm'
 import { format } from 'date-fns'
@@ -86,12 +87,16 @@ export default function ClienteDetailPage() {
   const [showAllFields, setShowAllFields] = useState(false)
   const [etapaCambiando, setEtapaCambiando] = useState(false)
 
+  // P3: usuario logueado para pre-llenar responsable
+  const [currentUserEmail, setCurrentUserEmail] = useState('')
+
   // dialogs de creación
   const [editOpen, setEditOpen] = useState(false)
   const [segOpen, setSegOpen] = useState(false)
   const [pagoOpen, setPagoOpen] = useState(false)
   const [asistenciaOpen, setAsistenciaOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)  // P5
 
   // dialogs de edición
   const [editSeg, setEditSeg] = useState<Seguimiento | null>(null)
@@ -106,6 +111,18 @@ export default function ClienteDetailPage() {
   }, [id, router])
 
   useEffect(() => { fetchCliente() }, [fetchCliente])
+
+  // P3: responsable por defecto — preferencia guardada en localStorage, fallback al email
+  useEffect(() => {
+    const guardado = typeof window !== 'undefined' ? localStorage.getItem('renova_responsable') : ''
+    if (guardado) {
+      setCurrentUserEmail(guardado)
+    } else {
+      getSupabase().auth.getUser().then(({ data }) => {
+        if (data.user?.email) setCurrentUserEmail(data.user.email)
+      })
+    }
+  }, [])
 
   async function exportar(tipo: 'excel' | 'pdf') {
     toast.info('Preparando exportación...')
@@ -140,11 +157,16 @@ export default function ClienteDetailPage() {
     }
   }
 
-  async function handleDeleteCliente() {
-    if (!confirm('¿Eliminar este cliente? Esta acción no se puede deshacer.')) return
+  // P5: abre modal de confirmación
+  function handleDeleteCliente() {
+    setMoreOpen(false)
+    setDeleteDialogOpen(true)
+  }
+
+  async function confirmarEliminarCliente() {
     const res = await fetch(`/api/clientes/${id}`, { method: 'DELETE' })
     if (res.ok) { toast.success('Cliente eliminado'); router.push('/clientes') }
-    else toast.error('Error al eliminar')
+    else { toast.error('Error al eliminar'); setDeleteDialogOpen(false) }
   }
 
   async function addSeguimiento(data: Record<string, string>) {
@@ -430,7 +452,8 @@ export default function ClienteDetailPage() {
                 </div>
               ) : (
                 <ul className="space-y-3">
-                  {cliente.seguimientos.map(s => (
+                  {/* P4: más reciente primero */}
+                  {[...cliente.seguimientos].reverse().map(s => (
                     <li key={s.id} className="text-sm border-l-2 border-orange-200 pl-3 group">
                       <div className="flex items-center gap-2 mb-0.5">
                         <Badge variant="outline" className="text-xs">{s.tipo}</Badge>
@@ -545,9 +568,38 @@ export default function ClienteDetailPage() {
 
       {/* ─── Dialogs ───────────────────────────────────────────────────── */}
       <ClienteFormDialog open={editOpen} onOpenChange={setEditOpen} onSubmit={handleEdit} title="Editar cliente" initial={cliente} />
-      <SeguimientoForm open={segOpen} onOpenChange={setSegOpen} onSubmit={addSeguimiento} />
+      {/* P3: pre-llenar Responsable con usuario logueado */}
+      <SeguimientoForm open={segOpen} onOpenChange={setSegOpen} onSubmit={addSeguimiento} defaultUsuario={currentUserEmail} />
       <PagoForm open={pagoOpen} onOpenChange={setPagoOpen} onSubmit={addPago} asistencias={cliente.asistencias ?? []} />
       <AsistenciaForm open={asistenciaOpen} onOpenChange={setAsistenciaOpen} onSubmit={addAsistencia} />
+
+      {/* P5: modal de confirmación eliminar cliente */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Eliminar cliente
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600">
+            ¿Estás segura de que deseas eliminar a{' '}
+            <span className="font-semibold">{cliente.nombre}</span>?
+            Esta acción también eliminará sus seguimientos, pagos y asistencias,
+            y no se puede deshacer.
+          </p>
+          <DialogFooter className="gap-2 mt-2">
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={confirmarEliminarCliente}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Sí, eliminar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {editSeg && <EditSeguimientoDialog seg={editSeg} onClose={() => setEditSeg(null)} onSave={saveEditSeg} />}
       {editPago && <EditPagoDialog pago={editPago} onClose={() => setEditPago(null)} onSave={saveEditPago} asistencias={cliente.asistencias ?? []} />}

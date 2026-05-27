@@ -19,6 +19,7 @@ export async function GET() {
     'Modalidad paciente',
     'Terapeuta',
     'Procedencia',
+    'Etapa Funnel',
     'Cumpleaños',
     'Fecha incorporación',
     'Comentario',
@@ -43,6 +44,7 @@ export async function GET() {
       'Modalidad paciente': 'presencial',
       Terapeuta: 'Dr. Rodolfo Soto',
       Procedencia: 'Instagram',
+      'Etapa Funnel': 'inscrito',
       Cumpleaños: '15/03/1985',
       'Fecha incorporación': '01/01/2025',
       Comentario: 'Muy interesada en diplomado',
@@ -65,6 +67,7 @@ export async function GET() {
       'Modalidad paciente': 'online',
       Terapeuta: '',
       Procedencia: 'Referido',
+      'Etapa Funnel': 'con_interes',
       Cumpleaños: '22/07/1990',
       'Fecha incorporación': '15/02/2025',
       Comentario: 'Referido por cliente anterior',
@@ -87,6 +90,7 @@ export async function GET() {
       'Modalidad paciente': '',
       Terapeuta: '',
       Procedencia: 'Facebook',
+      'Etapa Funnel': '',
       Cumpleaños: '',
       'Fecha incorporación': '',
       Comentario: '',
@@ -113,6 +117,7 @@ export async function GET() {
     { wch: 20 }, // Modalidad paciente
     { wch: 25 }, // Terapeuta
     { wch: 18 }, // Procedencia
+    { wch: 24 }, // Etapa Funnel
     { wch: 14 }, // Cumpleaños
     { wch: 20 }, // Fecha incorporación
     { wch: 35 }, // Comentario
@@ -131,6 +136,7 @@ export async function GET() {
     ['Tipo de cliente (múltiples)', 'Separar con // entre cada tipo. Ej: Paciente Fabiola // Alumno/a Master'],
     ['Modalidad paciente', 'presencial | online  (solo aplica si el tipo de cliente es Paciente, Paciente Fabiola o Paciente Rodolfo)'],
     ['Terapeuta', 'Nombre del terapeuta (solo aplica cuando el tipo de cliente es exactamente "Paciente")'],
+    ['Etapa Funnel', 'nuevo | contactado | con_interes | cotizacion_enviada | negociando | inscrito  (si se deja vacío se asigna "nuevo" automáticamente)'],
     ['Cumpleaños', 'Formato dd/mm/aaaa. Ej: 25/12/1990'],
     ['Fecha incorporación', 'Formato dd/mm/aaaa. Ej: 01/03/2025'],
     ['Asistencia actividad', 'Separar con // para múltiples. Ej: Diplomado Practitioner // Taller Enero'],

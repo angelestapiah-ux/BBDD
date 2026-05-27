@@ -5,7 +5,7 @@ import { Cliente, ETAPAS_FUNNEL, EtapaFunnel } from '@/lib/types'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Search, Plus, FileSpreadsheet, FileText, LayoutGrid, List, MessageSquare, Phone, Mail, CheckCircle2, X } from 'lucide-react'
+import { Search, Plus, FileSpreadsheet, FileText, LayoutGrid, List, MessageSquare, Phone, Mail, CheckCircle2, X, Download, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
 import { ClienteFormDialog } from '@/components/clientes/ClienteFormDialog'
 import { toast } from 'sonner'
@@ -207,22 +207,26 @@ export default function ClientesPage() {
   const [clientes, setClientes] = useState<ClienteEnriquecido[]>([])
   const [total, setTotal] = useState(0)
   const [q, setQ] = useState('')
+  const [etapaFilter, setEtapaFilter] = useState<EtapaFunnel | ''>('')
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [vista, setVista] = useState<'lista' | 'kanban'>('lista')
   const [contactadoId, setContactadoId] = useState<string | null>(null)
+  const [exportMenuOpen, setExportMenuOpen] = useState(false)
+  const exportMenuRef = useRef<HTMLDivElement>(null)
   const limit = 50
 
   const fetchClientes = useCallback(async () => {
     setLoading(true)
     const params = new URLSearchParams({ q, page: String(page), limit: String(limit) })
+    if (etapaFilter) params.set('etapa', etapaFilter)
     const res = await fetch(`/api/clientes?${params}`)
     const json = await res.json()
     setClientes(json.data || [])
     setTotal(json.count || 0)
     setLoading(false)
-  }, [q, page])
+  }, [q, page, etapaFilter])
 
   useEffect(() => {
     const t = setTimeout(fetchClientes, 300)
@@ -237,6 +241,17 @@ export default function ClientesPage() {
     }
     document.addEventListener('click', handler)
     return () => document.removeEventListener('click', handler)
+  }, [])
+
+  // Close export menu on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setExportMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
   }, [])
 
   async function exportarTodos(tipo: 'excel' | 'pdf') {
@@ -307,22 +322,49 @@ export default function ClientesPage() {
           <p className="text-sm text-gray-500">{total} clientes en total</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportarCompleto} className="border-orange-300 text-orange-700 hover:bg-orange-50">
-            <FileSpreadsheet className="h-4 w-4 mr-2" /> Base completa
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => exportarTodos('excel')}>
-            <FileSpreadsheet className="h-4 w-4 mr-2" /> Excel
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => exportarTodos('pdf')}>
-            <FileText className="h-4 w-4 mr-2" /> PDF
-          </Button>
+          {/* C3: Dropdown exportación consolidado */}
+          <div ref={exportMenuRef} className="relative">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setExportMenuOpen(o => !o)}
+              className="flex items-center gap-1"
+            >
+              <Download className="h-4 w-4" />
+              Exportar
+              <ChevronDown className="h-3 w-3 ml-0.5" />
+            </Button>
+            {exportMenuOpen && (
+              <div className="absolute right-0 top-full mt-1 bg-white rounded-lg border border-gray-200 shadow-lg z-20 w-48 py-1">
+                <button
+                  onClick={() => { exportarTodos('excel'); setExportMenuOpen(false) }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <FileSpreadsheet className="h-4 w-4 text-green-600" /> Excel (filtrado)
+                </button>
+                <button
+                  onClick={() => { exportarTodos('pdf'); setExportMenuOpen(false) }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <FileText className="h-4 w-4 text-red-500" /> PDF (filtrado)
+                </button>
+                <div className="border-t border-gray-100 my-1" />
+                <button
+                  onClick={() => { exportarCompleto(); setExportMenuOpen(false) }}
+                  className="w-full text-left px-4 py-2 text-sm text-orange-700 hover:bg-orange-50 flex items-center gap-2"
+                >
+                  <FileSpreadsheet className="h-4 w-4 text-orange-600" /> Base completa
+                </button>
+              </div>
+            )}
+          </div>
           <Button onClick={() => setDialogOpen(true)} className="bg-orange-600 hover:bg-orange-700">
             <Plus className="h-4 w-4 mr-2" /> Nuevo cliente
           </Button>
         </div>
       </div>
 
-      {/* Buscador + toggle de vista */}
+      {/* Buscador + filtro etapa + toggle de vista */}
       <div className="flex gap-3 mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -333,6 +375,22 @@ export default function ClientesPage() {
             onChange={e => { setQ(e.target.value); setPage(1) }}
           />
         </div>
+
+        {/* C5: Filtro etapa */}
+        <div className="relative">
+          <select
+            value={etapaFilter}
+            onChange={e => { setEtapaFilter(e.target.value as EtapaFunnel | ''); setPage(1) }}
+            className="h-10 pl-3 pr-8 rounded-lg border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400 appearance-none cursor-pointer"
+          >
+            <option value="">Todas las etapas</option>
+            {ETAPAS_FUNNEL.map(e => (
+              <option key={e.value} value={e.value}>{e.label}</option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
+        </div>
+
         <div className="flex rounded-lg border border-gray-200 overflow-hidden">
           <button
             onClick={() => setVista('lista')}
@@ -393,9 +451,14 @@ export default function ClientesPage() {
                         />
                       </td>
 
-                      {/* Nombre */}
+                      {/* C1: Nombre clickeable → perfil */}
                       <td className="px-4 py-3 font-medium text-gray-900">
-                        {c.nombre}
+                        <Link
+                          href={`/clientes/${c.id}`}
+                          className="hover:text-orange-600 transition-colors"
+                        >
+                          {c.nombre}
+                        </Link>
                       </td>
 
                       {/* Contacto — correo / teléfono */}
@@ -505,22 +568,52 @@ export default function ClientesPage() {
         </div>
       )}
 
-      {/* Paginación */}
-      {vista === 'lista' && total > limit && (
-        <div className="flex items-center justify-between mt-4">
-          <p className="text-sm text-gray-500">
-            Mostrando {Math.min((page - 1) * limit + 1, total)}–{Math.min(page * limit, total)} de {total}
-          </p>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
-              Anterior
-            </Button>
-            <Button variant="outline" size="sm" disabled={page * limit >= total} onClick={() => setPage(p => p + 1)}>
-              Siguiente
-            </Button>
+      {/* C4: Paginación con números de página */}
+      {vista === 'lista' && total > limit && (() => {
+        const totalPages = Math.ceil(total / limit)
+        // Build page window: always show first, last, and up to 3 around current
+        const pages: (number | '…')[] = []
+        if (totalPages <= 7) {
+          for (let i = 1; i <= totalPages; i++) pages.push(i)
+        } else {
+          pages.push(1)
+          if (page > 3) pages.push('…')
+          for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push(i)
+          if (page < totalPages - 2) pages.push('…')
+          pages.push(totalPages)
+        }
+
+        return (
+          <div className="flex items-center justify-between mt-4">
+            <p className="text-sm text-gray-500">
+              Mostrando {Math.min((page - 1) * limit + 1, total)}–{Math.min(page * limit, total)} de {total}
+            </p>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
+                ‹
+              </Button>
+              {pages.map((p, i) =>
+                p === '…' ? (
+                  <span key={`ellipsis-${i}`} className="px-2 text-gray-400 text-sm select-none">…</span>
+                ) : (
+                  <Button
+                    key={p}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p as number)}
+                    className={page === p ? 'bg-orange-600 text-white border-orange-600 hover:bg-orange-700' : ''}
+                  >
+                    {p}
+                  </Button>
+                )
+              )}
+              <Button variant="outline" size="sm" disabled={page * limit >= total} onClick={() => setPage(p => p + 1)}>
+                ›
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       <ClienteFormDialog
         open={dialogOpen}

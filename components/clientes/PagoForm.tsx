@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Asistencia } from '@/lib/types'
+import { toast } from 'sonner'
 
 interface Props {
   open: boolean
@@ -21,7 +22,7 @@ export function PagoForm({ open, onOpenChange, onSubmit, asistencias }: Props) {
   const [customActividad, setCustomActividad] = useState('')
   const [monto, setMonto] = useState('')
   const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10))
-  const [metodo, setMetodo] = useState('transferencia')
+  const [metodo, setMetodo] = useState('')
   const [estado, setEstado] = useState('pagado')
   const [notas, setNotas] = useState('')
   const [requiereFactura, setRequiereFactura] = useState(false)
@@ -32,6 +33,7 @@ export function PagoForm({ open, onOpenChange, onSubmit, asistencias }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!nombreFinal) return
+    if (!metodo) { toast.error('Selecciona un método de pago'); return }
     setSaving(true)
     await onSubmit({
       actividad_nombre: nombreFinal,
@@ -42,7 +44,7 @@ export function PagoForm({ open, onOpenChange, onSubmit, asistencias }: Props) {
       notas,
       requiere_factura: requiereFactura,
     })
-    setActividad(''); setCustomActividad(''); setMonto(''); setNotas(''); setRequiereFactura(false)
+    setActividad(''); setCustomActividad(''); setMonto(''); setNotas(''); setRequiereFactura(false); setMetodo('')
     setSaving(false)
   }
 
@@ -101,10 +103,13 @@ export function PagoForm({ open, onOpenChange, onSubmit, asistencias }: Props) {
               <Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
             </div>
             <div>
-              <Label>Método</Label>
-              <Select value={metodo} onValueChange={v => v && setMetodo(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <Label>Método *</Label>
+              <Select value={metodo || '__vacio__'} onValueChange={v => setMetodo(v === '__vacio__' ? '' : (v ?? ''))}>
+                <SelectTrigger className={!metodo ? 'text-gray-400' : ''}>
+                  <SelectValue placeholder="Selecciona..." />
+                </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__vacio__" disabled>Selecciona un método...</SelectItem>
                   <SelectItem value="transferencia">Transferencia</SelectItem>
                   <SelectItem value="efectivo">Efectivo</SelectItem>
                   <SelectItem value="tarjeta">Tarjeta</SelectItem>
@@ -143,7 +148,7 @@ export function PagoForm({ open, onOpenChange, onSubmit, asistencias }: Props) {
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit" disabled={saving || !nombreFinal} className="bg-orange-600 hover:bg-orange-700">
+            <Button type="submit" disabled={saving || !nombreFinal || !metodo} className="bg-orange-600 hover:bg-orange-700">
               {saving ? 'Guardando...' : 'Guardar'}
             </Button>
           </DialogFooter>

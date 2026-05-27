@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
       // Cliente ya existe: obtener datos actuales y completar solo los campos vacíos
       const { data: existente } = await supabase
         .from('clientes')
-        .select('correo, correo2, telefono, telefono2, genero, modalidad_paciente, terapeuta, edad, documento_identidad, estado_civil, profesion, ciudad, pais, comentario, procedencia, cumpleanos, fecha_incorporacion, tipos_cliente')
+        .select('correo, correo2, telefono, telefono2, genero, modalidad_paciente, terapeuta, edad, documento_identidad, estado_civil, profesion, ciudad, pais, comentario, procedencia, cumpleanos, fecha_incorporacion, etapa, tipos_cliente')
         .eq('id', clienteId)
         .single()
 
@@ -78,6 +78,7 @@ export async function POST(req: NextRequest) {
       if (!existente?.procedencia && fila.procedencia) actualizacion.procedencia = fila.procedencia
       if (!existente?.cumpleanos && fila.cumpleanos) actualizacion.cumpleanos = fila.cumpleanos
       if (!existente?.fecha_incorporacion && fila.fecha_incorporacion) actualizacion.fecha_incorporacion = fila.fecha_incorporacion
+      if (!existente?.etapa && fila.etapa) actualizacion.etapa = fila.etapa
 
       // Tipos de cliente: combinar sin duplicar
       if (fila.tipos_cliente.length > 0) {
@@ -116,6 +117,7 @@ export async function POST(req: NextRequest) {
           procedencia: fila.procedencia,
           cumpleanos: fila.cumpleanos,
           fecha_incorporacion: fila.fecha_incorporacion,
+          etapa: fila.etapa ?? 'nuevo',
         })
         .select('id')
         .single()
