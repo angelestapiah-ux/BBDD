@@ -112,13 +112,13 @@ export async function GET(req: NextRequest) {
   const nuevosContactosMes = nuevosMesRes.count ?? 0
 
   const ingresosMes = (ingresosMesRes.data ?? [])
-    .reduce((sum, p) => sum + (p.monto ?? 0), 0)
+    .reduce((sum: number, p) => sum + (p.monto ?? 0), 0)
 
   const ingresosMesAnterior = (ingresosMesAntRes.data ?? [])
-    .reduce((sum, p) => sum + (p.monto ?? 0), 0)
+    .reduce((sum: number, p) => sum + (p.monto ?? 0), 0)
 
   const pagosPendientesTotal = (pendientesRes.data ?? [])
-    .reduce((sum, p) => sum + (p.monto ?? 0), 0)
+    .reduce((sum: number, p) => sum + (p.monto ?? 0), 0)
 
   const seguimientosSemana = seguimientosRes.count ?? 0
 
