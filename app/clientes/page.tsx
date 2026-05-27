@@ -519,8 +519,9 @@ export default function ClientesPage() {
                           )}
                           {c.correo && (
                             <a
-                              href={`mailto:${c.correo}`}
-                              title="Email"
+                              href={`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(c.correo)}`}
+                              target="_blank" rel="noopener noreferrer"
+                              title={`Enviar correo a ${c.correo}`}
                               className="p-1.5 rounded-lg text-gray-300 hover:text-orange-600 hover:bg-orange-50 transition-colors opacity-0 group-hover:opacity-100"
                             >
                               <Mail size={14} />

@@ -317,7 +317,11 @@ export default function ClienteDetailPage() {
               </>
             )}
             {cliente.correo && (
-              <a href={`mailto:${cliente.correo}`} className="flex items-center gap-1 text-xs text-gray-500 hover:underline">
+              <a
+                href={`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(cliente.correo)}`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1 text-xs text-orange-600 hover:underline"
+              >
                 <Mail size={12} /> {cliente.correo}
               </a>
             )}
@@ -331,6 +335,9 @@ export default function ClienteDetailPage() {
         <div className="flex items-center gap-2 shrink-0">
           <Button size="sm" variant="outline" className="bg-orange-600 hover:bg-orange-700 text-white border-orange-600 hover:border-orange-700" onClick={() => setSegOpen(true)}>
             <Plus className="h-3.5 w-3.5 mr-1" /> Seguimiento
+          </Button>
+          <Button size="sm" variant="outline" className="border-green-600 text-green-700 hover:bg-green-50" onClick={() => setPagoOpen(true)}>
+            <Receipt className="h-3.5 w-3.5 mr-1" /> Pago
           </Button>
           <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
             <Pencil className="h-4 w-4" />
