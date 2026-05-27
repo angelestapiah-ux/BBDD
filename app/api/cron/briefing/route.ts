@@ -185,7 +185,7 @@ export async function GET(req: NextRequest) {
         horasSinContacto,
       }
     })
-    .sort((a, b) => b.horasSinContacto - a.horasSinContacto)
+    .sort((a: { horasSinContacto: number }, b: { horasSinContacto: number }) => b.horasSinContacto - a.horasSinContacto)
 
   // ── Armar BriefingData ────────────────────────────────────────────────────
 
