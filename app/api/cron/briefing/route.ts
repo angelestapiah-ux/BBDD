@@ -224,7 +224,7 @@ export async function GET(req: NextRequest) {
     },
     body: JSON.stringify({
       from: 'Renovapp CRM <onboarding@resend.dev>',
-      to: ['angeles@fabiolaescobar.cl'],
+      to: ['angeles.tapiah@gmail.com'],
       subject: `☀️ Briefing Renova — ${ahora.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' })}`,
       html: htmlEmail,
     }),
@@ -249,3 +249,4 @@ export async function GET(req: NextRequest) {
     },
   })
 }
+ 
