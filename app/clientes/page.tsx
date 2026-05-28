@@ -208,6 +208,12 @@ export default function ClientesPage() {
   const [q, setQ] = useState('')
   const [etapaFilter, setEtapaFilter] = useState<EtapaFunnel | ''>('')
   const [page, setPage] = useState(1)
+
+  // Pre-populate etapaFilter from URL (?etapa=...) when coming from the funnel chart
+  useEffect(() => {
+    const etapa = new URLSearchParams(window.location.search).get('etapa') as EtapaFunnel
+    if (etapa) setEtapaFilter(etapa)
+  }, [])
   const [loading, setLoading] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [vista, setVista] = useState<'lista' | 'kanban'>('lista')

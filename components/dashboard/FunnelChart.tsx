@@ -70,13 +70,17 @@ export function FunnelChart() {
           {datos.etapas.map((etapa, i) => {
             const anchoPct = maximo > 0 ? (etapa.cantidad / maximo) * 100 : 0
             return (
-              <div key={etapa.etapa} className="flex items-center gap-3">
+              <a
+                key={etapa.etapa}
+                href={`/clientes?etapa=${etapa.etapa}`}
+                className="flex items-center gap-3 rounded-lg px-1 -mx-1 hover:bg-gray-50 transition-colors cursor-pointer group"
+              >
                 {/* Número de etapa */}
                 <span className="text-xs text-gray-400 w-3 shrink-0">{i + 1}</span>
 
                 {/* Label */}
                 <span className={cn(
-                  'text-xs font-medium px-2 py-0.5 rounded-full shrink-0 w-36 text-center',
+                  'text-xs font-medium px-2 py-0.5 rounded-full shrink-0 w-36 text-center group-hover:ring-1 group-hover:ring-offset-1',
                   COLORES[etapa.etapa]
                 )}>
                   {etapa.label}
@@ -99,7 +103,7 @@ export function FunnelChart() {
                 <span className="text-xs text-gray-400 w-9 shrink-0">
                   {etapa.porcentaje}%
                 </span>
-              </div>
+              </a>
             )
           })}
         </div>

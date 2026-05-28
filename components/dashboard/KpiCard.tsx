@@ -1,4 +1,5 @@
 import { LucideIcon, TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
 interface KpiCardProps {
@@ -10,6 +11,7 @@ interface KpiCardProps {
   variacionLabel?: string  // ej. "vs. mes anterior"
   colorIcono?: 'orange' | 'green' | 'yellow' | 'blue'
   cargando?: boolean
+  href?: string            // si se pasa, la card es clickeable
 }
 
 export function KpiCard({
@@ -21,6 +23,7 @@ export function KpiCard({
   variacionLabel = 'vs. mes anterior',
   colorIcono = 'orange',
   cargando = false,
+  href,
 }: KpiCardProps) {
   const colores = {
     orange: 'bg-orange-50 text-orange-600',
@@ -31,8 +34,11 @@ export function KpiCard({
 
   const tieneVariacion = variacion !== undefined && variacion !== null
 
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-3 shadow-sm">
+  const card = (
+    <div className={cn(
+      'bg-white rounded-xl border border-gray-200 p-5 flex flex-col gap-3 shadow-sm',
+      href && 'hover:border-orange-300 hover:shadow-md transition-all'
+    )}>
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-gray-500">{titulo}</p>
         <div className={cn('p-2 rounded-lg', colores[colorIcono])}>
@@ -71,4 +77,6 @@ export function KpiCard({
       </div>
     </div>
   )
+
+  return href ? <Link href={href} className="block">{card}</Link> : card
 }

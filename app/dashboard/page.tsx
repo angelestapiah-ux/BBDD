@@ -126,6 +126,7 @@ export default function DashboardPage() {
           icono={Clock}
           colorIcono="yellow"
           cargando={cargando}
+          href="/reportes?tab=pendientes"
         />
 
         {/* KPI 4: Seguimientos esta semana */}

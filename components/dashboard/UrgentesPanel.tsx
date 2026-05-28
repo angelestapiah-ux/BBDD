@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { Phone, Mail, MessageCircle, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Phone, Mail, MessageCircle, AlertTriangle, CheckCircle2, Sparkles, Copy, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -155,10 +155,89 @@ function ContactarPanel({ prospecto, onSaved, onClose }: {
   )
 }
 
+// ─── Genera pregunta activadora PNL ──────────────────────────────────────
+function generarMensajePNL(nombre: string, canal: string | null): string {
+  const primerNombre = nombre.split(' ')[0]
+  const preguntas = [
+    `Hola ${primerNombre} 🌟 ¿Qué es lo que más te gustaría transformar en tu vida en este momento?`,
+    `Hola ${primerNombre} ✨ Si pudieras dar un paso adelante hoy, ¿hacia qué área de tu vida lo darías?`,
+    `${primerNombre}, cuéntame — ¿qué está pasando en tu vida que te trajo a conocer Renova PNL?`,
+    `Hola ${primerNombre} 💫 ¿Qué resultado te gustaría celebrar al terminar este año?`,
+    `${primerNombre}, me encantaría saber — ¿qué es lo que más valoras al momento de elegir un programa de desarrollo personal?`,
+  ]
+  // Elegir pregunta semideterminista según el nombre (no cambia entre cargas)
+  const idx = nombre.charCodeAt(0) % preguntas.length
+  return preguntas[idx]
+}
+
+// ─── Panel con mensaje PNL sugerido ──────────────────────────────────────
+function MensajePNLPanel({ prospecto, onClose }: {
+  prospecto: ProspectoUrgente
+  onClose: () => void
+}) {
+  const [copiado, setCopiado] = useState(false)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const mensaje = generarMensajePNL(prospecto.nombre, prospecto.procedencia)
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        onClose()
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [onClose])
+
+  function copiar() {
+    navigator.clipboard.writeText(mensaje).then(() => {
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    })
+  }
+
+  return (
+    <div
+      ref={panelRef}
+      className="absolute right-0 top-full mt-1 z-50 bg-white rounded-xl shadow-xl border border-orange-200 p-3 w-72"
+      onClick={e => e.stopPropagation()}
+    >
+      <div className="flex items-center gap-1.5 mb-2">
+        <Sparkles size={12} className="text-orange-500" />
+        <p className="text-xs font-semibold text-orange-700">Mensaje PNL sugerido</p>
+      </div>
+      <p className="text-xs text-gray-600 leading-relaxed bg-orange-50 rounded-lg p-2.5 mb-2 border border-orange-100">
+        {mensaje}
+      </p>
+      <div className="flex gap-1.5">
+        <button
+          onClick={onClose}
+          className="flex-1 text-xs py-1.5 rounded border border-gray-200 text-gray-500 hover:bg-gray-50"
+        >
+          Cerrar
+        </button>
+        <button
+          onClick={copiar}
+          className={cn(
+            'flex-1 flex items-center justify-center gap-1 text-xs py-1.5 rounded font-medium transition-colors',
+            copiado
+              ? 'bg-green-600 text-white'
+              : 'bg-orange-600 hover:bg-orange-700 text-white'
+          )}
+        >
+          {copiado ? <Check size={12} /> : <Copy size={12} />}
+          {copiado ? 'Copiado' : 'Copiar'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export function UrgentesPanel() {
   const [datos, setDatos] = useState<UrgentesResponse | null>(null)
   const [cargando, setCargando] = useState(true)
   const [contactandoId, setContactandoId] = useState<string | null>(null)
+  const [mensajePNLId, setMensajePNLId] = useState<string | null>(null)
 
   const cargarDatos = () => {
     fetch('/api/dashboard/urgentes')
@@ -313,6 +392,7 @@ export function UrgentesPanel() {
                             onClick={e => {
                               e.stopPropagation()
                               setContactandoId(isContactandoOpen ? null : p.id)
+                              setMensajePNLId(null)
                             }}
                             title="Registrar contacto"
                             className={cn(
@@ -333,6 +413,35 @@ export function UrgentesPanel() {
                             />
                           )}
                         </div>
+
+                        {/* Botón mensaje PNL sugerido (para prospectos +48h) */}
+                        {(p.semaforo === 'rojo' || p.semaforo === 'ambar') && (
+                          <div className="relative">
+                            <button
+                              onClick={e => {
+                                e.stopPropagation()
+                                setMensajePNLId(mensajePNLId === p.id ? null : p.id)
+                                setContactandoId(null)
+                              }}
+                              title="Sugerir mensaje PNL"
+                              className={cn(
+                                'p-1 rounded transition-colors',
+                                mensajePNLId === p.id
+                                  ? 'text-orange-600 bg-orange-100'
+                                  : 'text-gray-400 hover:text-orange-500 hover:bg-orange-50'
+                              )}
+                            >
+                              <Sparkles size={13} />
+                            </button>
+
+                            {mensajePNLId === p.id && (
+                              <MensajePNLPanel
+                                prospecto={p}
+                                onClose={() => setMensajePNLId(null)}
+                              />
+                            )}
+                          </div>
+                        )}
                       </div>
                     </td>
                   </tr>
