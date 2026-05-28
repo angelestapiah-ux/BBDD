@@ -348,7 +348,7 @@ export default function SeguimientosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(changes),
       })
-      if (res.ok) ok++ else fail++
+      if (res.ok) { ok++ } else { fail++ }
     }
     setSavingDrafts(false)
     if (fail === 0) {
