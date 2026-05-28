@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { generarEmailBriefing, BriefingData, EtapaFunnelItem } from '@/lib/email-briefing'
 
-// ─── Constantes ───────────────────────────────────────────────────────────────
+// ─── Constantes ──────────────────────────────────────────────────────────────
 
 const ETAPAS_ORDEN = [
   { etapa: 'nuevo', label: 'Nuevo' },
@@ -149,7 +149,6 @@ export async function GET(req: NextRequest) {
 
   // ── Prospectos sin contacto ───────────────────────────────────────────────
 
-  // Obtener ids con seguimiento reciente (post-48h)
   type ProspectoRow = {
     id: string
     nombre?: string | null
@@ -249,4 +248,3 @@ export async function GET(req: NextRequest) {
     },
   })
 }
- 
