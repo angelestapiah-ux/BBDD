@@ -128,3 +128,152 @@
     @apply font-sans;
   }
 }
+
+/* ═══════════════════════════════════════════════════════
+   TEMA DORADO — Renovapp Gold Edition
+   Se activa con: document.documentElement.setAttribute('data-theme', 'gold')
+   ═══════════════════════════════════════════════════════ */
+
+[data-theme="gold"] {
+  color-scheme: dark;
+}
+
+/* — Fondos principales — */
+[data-theme="gold"] body,
+[data-theme="gold"] .bg-gray-50 { background-color: #0f0f0f !important; }
+[data-theme="gold"] .bg-white   { background-color: #1a1a1a !important; }
+[data-theme="gold"] .bg-gray-100 { background-color: #252525 !important; }
+[data-theme="gold"] .bg-gray-200 { background-color: #333333 !important; }
+
+/* — Bordes — */
+[data-theme="gold"] .border-gray-100 { border-color: #202020 !important; }
+[data-theme="gold"] .border-gray-200 { border-color: #2a2a2a !important; }
+[data-theme="gold"] .border-gray-300 { border-color: #383838 !important; }
+[data-theme="gold"] .divide-gray-200 > * + * { border-color: #2a2a2a !important; }
+
+/* — Texto — */
+[data-theme="gold"] .text-gray-900 { color: #f0e8d0 !important; }
+[data-theme="gold"] .text-gray-800 { color: #d8c8a8 !important; }
+[data-theme="gold"] .text-gray-700 { color: #c4b48a !important; }
+[data-theme="gold"] .text-gray-600 { color: #a09070 !important; }
+[data-theme="gold"] .text-gray-500 { color: #7a7060 !important; }
+[data-theme="gold"] .text-gray-400 { color: #5a5040 !important; }
+
+/* — Naranja → Dorado — */
+[data-theme="gold"] .text-orange-700  { color: #d4a820 !important; }
+[data-theme="gold"] .text-orange-600  { color: #c9a227 !important; }
+[data-theme="gold"] .text-orange-500  { color: #c9a227 !important; }
+[data-theme="gold"] .bg-orange-50     { background-color: #1a1400 !important; }
+[data-theme="gold"] .bg-orange-100    { background-color: #221a00 !important; }
+[data-theme="gold"] .bg-orange-600    { background-color: #b8921f !important; }
+[data-theme="gold"] .bg-orange-700    { background-color: #a07d18 !important; }
+[data-theme="gold"] .border-orange-200 { border-color: #3a2e08 !important; }
+[data-theme="gold"] .border-orange-300 { border-color: #c9a227 !important; }
+
+/* — Hover states — */
+[data-theme="gold"] .hover\:bg-gray-50:hover       { background-color: #1e1e1e !important; }
+[data-theme="gold"] .hover\:bg-gray-100:hover      { background-color: #242424 !important; }
+[data-theme="gold"] .hover\:bg-orange-50:hover     { background-color: #1a1400 !important; }
+[data-theme="gold"] .hover\:text-orange-600:hover  { color: #c9a227 !important; }
+[data-theme="gold"] .hover\:text-gray-900:hover    { color: #f0e8d0 !important; }
+[data-theme="gold"] .hover\:border-orange-300:hover { border-color: #c9a227 !important; }
+[data-theme="gold"] .hover\:shadow-md:hover        { box-shadow: 0 4px 24px rgba(201, 162, 39, 0.12) !important; }
+[data-theme="gold"] .hover\:bg-red-50:hover        { background-color: #1a0a0a !important; }
+[data-theme="gold"] .hover\:text-red-600:hover     { color: #e05050 !important; }
+
+/* — Sombras — */
+[data-theme="gold"] .shadow-sm { box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6) !important; }
+
+/* — Colores de estado (ajustados para fondo oscuro) — */
+[data-theme="gold"] .bg-green-50   { background-color: #0a1a0a !important; }
+[data-theme="gold"] .bg-green-100  { background-color: #0d200d !important; }
+[data-theme="gold"] .text-green-600 { color: #4ade80 !important; }
+[data-theme="gold"] .text-green-700 { color: #22c55e !important; }
+[data-theme="gold"] .text-green-500 { color: #4ade80 !important; }
+[data-theme="gold"] .border-green-200 { border-color: #14401a !important; }
+
+[data-theme="gold"] .bg-yellow-50   { background-color: #1a1200 !important; }
+[data-theme="gold"] .bg-yellow-100  { background-color: #221800 !important; }
+[data-theme="gold"] .text-yellow-600 { color: #fbbf24 !important; }
+[data-theme="gold"] .text-yellow-700 { color: #f59e0b !important; }
+[data-theme="gold"] .border-yellow-200 { border-color: #3a2e00 !important; }
+
+[data-theme="gold"] .bg-blue-50    { background-color: #0a0f1a !important; }
+[data-theme="gold"] .bg-blue-100   { background-color: #0d1422 !important; }
+[data-theme="gold"] .text-blue-600 { color: #60a5fa !important; }
+[data-theme="gold"] .text-blue-700 { color: #3b82f6 !important; }
+[data-theme="gold"] .border-blue-200 { border-color: #1a2a44 !important; }
+
+[data-theme="gold"] .bg-red-50    { background-color: #1a0a0a !important; }
+[data-theme="gold"] .text-red-500 { color: #f87171 !important; }
+[data-theme="gold"] .text-red-700 { color: #f87171 !important; }
+[data-theme="gold"] .border-red-200 { border-color: #4a1a1a !important; }
+
+[data-theme="gold"] .bg-indigo-100 { background-color: #0f0f1a !important; }
+[data-theme="gold"] .text-indigo-700 { color: #a5b4fc !important; }
+
+/* — Inputs y formularios — */
+[data-theme="gold"] input:not([type="checkbox"]):not([type="radio"]),
+[data-theme="gold"] textarea,
+[data-theme="gold"] select {
+  background-color: #1a1a1a !important;
+  border-color: #2a2a2a !important;
+  color: #f0e8d0 !important;
+}
+[data-theme="gold"] input::placeholder,
+[data-theme="gold"] textarea::placeholder { color: #5a5040 !important; }
+[data-theme="gold"] input:focus,
+[data-theme="gold"] textarea:focus,
+[data-theme="gold"] select:focus {
+  border-color: #c9a227 !important;
+  box-shadow: 0 0 0 2px rgba(201, 162, 39, 0.2) !important;
+  outline: none !important;
+}
+
+/* — Sidebar dorado — */
+[data-theme="gold"] aside {
+  background-color: #111111 !important;
+  border-color: #2a2a2a !important;
+}
+[data-theme="gold"] aside h1 { color: #c9a227 !important; }
+[data-theme="gold"] aside h1 + p { color: #5a5040 !important; }
+
+/* — Skeletons / loaders — */
+[data-theme="gold"] .animate-pulse { background-color: #252525 !important; }
+
+/* — Scrollbar estilo dorado — */
+[data-theme="gold"] ::-webkit-scrollbar { width: 5px; height: 5px; }
+[data-theme="gold"] ::-webkit-scrollbar-track { background: #0f0f0f; }
+[data-theme="gold"] ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 4px; }
+[data-theme="gold"] ::-webkit-scrollbar-thumb:hover { background: #c9a227; }
+
+/* — Focus visible — */
+[data-theme="gold"] *:focus-visible { outline-color: #c9a227 !important; }
+
+/* — Ring / focus rings de Tailwind — */
+[data-theme="gold"] .focus\:ring-orange-500:focus,
+[data-theme="gold"] .focus\:border-orange-500:focus {
+  --tw-ring-color: #c9a227 !important;
+  border-color: #c9a227 !important;
+}
+
+/* — Tablas — */
+[data-theme="gold"] thead tr,
+[data-theme="gold"] thead th {
+  background-color: #141414 !important;
+  color: #c9a227 !important;
+  border-color: #2a2a2a !important;
+}
+[data-theme="gold"] tbody tr { border-color: #232323 !important; }
+[data-theme="gold"] tbody tr:hover { background-color: #1e1e1e !important; }
+
+/* — Badges de etapa funnel — */
+[data-theme="gold"] .bg-gray-200.text-gray-700    { background-color: #252525 !important; color: #a09070 !important; }
+[data-theme="gold"] .bg-blue-100.text-blue-700    { background-color: #0d1422 !important; color: #60a5fa !important; }
+[data-theme="gold"] .bg-indigo-100.text-indigo-700 { background-color: #0f0f1a !important; color: #a5b4fc !important; }
+[data-theme="gold"] .bg-yellow-100.text-yellow-700 { background-color: #221800 !important; color: #fbbf24 !important; }
+[data-theme="gold"] .bg-orange-100.text-orange-700 { background-color: #1a1400 !important; color: #c9a227 !important; }
+[data-theme="gold"] .bg-green-100.text-green-700  { background-color: #0d200d !important; color: #4ade80 !important; }
+
+/* — Ring en badges hover — */
+[data-theme="gold"] .group-hover\:ring-1 { --tw-ring-color: #c9a22760 !important; }
