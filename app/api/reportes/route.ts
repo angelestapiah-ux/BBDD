@@ -70,5 +70,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(resultado)
   }
 
+  if (tipo === 'pagos_pendientes') {
+    const { data, error } = await supabase
+      .from('pagos')
+      .select('*, clientes(id, nombre, correo, telefono)')
+      .in('estado', ['pendiente', 'parcial'])
+      .order('monto', { ascending: false })
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const total = (data || []).reduce((sum: number, p: any) => sum + (p.monto || 0), 0)
+    return NextResponse.json({ pagos: data, total })
+  }
+
   return NextResponse.json({ error: 'Tipo de reporte no válido' }, { status: 400 })
 }

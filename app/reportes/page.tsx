@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Search, Download } from 'lucide-react'
+import { Search, Download, Mail, Phone, MessageSquare } from 'lucide-react'
 import * as XLSX from 'xlsx'
 import { Actividad } from '@/lib/types'
 
@@ -21,6 +21,7 @@ export default function ReportesPage() {
   const [pagosData, setPagosData] = useState<{ pagos: Record<string, string>[]; total: number } | null>(null)
   const [cumpleaneros, setCumpleaneros] = useState<Record<string, string>[]>([])
   const [procedencias, setProcedencias] = useState<{ procedencia: string; cantidad: number }[]>([])
+  const [pendientesData, setPendientesData] = useState<{ pagos: Record<string, unknown>[]; total: number } | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
   const [actividades, setActividades] = useState<Actividad[]>([])
 
@@ -47,6 +48,30 @@ export default function ReportesPage() {
     const res = await fetch(`/api/reportes?tipo=cumpleanos_mes&mes=${mesQ}`)
     setCumpleaneros(await res.json() || [])
     setLoading(null)
+  }
+
+  async function cargarPendientes() {
+    setLoading('pendientes')
+    const res = await fetch('/api/reportes?tipo=pagos_pendientes')
+    setPendientesData(await res.json())
+    setLoading(null)
+  }
+
+  function exportarPendientes(data: Record<string, unknown>[], nombre: string) {
+    const filas = data.map(p => ({
+      'Cliente': (p.clientes as Record<string, string>)?.nombre || '—',
+      'Correo': (p.clientes as Record<string, string>)?.correo || '',
+      'Teléfono': (p.clientes as Record<string, string>)?.telefono || '',
+      'Actividad': p.actividad_nombre as string || '',
+      'Monto': p.monto ?? '',
+      'Estado': p.estado as string || '',
+      'Fecha pago': p.fecha_pago as string || '',
+      'Notas': p.notas as string || '',
+    }))
+    const ws = XLSX.utils.json_to_sheet(filas)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Por cobrar')
+    XLSX.writeFile(wb, `${nombre}.xlsx`)
   }
 
   async function buscarProcedencias() {
@@ -133,13 +158,123 @@ export default function ReportesPage() {
         <h2 className="text-2xl font-bold text-gray-900">Reportes</h2>
       </div>
 
-      <Tabs defaultValue="asistentes">
-        <TabsList className="mb-4">
+      <Tabs defaultValue="pendientes">
+        <TabsList className="mb-4 flex-wrap h-auto gap-1">
+          <TabsTrigger value="pendientes" className="text-orange-700 data-[state=active]:bg-orange-600 data-[state=active]:text-white">💰 Por cobrar</TabsTrigger>
           <TabsTrigger value="asistentes">Asistentes por actividad</TabsTrigger>
           <TabsTrigger value="pagos">Pagos por actividad</TabsTrigger>
           <TabsTrigger value="cumpleanos">Cumpleaños del mes</TabsTrigger>
           <TabsTrigger value="procedencias">Procedencias</TabsTrigger>
         </TabsList>
+
+        {/* ─── Por cobrar ─────────────────────────────────────────────── */}
+        <TabsContent value="pendientes">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Pagos pendientes y parciales</CardTitle>
+                <p className="text-xs text-gray-400 mt-0.5">Todos los pagos sin confirmar — ordenados por monto</p>
+              </div>
+              <Button onClick={cargarPendientes} size="sm" disabled={loading === 'pendientes'}>
+                <Search className="h-4 w-4 mr-2" /> {loading === 'pendientes' ? 'Cargando...' : 'Cargar'}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {!pendientesData && loading !== 'pendientes' && (
+                <p className="text-sm text-gray-400">Haz clic en Cargar para ver los pagos por cobrar</p>
+              )}
+              {loading === 'pendientes' && <p className="text-sm text-gray-400 animate-pulse">Cargando...</p>}
+              {pendientesData && (
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-orange-700">
+                        Total por cobrar: ${pendientesData.total.toLocaleString('es-CL')}
+                      </span>
+                      <Badge variant="secondary">{pendientesData.pagos.length} registro{pendientesData.pagos.length !== 1 ? 's' : ''}</Badge>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => exportarPendientes(pendientesData.pagos, 'por_cobrar')}>
+                      <Download className="h-3 w-3 mr-1" /> Exportar Excel
+                    </Button>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-orange-50">
+                        <tr>
+                          <th className="text-left p-2 font-medium text-gray-600">Cliente</th>
+                          <th className="text-left p-2 font-medium text-gray-600">Actividad</th>
+                          <th className="text-right p-2 font-medium text-gray-600">Monto</th>
+                          <th className="text-left p-2 font-medium text-gray-600">Estado</th>
+                          <th className="text-left p-2 font-medium text-gray-600">Contacto</th>
+                          <th className="text-left p-2 font-medium text-gray-600">Notas</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {pendientesData.pagos.map((p, i) => {
+                          const cliente = p.clientes as Record<string, string> | null
+                          return (
+                            <tr key={i} className="hover:bg-orange-50/40 transition-colors">
+                              <td className="p-2 font-medium">
+                                {cliente?.id ? (
+                                  <a href={`/clientes/${cliente.id}`} className="hover:text-orange-600 hover:underline">
+                                    {cliente.nombre || '—'}
+                                  </a>
+                                ) : (cliente?.nombre || '—')}
+                              </td>
+                              <td className="p-2 text-gray-600">{p.actividad_nombre as string || '—'}</td>
+                              <td className="p-2 text-right font-semibold text-gray-800">
+                                {p.monto ? `$${Number(p.monto).toLocaleString('es-CL')}` : '—'}
+                              </td>
+                              <td className="p-2">
+                                <Badge variant={p.estado === 'parcial' ? 'outline' : 'secondary'} className={p.estado === 'parcial' ? 'border-yellow-400 text-yellow-700' : ''}>
+                                  {p.estado as string}
+                                </Badge>
+                              </td>
+                              <td className="p-2">
+                                <div className="flex items-center gap-1">
+                                  {cliente?.telefono && (
+                                    <a
+                                      href={`https://wa.me/${(cliente.telefono).replace(/\D/g, '')}`}
+                                      target="_blank" rel="noopener noreferrer"
+                                      title="WhatsApp"
+                                      className="p-1 rounded text-gray-400 hover:text-green-600 hover:bg-green-50 transition-colors"
+                                    >
+                                      <MessageSquare size={13} />
+                                    </a>
+                                  )}
+                                  {cliente?.telefono && (
+                                    <a
+                                      href={`tel:${cliente.telefono}`}
+                                      title="Llamar"
+                                      className="p-1 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                                    >
+                                      <Phone size={13} />
+                                    </a>
+                                  )}
+                                  {cliente?.correo && (
+                                    <a
+                                      href={`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(cliente.correo)}`}
+                                      target="_blank" rel="noopener noreferrer"
+                                      title="Enviar correo"
+                                      className="p-1 rounded text-gray-400 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+                                    >
+                                      <Mail size={13} />
+                                    </a>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-2 text-gray-400 text-xs max-w-[180px] truncate">{p.notas as string || '—'}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="asistentes">
           <Card>
