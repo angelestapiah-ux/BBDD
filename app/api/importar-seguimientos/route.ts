@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import * as XLSX from 'xlsx'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 interface FilaSeguimiento {
   clienteId: string
@@ -34,7 +35,13 @@ function mapearColumnas(headerRow: unknown[]): Record<string, number> {
   return map
 }
 
-async function buscarCliente(nombre: string, rut: string, correo: string, telefono: string): Promise<string | null> {
+async function buscarCliente(
+  supabase: SupabaseClient,
+  nombre: string,
+  rut: string,
+  correo: string,
+  telefono: string
+): Promise<string | null> {
   // 1. Por correo
   if (correo) {
     const { data } = await supabase.from('clientes').select('id').eq('correo', correo).maybeSingle()
@@ -60,6 +67,8 @@ async function buscarCliente(nombre: string, rut: string, correo: string, telefo
 }
 
 export async function POST(req: NextRequest) {
+  const supabase = createSupabaseAdminClient()
+
   const formData = await req.formData()
   const file = formData.get('file') as File | null
   if (!file) return NextResponse.json({ error: 'No se recibió archivo' }, { status: 400 })
@@ -101,7 +110,7 @@ export async function POST(req: NextRequest) {
       const telefono = cols.telefono !== undefined ? String(row[cols.telefono] ?? '').trim() : ''
       const nuevoComentario = cols.nuevo_comentario !== undefined ? String(row[cols.nuevo_comentario] ?? '').trim() : ''
 
-      const clienteId = await buscarCliente(nombre, rut, correo, telefono)
+      const clienteId = await buscarCliente(supabase, nombre, rut, correo, telefono)
       if (!clienteId) {
         noEncontrados++
         errores.push(`No se encontró cliente: "${nombre}"`)
