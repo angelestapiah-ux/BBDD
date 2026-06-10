@@ -158,6 +158,11 @@ export default function ClientesPage() {
   const [vista, setVista] = useState<'lista' | 'kanban'>('lista')
   const [contactadoId, setContactadoId] = useState<string | null>(null)
   const [contactadoPos, setContactadoPos] = useState<{ top: number; right: number } | null>(null)
+  // Acciones masivas
+  const [seleccion, setSeleccion] = useState<Set<string>>(new Set())
+  const [tiposDisponibles, setTiposDisponibles] = useState<string[]>([])
+  const [bulkEliminarOpen, setBulkEliminarOpen] = useState(false)
+  const [bulkSaving, setBulkSaving] = useState(false)
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
   const exportMenuRef = useRef<HTMLDivElement>(null)
   const limit = 50
@@ -244,6 +249,52 @@ export default function ClientesPage() {
     } else {
       const err = await res.json()
       toast.error(err.error || 'Error al crear cliente')
+    }
+  }
+
+  // ─── Acciones masivas ────────────────────────────────────────────────
+  function toggleSeleccion(id: string) {
+    setSeleccion(prev => {
+      const s = new Set(prev)
+      if (s.has(id)) s.delete(id); else s.add(id)
+      return s
+    })
+  }
+
+  function toggleSeleccionTodos() {
+    setSeleccion(prev =>
+      prev.size === clientes.length ? new Set() : new Set(clientes.map(c => c.id))
+    )
+  }
+
+  // Limpiar selección al cambiar de página/filtros
+  useEffect(() => { setSeleccion(new Set()) }, [page, q, etapaFilter])
+
+  // Tipos de cliente para la acción masiva "asignar tipo"
+  useEffect(() => {
+    fetch('/api/tipos-cliente')
+      .then(r => r.ok ? r.json() : [])
+      .then(d => setTiposDisponibles(Array.isArray(d) ? d.map((t: { nombre: string }) => t.nombre) : []))
+      .catch(() => {})
+  }, [])
+
+  async function accionMasiva(payload: { accion: string; etapa?: string; tipo?: string }) {
+    setBulkSaving(true)
+    const res = await fetch('/api/clientes/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: Array.from(seleccion), ...payload }),
+    })
+    setBulkSaving(false)
+    if (res.ok) {
+      const json = await res.json()
+      toast.success(`${json.afectados} cliente${json.afectados === 1 ? '' : 's'} actualizado${json.afectados === 1 ? '' : 's'}`)
+      setSeleccion(new Set())
+      setBulkEliminarOpen(false)
+      fetchClientes()
+    } else {
+      const err = await res.json().catch(() => ({}))
+      toast.error(err.error || 'Error en la acción masiva')
     }
   }
 
@@ -375,6 +426,15 @@ export default function ClientesPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
+                  <th className="px-3 py-3 w-8">
+                    <input
+                      type="checkbox"
+                      checked={clientes.length > 0 && seleccion.size === clientes.length}
+                      onChange={toggleSeleccionTodos}
+                      className="h-3.5 w-3.5 accent-orange-600 cursor-pointer"
+                      title="Seleccionar todos"
+                    />
+                  </th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600 w-6"></th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Nombre</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Contacto</th>
@@ -390,7 +450,17 @@ export default function ClientesPage() {
                   const isContactadoOpen = contactadoId === c.id
 
                   return (
-                    <tr key={c.id} className="hover:bg-gray-50 transition-colors group">
+                    <tr key={c.id} className={`hover:bg-gray-50 transition-colors group ${seleccion.has(c.id) ? 'bg-orange-50/50' : ''}`}>
+                      {/* Checkbox de selección */}
+                      <td className="px-3 py-3">
+                        <input
+                          type="checkbox"
+                          checked={seleccion.has(c.id)}
+                          onChange={() => toggleSeleccion(c.id)}
+                          className="h-3.5 w-3.5 accent-orange-600 cursor-pointer"
+                        />
+                      </td>
+
                       {/* Semáforo dot */}
                       <td className="px-4 py-3">
                         <div
@@ -572,6 +642,93 @@ export default function ClientesPage() {
           </div>
         )
       })()}
+
+      {/* Barra flotante de acciones masivas */}
+      {seleccion.size > 0 && (
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[8000] bg-white rounded-2xl shadow-2xl border border-gray-200 px-4 py-3 flex items-center gap-3 flex-wrap">
+          <span className="text-sm font-semibold text-gray-800">
+            {seleccion.size} seleccionado{seleccion.size === 1 ? '' : 's'}
+          </span>
+
+          <div className="h-5 w-px bg-gray-200" />
+
+          {/* Cambiar etapa */}
+          <div className="relative">
+            <select
+              disabled={bulkSaving}
+              value=""
+              onChange={e => e.target.value && accionMasiva({ accion: 'etapa', etapa: e.target.value })}
+              className="h-8 pl-2 pr-7 rounded-lg border border-gray-200 text-xs text-gray-600 bg-white focus:outline-none focus:border-orange-400 appearance-none cursor-pointer"
+            >
+              <option value="">Cambiar etapa...</option>
+              {ETAPAS_FUNNEL.map(e => (
+                <option key={e.value} value={e.value}>{e.label}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
+          </div>
+
+          {/* Asignar tipo */}
+          {tiposDisponibles.length > 0 && (
+            <div className="relative">
+              <select
+                disabled={bulkSaving}
+                value=""
+                onChange={e => e.target.value && accionMasiva({ accion: 'tipo', tipo: e.target.value })}
+                className="h-8 pl-2 pr-7 rounded-lg border border-gray-200 text-xs text-gray-600 bg-white focus:outline-none focus:border-orange-400 appearance-none cursor-pointer"
+              >
+                <option value="">Asignar tipo...</option>
+                {tiposDisponibles.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
+            </div>
+          )}
+
+          {/* Eliminar */}
+          <button
+            disabled={bulkSaving}
+            onClick={() => setBulkEliminarOpen(true)}
+            className="h-8 px-3 rounded-lg border border-red-200 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+          >
+            Eliminar
+          </button>
+
+          <button
+            onClick={() => setSeleccion(new Set())}
+            title="Limpiar selección"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+          >
+            <X size={14} />
+          </button>
+
+          {bulkSaving && <span className="text-xs text-gray-400">Aplicando...</span>}
+        </div>
+      )}
+
+      {/* Confirmación de eliminación masiva */}
+      {bulkEliminarOpen && (
+        <div className="fixed inset-0 z-[9000] bg-black/40 flex items-center justify-center p-4" onClick={() => setBulkEliminarOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-sm w-full p-5" onClick={e => e.stopPropagation()}>
+            <p className="text-sm font-semibold text-red-600 mb-2">⚠ Eliminar {seleccion.size} cliente{seleccion.size === 1 ? '' : 's'}</p>
+            <p className="text-sm text-gray-600 mb-4">
+              Esta acción también elimina sus seguimientos, pagos y asistencias, y <span className="font-semibold">no se puede deshacer</span>.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setBulkEliminarOpen(false)}>Cancelar</Button>
+              <Button
+                size="sm"
+                disabled={bulkSaving}
+                onClick={() => accionMasiva({ accion: 'eliminar' })}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {bulkSaving ? 'Eliminando...' : 'Sí, eliminar'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ClienteFormDialog
         open={dialogOpen}
