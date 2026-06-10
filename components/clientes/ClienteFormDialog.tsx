@@ -10,7 +10,17 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { TiposClienteSelect } from './TiposClienteSelect'
 import { ETAPAS_FUNNEL, EtapaFunnel } from '@/lib/types'
-import { ChevronDown, ChevronUp, Zap } from 'lucide-react'
+import { ChevronDown, ChevronUp, Zap, AlertTriangle } from 'lucide-react'
+import Link from 'next/link'
+
+interface Duplicado {
+  id: string
+  nombre: string
+  telefono: string | null
+  correo: string | null
+  etapa: string | null
+  motivo: string
+}
 
 const ESTADOS_CIVILES = ['Soltero/a', 'Casado/a', 'Separado/a', 'Divorciado/a', 'Acuerdo Unión Civil', 'Viudo/a'] as const
 
@@ -32,10 +42,39 @@ export function ClienteFormDialog({ open, onOpenChange, onSubmit, title, initial
   // Quick mode is default when creating (no initial data), full mode for editing
   const [modoRapido, setModoRapido] = useState(!initial)
 
+  const [duplicados, setDuplicados] = useState<Duplicado[]>([])
+
   useEffect(() => {
     setForm(initial || {})
     setModoRapido(!initial)
+    setDuplicados([])
   }, [initial, open])
+
+  // Detección de duplicados en vivo (debounce 500ms) mientras se escribe
+  // nombre, teléfono o correo. Al editar, se excluye al propio cliente.
+  useEffect(() => {
+    if (!open) return
+    const nombre = form.nombre || ''
+    const telefono = form.telefono || ''
+    const correo = form.correo || ''
+    if (!telefono && !correo && nombre.length < 5) { setDuplicados([]); return }
+
+    const t = setTimeout(async () => {
+      const params = new URLSearchParams()
+      if (nombre) params.set('nombre', nombre)
+      if (telefono) params.set('telefono', telefono)
+      if (correo) params.set('correo', correo)
+      if (initial?.id) params.set('excluir', initial.id)
+      try {
+        const res = await fetch(`/api/clientes/duplicados?${params}`)
+        if (res.ok) {
+          const json = await res.json()
+          setDuplicados(json.duplicados || [])
+        }
+      } catch { /* sin red: no bloquear el formulario */ }
+    }, 500)
+    return () => clearTimeout(t)
+  }, [open, form.nombre, form.telefono, form.correo, initial?.id])
 
   const esPaciente = (form.tipos_cliente || []).some(t =>
     ['Paciente', 'Paciente Fabiola', 'Paciente Rodolfo'].includes(t)
@@ -70,6 +109,37 @@ export function ClienteFormDialog({ open, onOpenChange, onSubmit, title, initial
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+
+          {/* Alerta de posibles duplicados */}
+          {duplicados.length > 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="flex items-center gap-1.5 text-xs font-semibold text-yellow-800 mb-1.5">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                {duplicados.length === 1 ? 'Ya existe un cliente parecido' : `Ya existen ${duplicados.length} clientes parecidos`}
+              </p>
+              <div className="space-y-1">
+                {duplicados.map(d => (
+                  <div key={d.id} className="flex items-center justify-between gap-2 text-xs">
+                    <span className="text-yellow-900 truncate">
+                      <span className="font-medium">{d.nombre}</span>
+                      {' '}({d.motivo})
+                      {d.telefono && ` · ${d.telefono}`}
+                    </span>
+                    <Link
+                      href={`/clientes/${d.id}`}
+                      target="_blank"
+                      className="text-orange-600 hover:underline font-medium shrink-0"
+                    >
+                      Ver perfil →
+                    </Link>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-yellow-700 mt-1.5">
+                Si es la misma persona, mejor actualiza su perfil en vez de crearla de nuevo.
+              </p>
+            </div>
+          )}
 
           {modoRapido ? (
             /* ─── MODO RÁPIDO: 3 campos ─── */
