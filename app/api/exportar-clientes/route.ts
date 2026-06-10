@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import ExcelJS from 'exceljs'
 
 const TIPOS = '"llamada,whatsapp,correo,visita,otro"'
@@ -14,6 +14,7 @@ function tipoCol(seg: number) { return CLIENTE_COLS + (seg - 1) * 4 + 1 }
 function responsableCol(seg: number) { return CLIENTE_COLS + (seg - 1) * 4 + 3 }
 
 export async function GET() {
+  const supabase = createSupabaseAdminClient()
   const [clientesRes, asistenciasRes] = await Promise.all([
     supabase.from('clientes').select('*').order('nombre'),
     supabase.from('asistencias').select('cliente_id, actividad_nombre').order('fecha_asistencia'),

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createSupabaseAdminClient } from '@/lib/supabase-server'
 
 export async function GET() {
+  const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase
     .from('tipos_cliente')
     .select('*')
@@ -11,6 +12,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const supabase = createSupabaseAdminClient()
   const { nombre } = await req.json()
   if (!nombre) return NextResponse.json({ error: 'Nombre requerido' }, { status: 400 })
   const { data: max } = await supabase.from('tipos_cliente').select('orden').order('orden', { ascending: false }).limit(1).single()

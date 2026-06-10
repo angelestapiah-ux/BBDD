@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createSupabaseAdminClient } from '@/lib/supabase-server'
 
 export async function GET(req: NextRequest) {
+  const supabase = createSupabaseAdminClient()
   const { searchParams } = new URL(req.url)
   const tipo = searchParams.get('tipo')
 

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createSupabaseAdminClient } from '@/lib/supabase-server'
 
 export async function GET() {
+  const supabase = createSupabaseAdminClient()
   // 4 consultas en paralelo — eficiente sin importar cuántos clientes haya
   const [clientesRes, asistenciasRes, pagosRes, seguimientosRes] = await Promise.all([
     supabase.from('clientes').select('*').order('nombre'),

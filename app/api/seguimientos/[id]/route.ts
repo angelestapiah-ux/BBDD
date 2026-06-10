@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createSupabaseAdminClient } from '@/lib/supabase-server'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const supabase = createSupabaseAdminClient()
   const { id } = await params
   const body = await req.json()
   const { data, error } = await supabase.from('seguimientos').update(body).eq('id', id).select().single()
@@ -10,6 +11,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const supabase = createSupabaseAdminClient()
   const { id } = await params
   const { error } = await supabase.from('seguimientos').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
