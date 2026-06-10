@@ -43,12 +43,31 @@ export function ClienteFormDialog({ open, onOpenChange, onSubmit, title, initial
   const [modoRapido, setModoRapido] = useState(!initial)
 
   const [duplicados, setDuplicados] = useState<Duplicado[]>([])
+  // Tras detectar duplicados al guardar, se exige un segundo click de confirmación
+  const [confirmarDuplicado, setConfirmarDuplicado] = useState(false)
 
   useEffect(() => {
     setForm(initial || {})
     setModoRapido(!initial)
     setDuplicados([])
+    setConfirmarDuplicado(false)
   }, [initial, open])
+
+  async function buscarDuplicados(): Promise<Duplicado[]> {
+    const params = new URLSearchParams()
+    if (form.nombre) params.set('nombre', form.nombre)
+    if (form.telefono) params.set('telefono', form.telefono)
+    if (form.correo) params.set('correo', form.correo)
+    if (initial?.id) params.set('excluir', initial.id)
+    try {
+      const res = await fetch(`/api/clientes/duplicados?${params}`)
+      if (res.ok) {
+        const json = await res.json()
+        return json.duplicados || []
+      }
+    } catch { /* sin red: no bloquear el formulario */ }
+    return []
+  }
 
   // Detección de duplicados en vivo (debounce 500ms) mientras se escribe
   // nombre, teléfono o correo. Al editar, se excluye al propio cliente.
@@ -57,23 +76,14 @@ export function ClienteFormDialog({ open, onOpenChange, onSubmit, title, initial
     const nombre = form.nombre || ''
     const telefono = form.telefono || ''
     const correo = form.correo || ''
+    setConfirmarDuplicado(false)
     if (!telefono && !correo && nombre.length < 5) { setDuplicados([]); return }
 
     const t = setTimeout(async () => {
-      const params = new URLSearchParams()
-      if (nombre) params.set('nombre', nombre)
-      if (telefono) params.set('telefono', telefono)
-      if (correo) params.set('correo', correo)
-      if (initial?.id) params.set('excluir', initial.id)
-      try {
-        const res = await fetch(`/api/clientes/duplicados?${params}`)
-        if (res.ok) {
-          const json = await res.json()
-          setDuplicados(json.duplicados || [])
-        }
-      } catch { /* sin red: no bloquear el formulario */ }
+      setDuplicados(await buscarDuplicados())
     }, 500)
     return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, form.nombre, form.telefono, form.correo, initial?.id])
 
   const esPaciente = (form.tipos_cliente || []).some(t =>
@@ -88,6 +98,19 @@ export function ClienteFormDialog({ open, onOpenChange, onSubmit, title, initial
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
+
+    // Verificación final de duplicados ANTES de guardar (solo al crear).
+    // Cubre el caso de escribir rápido y guardar antes de que aparezca la alerta.
+    if (!initial && !confirmarDuplicado) {
+      const dups = await buscarDuplicados()
+      if (dups.length > 0) {
+        setDuplicados(dups)
+        setConfirmarDuplicado(true)
+        setSaving(false)
+        return
+      }
+    }
+
     // In quick mode, default etapa to 'nuevo' if not set
     const dataToSave = modoRapido ? { etapa: 'nuevo' as EtapaFunnel, ...form } : form
     await onSubmit(dataToSave)
@@ -136,7 +159,9 @@ export function ClienteFormDialog({ open, onOpenChange, onSubmit, title, initial
                 ))}
               </div>
               <p className="text-xs text-yellow-700 mt-1.5">
-                Si es la misma persona, mejor actualiza su perfil en vez de crearla de nuevo.
+                {confirmarDuplicado
+                  ? 'Si estás segura de que es otra persona, presiona "Crear de todos modos".'
+                  : 'Si es la misma persona, mejor actualiza su perfil en vez de crearla de nuevo.'}
               </p>
             </div>
           )}
@@ -373,8 +398,14 @@ export function ClienteFormDialog({ open, onOpenChange, onSubmit, title, initial
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit" disabled={saving} className="bg-orange-600 hover:bg-orange-700">
-              {saving ? 'Guardando...' : 'Guardar'}
+            <Button
+              type="submit"
+              disabled={saving}
+              className={confirmarDuplicado
+                ? 'bg-yellow-600 hover:bg-yellow-700'
+                : 'bg-orange-600 hover:bg-orange-700'}
+            >
+              {saving ? 'Guardando...' : confirmarDuplicado ? '⚠ Crear de todos modos' : 'Guardar'}
             </Button>
           </DialogFooter>
         </form>
