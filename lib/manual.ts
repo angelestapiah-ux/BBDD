@@ -198,6 +198,19 @@ export const MANUAL: EntradaManual[] = [
     ],
   },
   {
+    id: 'tutorial',
+    titulo: 'Capacitarse desde cero (usuarios nuevos)',
+    categoria: 'Configuración',
+    keywords: 'tutorial capacitacion aprender nuevo usuario empezar partir induccion entrenamiento',
+    pasos: [
+      'Ve a "Tutorial" en el menú lateral (ícono de birrete 🎓).',
+      'Avanza por los 5 capítulos en orden: rutina diaria, contactos, clientes y funnel, pagos, y atajos.',
+      'Marca cada capítulo como entendido — tu progreso se guarda automáticamente.',
+      'Toma unos 15 minutos. Al terminar, abre la vista "Hoy" y trabaja tu primera lista real.',
+    ],
+    tip: 'Ideal para el primer día de una persona nueva en el equipo: entregarle su acceso y pedirle que complete el tutorial antes de empezar.',
+  },
+  {
     id: 'editar-eliminar-cliente',
     titulo: 'Editar o eliminar un cliente',
     categoria: 'Clientes',

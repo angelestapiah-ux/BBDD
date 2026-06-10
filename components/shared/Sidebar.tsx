@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Users, Calendar, FileText, Upload, DollarSign, BookOpen, Settings, LayoutDashboard, LogOut, Sun } from 'lucide-react'
+import { Users, Calendar, FileText, Upload, DollarSign, BookOpen, Settings, LayoutDashboard, LogOut, Sun, GraduationCap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getSupabase } from '@/lib/supabase'
 
@@ -16,6 +16,7 @@ const navItems = [
   { href: '/reportes', label: 'Reportes', icon: FileText },
   { href: '/importar', label: 'Importar Excel', icon: Upload },
   { href: '/configuracion', label: 'Configuración', icon: Settings },
+  { href: '/tutorial', label: 'Tutorial', icon: GraduationCap },
 ]
 
 export function Sidebar() {
