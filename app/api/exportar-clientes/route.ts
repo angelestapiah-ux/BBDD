@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requirePermiso } from '@/lib/permisos-server'
 import ExcelJS from 'exceljs'
 
 const TIPOS = '"llamada,whatsapp,correo,visita,otro"'
@@ -14,6 +15,8 @@ function tipoCol(seg: number) { return CLIENTE_COLS + (seg - 1) * 4 + 1 }
 function responsableCol(seg: number) { return CLIENTE_COLS + (seg - 1) * 4 + 3 }
 
 export async function GET() {
+  const bloqueo = await requirePermiso('exportar')
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const [clientesRes, asistenciasRes] = await Promise.all([
     supabase.from('clientes').select('*').order('nombre'),

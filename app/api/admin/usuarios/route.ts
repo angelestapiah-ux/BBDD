@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requirePermiso } from '@/lib/permisos-server'
 
 export async function GET() {
+  const bloqueo = await requirePermiso('configuracion')
+  if (bloqueo) return bloqueo
   const admin = createSupabaseAdminClient()
   const { data, error } = await admin.auth.admin.listUsers()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -15,7 +18,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const { email, password } = await req.json()
+  const bloqueo = await requirePermiso('configuracion')
+  if (bloqueo) return bloqueo
+  const { email, password, rol } = await req.json()
   if (!email || !password) return NextResponse.json({ error: 'Email y contraseña requeridos' }, { status: 400 })
   const admin = createSupabaseAdminClient()
   const { data, error } = await admin.auth.admin.createUser({
@@ -24,5 +29,10 @@ export async function POST(req: NextRequest) {
     email_confirm: true,
   })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Crear el perfil del usuario nuevo (default: operación)
+  const rolValido = ['admin', 'operacion', 'visor'].includes(rol) ? rol : 'operacion'
+  await admin.from('perfiles_usuario').upsert({ user_id: data.user.id, rol: rolValido, permisos_extra: [] })
+
   return NextResponse.json({ id: data.user.id, email: data.user.email }, { status: 201 })
 }

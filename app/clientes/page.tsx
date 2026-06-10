@@ -9,6 +9,7 @@ import { Search, Plus, FileSpreadsheet, FileText, LayoutGrid, List, MessageSquar
 import Link from 'next/link'
 import { ClienteFormDialog } from '@/components/clientes/ClienteFormDialog'
 import { ContactadoPanel } from '@/components/clientes/ContactadoPanel'
+import { usePerfil } from '@/components/shared/usePerfil'
 import { toast } from 'sonner'
 import { exportarClientesExcel, exportarClientesPDF, exportarTodoExcel } from '@/lib/export'
 
@@ -181,6 +182,8 @@ function KanbanView({
 
 // ─── Página principal ─────────────────────────────────────────────────────
 export default function ClientesPage() {
+  const perfil = usePerfil()
+  const puedeMasivas = perfil.permisos.has('masivas') || perfil.permisos.has('eliminar')
   const [clientes, setClientes] = useState<ClienteEnriquecido[]>([])
   const [total, setTotal] = useState(0)
   const [q, setQ] = useState('')
@@ -378,7 +381,8 @@ export default function ClientesPage() {
           <p className="text-sm text-gray-500">{total} clientes en total</p>
         </div>
         <div className="flex gap-2">
-          {/* C3: Dropdown exportación consolidado */}
+          {/* C3: Dropdown exportación consolidado (requiere permiso) */}
+          {perfil.permisos.has('exportar') && (
           <div ref={exportMenuRef} className="relative">
             <Button
               variant="outline"
@@ -414,6 +418,7 @@ export default function ClientesPage() {
               </div>
             )}
           </div>
+          )}
           <Button onClick={() => setDialogOpen(true)} className="bg-orange-600 hover:bg-orange-700">
             <Plus className="h-4 w-4 mr-2" /> Nuevo cliente
           </Button>
@@ -483,15 +488,17 @@ export default function ClientesPage() {
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-3 py-3 w-8">
-                    <input
-                      type="checkbox"
-                      checked={clientes.length > 0 && seleccion.size === clientes.length}
-                      onChange={toggleSeleccionTodos}
-                      className="h-3.5 w-3.5 accent-orange-600 cursor-pointer"
-                      title="Seleccionar todos"
-                    />
-                  </th>
+                  {puedeMasivas && (
+                    <th className="px-3 py-3 w-8">
+                      <input
+                        type="checkbox"
+                        checked={clientes.length > 0 && seleccion.size === clientes.length}
+                        onChange={toggleSeleccionTodos}
+                        className="h-3.5 w-3.5 accent-orange-600 cursor-pointer"
+                        title="Seleccionar todos"
+                      />
+                    </th>
+                  )}
                   <th className="text-left px-4 py-3 font-medium text-gray-600 w-6"></th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Nombre</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Contacto</th>
@@ -509,14 +516,16 @@ export default function ClientesPage() {
                   return (
                     <tr key={c.id} className={`hover:bg-gray-50 transition-colors group ${seleccion.has(c.id) ? 'bg-orange-50/50' : ''}`}>
                       {/* Checkbox de selección */}
-                      <td className="px-3 py-3">
-                        <input
-                          type="checkbox"
-                          checked={seleccion.has(c.id)}
-                          onChange={() => toggleSeleccion(c.id)}
-                          className="h-3.5 w-3.5 accent-orange-600 cursor-pointer"
-                        />
-                      </td>
+                      {puedeMasivas && (
+                        <td className="px-3 py-3">
+                          <input
+                            type="checkbox"
+                            checked={seleccion.has(c.id)}
+                            onChange={() => toggleSeleccion(c.id)}
+                            className="h-3.5 w-3.5 accent-orange-600 cursor-pointer"
+                          />
+                        </td>
+                      )}
 
                       {/* Semáforo dot */}
                       <td className="px-4 py-3">
@@ -726,6 +735,7 @@ export default function ClientesPage() {
           <div className="h-5 w-px bg-gray-200" />
 
           {/* Cambiar etapa */}
+          {perfil.permisos.has('masivas') && (
           <div className="relative">
             <select
               disabled={bulkSaving}
@@ -740,9 +750,10 @@ export default function ClientesPage() {
             </select>
             <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-gray-400 pointer-events-none" />
           </div>
+          )}
 
           {/* Asignar tipo */}
-          {tiposDisponibles.length > 0 && (
+          {perfil.permisos.has('masivas') && tiposDisponibles.length > 0 && (
             <div className="relative">
               <select
                 disabled={bulkSaving}
@@ -760,13 +771,15 @@ export default function ClientesPage() {
           )}
 
           {/* Eliminar */}
-          <button
-            disabled={bulkSaving}
-            onClick={() => setBulkEliminarOpen(true)}
-            className="h-8 px-3 rounded-lg border border-red-200 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
-          >
-            Eliminar
-          </button>
+          {perfil.permisos.has('eliminar') && (
+            <button
+              disabled={bulkSaving}
+              onClick={() => setBulkEliminarOpen(true)}
+              className="h-8 px-3 rounded-lg border border-red-200 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+            >
+              Eliminar
+            </button>
+          )}
 
           <button
             onClick={() => setSeleccion(new Set())}

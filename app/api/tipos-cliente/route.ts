@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requirePermiso } from '@/lib/permisos-server'
 
 export async function GET() {
   const supabase = createSupabaseAdminClient()
@@ -12,6 +13,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const bloqueo = await requirePermiso('configuracion')
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { nombre } = await req.json()
   if (!nombre) return NextResponse.json({ error: 'Nombre requerido' }, { status: 400 })

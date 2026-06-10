@@ -1,8 +1,11 @@
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requirePermiso } from '@/lib/permisos-server'
 import { NextResponse } from 'next/server'
 import { EtapaFunnel, ETAPAS_FUNNEL } from '@/lib/types'
 
 export async function GET() {
+  const bloqueo = await requirePermiso('dashboard')
+  if (bloqueo) return bloqueo
   try {
     const supabase = createSupabaseAdminClient()
 

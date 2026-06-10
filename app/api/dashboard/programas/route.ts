@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requirePermiso } from '@/lib/permisos-server'
 import { NextResponse } from 'next/server'
 
 // Normaliza el nombre del programa según las reglas del proyecto
@@ -16,6 +17,8 @@ function normalizarPrograma(nombre: string): string {
 }
 
 export async function GET() {
+  const bloqueo = await requirePermiso('dashboard')
+  if (bloqueo) return bloqueo
   try {
     const supabase = createSupabaseAdminClient()
 

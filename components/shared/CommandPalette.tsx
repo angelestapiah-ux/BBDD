@@ -5,17 +5,19 @@ import { useRouter } from 'next/navigation'
 import { Cliente, ETAPAS_FUNNEL } from '@/lib/types'
 import { Search, Users, Sun, DollarSign, Calendar, FileText, Upload, Settings, Plus, MessageSquare, LayoutDashboard } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { usePerfil } from './usePerfil'
+import { Permiso } from '@/lib/permisos'
 
-const NAV_COMMANDS = [
+const NAV_COMMANDS: { label: string; href: string; icon: typeof Sun; keywords: string; permiso?: Permiso }[] = [
   { label: 'Nuevo cliente',       href: '/clientes?nuevo=1', icon: Plus,            keywords: 'nuevo crear agregar cliente lead' },
   { label: 'Ir a Hoy',            href: '/hoy',              icon: Sun,             keywords: 'hoy contactar pendientes agenda' },
-  { label: 'Ir a Dashboard',      href: '/dashboard',        icon: LayoutDashboard, keywords: 'dashboard inicio resumen kpi' },
+  { label: 'Ir a Dashboard',      href: '/dashboard',        icon: LayoutDashboard, keywords: 'dashboard inicio resumen kpi', permiso: 'dashboard' },
   { label: 'Ir a Clientes',       href: '/clientes',         icon: Users,           keywords: 'clientes lista kanban' },
   { label: 'Ir a Seguimientos',   href: '/seguimientos',     icon: Calendar,        keywords: 'seguimientos contactos historial' },
   { label: 'Ir a Pagos',          href: '/pagos',            icon: DollarSign,      keywords: 'pagos cobros pendientes dinero' },
-  { label: 'Ir a Reportes',       href: '/reportes',         icon: FileText,        keywords: 'reportes informes cumpleanos' },
-  { label: 'Ir a Importar',       href: '/importar',         icon: Upload,          keywords: 'importar excel subir' },
-  { label: 'Ir a Configuración',  href: '/configuracion',    icon: Settings,        keywords: 'configuracion usuarios plantillas ajustes' },
+  { label: 'Ir a Reportes',       href: '/reportes',         icon: FileText,        keywords: 'reportes informes cumpleanos', permiso: 'reportes' },
+  { label: 'Ir a Importar',       href: '/importar',         icon: Upload,          keywords: 'importar excel subir', permiso: 'importar' },
+  { label: 'Ir a Configuración',  href: '/configuracion',    icon: Settings,        keywords: 'configuracion usuarios plantillas ajustes', permiso: 'configuracion' },
 ]
 
 function normalizar(s: string) {
@@ -31,6 +33,8 @@ export function CommandPalette() {
   const [idx, setIdx] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+  const perfil = usePerfil()
+  const comandosVisibles = NAV_COMMANDS.filter(c => !c.permiso || perfil.permisos.has(c.permiso))
 
   // Atajo global Ctrl/Cmd+K
   useEffect(() => {
@@ -73,8 +77,8 @@ export function CommandPalette() {
   }, [q, open])
 
   const navFiltrados = q.trim()
-    ? NAV_COMMANDS.filter(c => normalizar(`${c.label} ${c.keywords}`).includes(normalizar(q)))
-    : NAV_COMMANDS.slice(0, 4)
+    ? comandosVisibles.filter(c => normalizar(`${c.label} ${c.keywords}`).includes(normalizar(q)))
+    : comandosVisibles.slice(0, 4)
 
   const items: Array<{ tipo: 'cliente'; cliente: Cliente } | { tipo: 'nav'; nav: typeof NAV_COMMANDS[number] }> = [
     ...clientes.map(c => ({ tipo: 'cliente' as const, cliente: c })),

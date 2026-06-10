@@ -1,4 +1,5 @@
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requirePermiso } from '@/lib/permisos-server'
 import { NextResponse } from 'next/server'
 
 export type TipoEvento = 'cliente_nuevo' | 'pago' | 'seguimiento' | 'pago_pendiente'
@@ -15,6 +16,8 @@ export interface Evento {
 }
 
 export async function GET() {
+  const bloqueo = await requirePermiso('dashboard')
+  if (bloqueo) return bloqueo
   try {
     const supabase = createSupabaseAdminClient()
 

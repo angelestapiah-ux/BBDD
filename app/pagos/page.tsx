@@ -11,6 +11,7 @@ import { Plus, Search, Receipt, ChevronDown, X, CheckCircle2 } from 'lucide-reac
 import { toast } from 'sonner'
 import { Asistencia, Cliente } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { usePerfil } from '@/components/shared/usePerfil'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface PagoConCliente {
@@ -34,6 +35,7 @@ const ESTADO_STYLE: Record<string, { badge: string; label: string }> = {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function PagosPage() {
+  const perfil = usePerfil()
   const [pagos, setPagos]     = useState<PagoConCliente[]>([])
   const [total, setTotal]     = useState(0)
   const [loading, setLoading] = useState(true)
@@ -184,8 +186,8 @@ export default function PagosPage() {
         </Button>
       </div>
 
-      {/* KPI Cards */}
-      {!loading && pagos.length > 0 && (
+      {/* KPI Cards — solo con permiso de ver totales */}
+      {perfil.permisos.has('totales_pagos') && !loading && pagos.length > 0 && (
         <div className="flex flex-wrap gap-3 mb-6">
           {(!estadoFilter || estadoFilter === 'pagado') && kpiPagado > 0 && (
             <div className="bg-orange-50 border border-orange-200 rounded-lg px-4 py-3">

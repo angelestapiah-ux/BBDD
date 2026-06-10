@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requirePermiso } from '@/lib/permisos-server'
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const bloqueo = await requirePermiso('configuracion')
+  if (bloqueo) return bloqueo
   const { id } = await params
   const admin = createSupabaseAdminClient()
   const { error } = await admin.auth.admin.deleteUser(id)
@@ -10,6 +13,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const bloqueo = await requirePermiso('configuracion')
+  if (bloqueo) return bloqueo
   const { id } = await params
   const { password } = await req.json()
   const admin = createSupabaseAdminClient()

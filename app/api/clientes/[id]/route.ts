@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requirePermiso, requireEscritura } from '@/lib/permisos-server'
 
 // Registra el cambio de etapa en etapa_historial (si la tabla existe y la etapa cambió)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -42,6 +43,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const bloqueo = await requireEscritura()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { id } = await params
   const body = await req.json()
@@ -83,6 +86,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 // PATCH — partial update (etapa, procedencia, etc.)
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const bloqueo = await requireEscritura()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { id } = await params
   const body = await req.json()
@@ -93,6 +98,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const bloqueo = await requirePermiso('eliminar')
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { id } = await params
   const { error } = await supabase.from('clientes').delete().eq('id', id)

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requirePermiso } from '@/lib/permisos-server'
 
 export async function GET(req: NextRequest) {
+  const bloqueo = await requirePermiso('reportes')
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { searchParams } = new URL(req.url)
   const tipo = searchParams.get('tipo')

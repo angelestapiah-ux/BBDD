@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Fragment } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,6 +11,9 @@ import { Plus, Trash2, KeyRound, LogOut } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { ROLES, PERMISOS, Rol, Permiso, permisosDeRol } from '@/lib/permisos'
+
+interface PerfilUsuario { user_id: string; rol: Rol; permisos_extra: Permiso[] }
 
 interface Usuario {
   id: string
@@ -37,6 +40,9 @@ export default function ConfiguracionPage() {
   const [savingTipo, setSavingTipo] = useState(false)
   const [nombreResponsable, setNombreResponsable] = useState('')
   const [plantillas, setPlantillas] = useState<Plantilla[]>([])
+  const [perfiles, setPerfiles] = useState<Record<string, PerfilUsuario>>({})
+  const [permisosAbiertos, setPermisosAbiertos] = useState<string | null>(null)
+  const [nuevoRol, setNuevoRol] = useState<Rol>('operacion')
   const [nuevaPlantillaNombre, setNuevaPlantillaNombre] = useState('')
   const [nuevaPlantillaCuerpo, setNuevaPlantillaCuerpo] = useState('')
   const [savingPlantilla, setSavingPlantilla] = useState(false)
@@ -61,13 +67,39 @@ export default function ConfiguracionPage() {
     }
   }, [])
 
+  const fetchPerfiles = useCallback(async () => {
+    const res = await fetch('/api/admin/perfiles')
+    if (res.ok) {
+      const lista: PerfilUsuario[] = await res.json()
+      const map: Record<string, PerfilUsuario> = {}
+      for (const p of lista) map[p.user_id] = p
+      setPerfiles(map)
+    }
+  }, [])
+
+  async function guardarPerfil(userId: string, rol: Rol, permisosExtra: Permiso[]) {
+    const res = await fetch('/api/admin/perfiles', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, rol, permisos_extra: permisosExtra }),
+    })
+    if (res.ok) {
+      toast.success('Perfil actualizado')
+      fetchPerfiles()
+    } else {
+      const err = await res.json().catch(() => ({}))
+      toast.error(err.error || 'Error al actualizar perfil')
+    }
+  }
+
   useEffect(() => {
     fetchUsuarios()
     fetchTipos()
     fetchPlantillas()
+    fetchPerfiles()
     // Cargar preferencia guardada en este navegador
     setNombreResponsable(localStorage.getItem('renova_responsable') || '')
-  }, [fetchUsuarios, fetchTipos, fetchPlantillas])
+  }, [fetchUsuarios, fetchTipos, fetchPlantillas, fetchPerfiles])
 
   async function agregarPlantilla(e: React.FormEvent) {
     e.preventDefault()
@@ -136,13 +168,14 @@ export default function ConfiguracionPage() {
     const res = await fetch('/api/admin/usuarios', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, rol: nuevoRol }),
     })
     if (res.ok) {
       toast.success('Usuario creado correctamente')
       setNuevoOpen(false)
-      setEmail(''); setPassword('')
+      setEmail(''); setPassword(''); setNuevoRol('operacion')
       fetchUsuarios()
+      fetchPerfiles()
     } else {
       const err = await res.json()
       toast.error(err.error || 'Error al crear usuario')
@@ -209,27 +242,87 @@ export default function ConfiguracionPage() {
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="text-left px-3 py-2 font-medium text-gray-600">Correo</th>
+                  <th className="text-left px-3 py-2 font-medium text-gray-600">Perfil</th>
                   <th className="text-left px-3 py-2 font-medium text-gray-600">Último acceso</th>
                   <th className="px-3 py-2"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {usuarios.map(u => (
-                  <tr key={u.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-3 font-medium">{u.email}</td>
-                    <td className="px-3 py-3 text-gray-400">{fmt(u.last_sign_in_at)}</td>
-                    <td className="px-3 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button size="sm" variant="ghost" onClick={() => setCambioPassOpen(u)} title="Cambiar contraseña">
-                          <KeyRound className="h-3 w-3" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-700" onClick={() => eliminarUsuario(u)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {usuarios.map(u => {
+                  const p = perfiles[u.id] || { user_id: u.id, rol: 'operacion' as Rol, permisos_extra: [] as Permiso[] }
+                  const base = permisosDeRol(p.rol)
+                  const personalizables = PERMISOS.filter(perm => !base.has(perm.key))
+                  const abierto = permisosAbiertos === u.id
+                  return (
+                    <Fragment key={u.id}>
+                      <tr className="hover:bg-gray-50">
+                        <td className="px-3 py-3 font-medium">{u.email}</td>
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={p.rol}
+                              onChange={e => guardarPerfil(u.id, e.target.value as Rol, [])}
+                              className="h-7 pl-2 pr-6 rounded border border-gray-200 text-xs text-gray-700 bg-white focus:outline-none focus:border-orange-400 cursor-pointer"
+                              title={ROLES.find(r => r.value === p.rol)?.descripcion}
+                            >
+                              {ROLES.map(r => (
+                                <option key={r.value} value={r.value}>{r.label}</option>
+                              ))}
+                            </select>
+                            {p.rol !== 'admin' && (
+                              <button
+                                onClick={() => setPermisosAbiertos(abierto ? null : u.id)}
+                                className={`text-xs underline transition-colors ${
+                                  p.permisos_extra.length > 0 ? 'text-orange-600 font-medium' : 'text-gray-400 hover:text-orange-600'
+                                }`}
+                              >
+                                {p.permisos_extra.length > 0 ? `+${p.permisos_extra.length} extra` : 'personalizar'}
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-gray-400">{fmt(u.last_sign_in_at)}</td>
+                        <td className="px-3 py-3">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button size="sm" variant="ghost" onClick={() => setCambioPassOpen(u)} title="Cambiar contraseña">
+                              <KeyRound className="h-3 w-3" />
+                            </Button>
+                            <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-700" onClick={() => eliminarUsuario(u)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                      {abierto && p.rol !== 'admin' && (
+                        <tr>
+                          <td colSpan={4} className="px-3 pb-3 pt-0 bg-orange-50/40">
+                            <p className="text-xs text-gray-500 mb-2 pt-2">
+                              Permisos extra para <span className="font-medium">{u.email}</span> (además de los de su rol):
+                            </p>
+                            <div className="flex flex-wrap gap-x-5 gap-y-1.5">
+                              {personalizables.map(perm => (
+                                <label key={perm.key} className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer select-none">
+                                  <input
+                                    type="checkbox"
+                                    checked={p.permisos_extra.includes(perm.key)}
+                                    onChange={e => {
+                                      const nuevos = e.target.checked
+                                        ? [...p.permisos_extra, perm.key]
+                                        : p.permisos_extra.filter(x => x !== perm.key)
+                                      guardarPerfil(u.id, p.rol, nuevos)
+                                    }}
+                                    className="h-3.5 w-3.5 accent-orange-600"
+                                  />
+                                  {perm.label}
+                                </label>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  )
+                })}
               </tbody>
             </table>
           )}
@@ -248,6 +341,18 @@ export default function ConfiguracionPage() {
             <div>
               <Label>Contraseña *</Label>
               <Input type="password" required minLength={6} value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" />
+            </div>
+            <div>
+              <Label>Perfil</Label>
+              <select
+                value={nuevoRol}
+                onChange={e => setNuevoRol(e.target.value as Rol)}
+                className="w-full h-10 px-3 rounded-lg border border-gray-200 text-sm text-gray-700 bg-white focus:outline-none focus:border-orange-400"
+              >
+                {ROLES.map(r => (
+                  <option key={r.value} value={r.value}>{r.label} — {r.descripcion}</option>
+                ))}
+              </select>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setNuevoOpen(false)}>Cancelar</Button>

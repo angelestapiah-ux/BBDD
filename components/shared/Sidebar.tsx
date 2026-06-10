@@ -5,23 +5,27 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Users, Calendar, FileText, Upload, DollarSign, BookOpen, Settings, LayoutDashboard, LogOut, Sun, GraduationCap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getSupabase } from '@/lib/supabase'
+import { usePerfil } from './usePerfil'
+import { Permiso } from '@/lib/permisos'
 
-const navItems = [
+const navItems: { href: string; label: string; icon: typeof Sun; permiso?: Permiso }[] = [
   { href: '/hoy', label: 'Hoy', icon: Sun },
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permiso: 'dashboard' },
   { href: '/clientes', label: 'Clientes', icon: Users },
   { href: '/actividades', label: 'Actividades', icon: BookOpen },
   { href: '/seguimientos', label: 'Seguimientos', icon: Calendar },
   { href: '/pagos', label: 'Pagos', icon: DollarSign },
-  { href: '/reportes', label: 'Reportes', icon: FileText },
-  { href: '/importar', label: 'Importar Excel', icon: Upload },
-  { href: '/configuracion', label: 'Configuración', icon: Settings },
+  { href: '/reportes', label: 'Reportes', icon: FileText, permiso: 'reportes' },
+  { href: '/importar', label: 'Importar Excel', icon: Upload, permiso: 'importar' },
+  { href: '/configuracion', label: 'Configuración', icon: Settings, permiso: 'configuracion' },
   { href: '/tutorial', label: 'Tutorial', icon: GraduationCap },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const perfil = usePerfil()
+  const items = navItems.filter(i => !i.permiso || perfil.permisos.has(i.permiso))
 
   async function handleLogout() {
     try {
@@ -41,7 +45,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {navItems.map(({ href, label, icon: Icon }) => (
+        {items.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}

@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requirePermiso } from '@/lib/permisos-server'
 
 // Acciones masivas sobre clientes seleccionados.
 // POST { ids: string[], accion: 'etapa' | 'tipo' | 'eliminar', etapa?, tipo? }
 export async function POST(req: NextRequest) {
   const supabase = createSupabaseAdminClient()
   const { ids, accion, etapa, tipo } = await req.json()
+
+  const bloqueo = await requirePermiso(accion === 'eliminar' ? 'eliminar' : 'masivas')
+  if (bloqueo) return bloqueo
 
   if (!Array.isArray(ids) || ids.length === 0) {
     return NextResponse.json({ error: 'Sin clientes seleccionados' }, { status: 400 })

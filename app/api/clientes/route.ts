@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requireEscritura } from '@/lib/permisos-server'
 
 export async function GET(req: NextRequest) {
   const supabase = createSupabaseAdminClient()
@@ -56,6 +57,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const bloqueo = await requireEscritura()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const body = await req.json()
   const { data, error } = await supabase.from('clientes').insert(body).select().single()

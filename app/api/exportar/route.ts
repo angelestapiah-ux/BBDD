@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requirePermiso } from '@/lib/permisos-server'
 
 export async function GET() {
+  const bloqueo = await requirePermiso('exportar')
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   // 4 consultas en paralelo — eficiente sin importar cuántos clientes haya
   const [clientesRes, asistenciasRes, pagosRes, seguimientosRes] = await Promise.all([

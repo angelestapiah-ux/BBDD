@@ -21,6 +21,7 @@ import { SeguimientoForm } from '@/components/clientes/SeguimientoForm'
 import { getSupabase } from '@/lib/supabase'
 import { PagoForm } from '@/components/clientes/PagoForm'
 import { AsistenciaForm } from '@/components/clientes/AsistenciaForm'
+import { usePerfil } from '@/components/shared/usePerfil'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -80,6 +81,7 @@ function Campo({
 }
 
 export default function ClienteDetailPage() {
+  const perfil = usePerfil()
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
   const [cliente, setCliente] = useState<ClienteConDetalle | null>(null)
@@ -354,10 +356,14 @@ export default function ClienteDetailPage() {
                 <button onClick={() => { exportar('pdf'); setMoreOpen(false) }} className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-gray-50 text-gray-700">
                   <FileText size={14} /> Exportar PDF
                 </button>
-                <div className="border-t border-gray-100 my-1" />
-                <button onClick={() => { handleDeleteCliente(); setMoreOpen(false) }} className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-red-50 text-red-600">
-                  <Trash2 size={14} /> Eliminar cliente
-                </button>
+                {perfil.permisos.has('eliminar') && (
+                  <>
+                    <div className="border-t border-gray-100 my-1" />
+                    <button onClick={() => { handleDeleteCliente(); setMoreOpen(false) }} className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-red-50 text-red-600">
+                      <Trash2 size={14} /> Eliminar cliente
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
