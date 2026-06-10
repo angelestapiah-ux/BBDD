@@ -45,6 +45,48 @@ const SEMAFORO_TITLE: Record<string, string> = {
   rojo:  'Sin contacto más de 72h',
 }
 
+// ─── Celda editable inline (click → input → Enter/blur guarda) ───────────
+function CeldaEditable({ valor, placeholder, onSave }: {
+  valor: string | null
+  placeholder: string
+  onSave: (v: string) => Promise<void>
+}) {
+  const [editando, setEditando] = useState(false)
+  const [v, setV] = useState(valor || '')
+
+  useEffect(() => { setV(valor || '') }, [valor])
+
+  async function guardar() {
+    setEditando(false)
+    if ((valor || '') !== v.trim()) await onSave(v.trim())
+  }
+
+  if (editando) {
+    return (
+      <input
+        autoFocus
+        value={v}
+        onChange={e => setV(e.target.value)}
+        onBlur={guardar}
+        onKeyDown={e => {
+          if (e.key === 'Enter') guardar()
+          if (e.key === 'Escape') { setV(valor || ''); setEditando(false) }
+        }}
+        className="w-full max-w-[170px] text-sm border border-orange-300 rounded px-1.5 py-0.5 focus:outline-none bg-white"
+      />
+    )
+  }
+  return (
+    <span
+      onClick={() => setEditando(true)}
+      title="Click para editar"
+      className={`cursor-text rounded px-1 -mx-1 hover:bg-orange-50 transition-colors truncate max-w-[170px] inline-block align-middle ${valor ? '' : 'text-gray-300'}`}
+    >
+      {valor || placeholder}
+    </span>
+  )
+}
+
 // ─── Kanban view ──────────────────────────────────────────────────────────
 function KanbanView({
   clientes,
@@ -312,6 +354,21 @@ export default function ClientesPage() {
     }
   }
 
+  // Edición inline de un campo (teléfono/correo) directo en la tabla
+  async function editarCampoInline(id: string, campo: 'telefono' | 'correo', valor: string) {
+    const res = await fetch(`/api/clientes/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [campo]: valor || null }),
+    })
+    if (res.ok) {
+      setClientes(prev => prev.map(c => c.id === id ? { ...c, [campo]: valor || null } : c))
+      toast.success('Actualizado')
+    } else {
+      toast.error('Error al actualizar')
+    }
+  }
+
   return (
     <div className="p-6">
       {/* Header */}
@@ -479,24 +536,40 @@ export default function ClientesPage() {
                         </Link>
                       </td>
 
-                      {/* Contacto — correo / teléfono */}
+                      {/* Contacto — correo / teléfono (editables inline) */}
                       <td className="px-4 py-3 text-gray-500">
                         <div className="flex flex-col gap-0.5">
-                          {c.correo && <span className="truncate max-w-[160px]">{c.correo}</span>}
-                          {c.telefono && <span>{c.telefono}</span>}
-                          {!c.correo && !c.telefono && <span>—</span>}
+                          <CeldaEditable
+                            valor={c.correo}
+                            placeholder="+ correo"
+                            onSave={v => editarCampoInline(c.id, 'correo', v)}
+                          />
+                          <CeldaEditable
+                            valor={c.telefono}
+                            placeholder="+ teléfono"
+                            onSave={v => editarCampoInline(c.id, 'telefono', v)}
+                          />
                         </div>
                       </td>
 
-                      {/* Etapa badge */}
+                      {/* Etapa — select inline disfrazado de badge */}
                       <td className="px-4 py-3">
-                        {etapaCfg ? (
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${etapaCfg.bg} ${etapaCfg.text}`}>
-                            {etapaCfg.label}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-gray-400">—</span>
-                        )}
+                        <div className="relative inline-block">
+                          <select
+                            value={c.etapa || ''}
+                            onChange={e => e.target.value && handleEtapaChange(c.id, e.target.value as EtapaFunnel)}
+                            title="Cambiar etapa"
+                            className={`appearance-none cursor-pointer text-xs font-medium pl-2 pr-5 py-0.5 rounded-full border-0 focus:outline-none focus:ring-1 focus:ring-orange-400 ${
+                              etapaCfg ? `${etapaCfg.bg} ${etapaCfg.text}` : 'bg-gray-100 text-gray-400'
+                            }`}
+                          >
+                            {!c.etapa && <option value="">— etapa —</option>}
+                            {ETAPAS_FUNNEL.map(e => (
+                              <option key={e.value} value={e.value}>{e.label}</option>
+                            ))}
+                          </select>
+                          <ChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 h-2.5 w-2.5 opacity-50 pointer-events-none" />
+                        </div>
                       </td>
 
                       {/* Canal */}

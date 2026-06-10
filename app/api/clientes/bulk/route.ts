@@ -16,6 +16,16 @@ export async function POST(req: NextRequest) {
 
   if (accion === 'etapa') {
     if (!etapa) return NextResponse.json({ error: 'Etapa requerida' }, { status: 400 })
+
+    // Registrar historial de quienes realmente cambian de etapa (best-effort)
+    try {
+      const { data: actuales } = await supabase.from('clientes').select('id, etapa').in('id', ids)
+      const cambios = ((actuales ?? []) as Array<{ id: string; etapa: string | null }>)
+        .filter(c => c.etapa !== etapa)
+        .map(c => ({ cliente_id: c.id, etapa_anterior: c.etapa, etapa_nueva: etapa }))
+      if (cambios.length > 0) await supabase.from('etapa_historial').insert(cambios)
+    } catch { /* la tabla puede no existir aún */ }
+
     const { error } = await supabase.from('clientes').update({ etapa }).in('id', ids)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ ok: true, afectados: ids.length })

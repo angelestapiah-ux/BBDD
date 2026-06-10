@@ -89,6 +89,10 @@ export default function PagosPage() {
 
   // PA3: Mark payment as paid inline
   async function marcarPagado(pago: PagoConCliente) {
+    if (!pago.monto || pago.monto <= 0) {
+      toast.error('Este pago no tiene monto. Agrégalo desde el perfil del cliente (lápiz en la pestaña Pagos) antes de marcarlo pagado.')
+      return
+    }
     setMarcandoId(pago.id)
     const res = await fetch(`/api/pagos/${pago.id}`, {
       method: 'PUT',

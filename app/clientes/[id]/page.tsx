@@ -438,6 +438,9 @@ export default function ClienteDetailPage() {
           <TabsTrigger value="asistencias">
             Asistencias ({cliente.asistencias?.length ?? 0})
           </TabsTrigger>
+          <TabsTrigger value="etapas">
+            Etapas ({cliente.etapa_historial?.length ?? 0})
+          </TabsTrigger>
         </TabsList>
 
         {/* SEGUIMIENTOS */}
@@ -571,6 +574,50 @@ export default function ClienteDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
+        {/* HISTORIAL DE ETAPAS */}
+        <TabsContent value="etapas">
+          <Card>
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm font-medium">Recorrido por el funnel</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!cliente.etapa_historial?.length ? (
+                <p className="text-sm text-gray-400 text-center py-6">
+                  Sin cambios de etapa registrados aún. Se registrarán automáticamente desde ahora.
+                </p>
+              ) : (
+                <ul className="space-y-3">
+                  {cliente.etapa_historial.map((h, i) => {
+                    const anterior = h.etapa_anterior ? ETAPAS_FUNNEL.find(e => e.value === h.etapa_anterior)?.label : 'Sin etapa'
+                    const nueva = ETAPAS_FUNNEL.find(e => e.value === h.etapa_nueva)?.label || h.etapa_nueva
+                    const cfg = ETAPA_BADGE[h.etapa_nueva]
+                    // Tiempo que estuvo en la etapa anterior (diferencia con el cambio previo)
+                    const siguiente = cliente.etapa_historial![i + 1]
+                    const desde = siguiente ? new Date(siguiente.created_at) : new Date(cliente.created_at)
+                    const dias = Math.round((new Date(h.created_at).getTime() - desde.getTime()) / 86_400_000)
+                    return (
+                      <li key={h.id} className="flex items-center gap-3 text-sm border-l-2 border-orange-200 pl-3">
+                        <span className="text-gray-400 text-xs w-32 shrink-0">
+                          {format(new Date(h.created_at), 'dd/MM/yyyy HH:mm', { locale: es })}
+                        </span>
+                        <span className="text-gray-500">{anterior}</span>
+                        <span className="text-gray-300">→</span>
+                        {cfg ? (
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.text}`}>{nueva}</span>
+                        ) : (
+                          <span className="font-medium">{nueva}</span>
+                        )}
+                        {dias > 0 && (
+                          <span className="text-xs text-gray-400 ml-auto">{dias} día{dias === 1 ? '' : 's'} en etapa anterior</span>
+                        )}
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* ─── Dialogs ───────────────────────────────────────────────────── */}
@@ -697,6 +744,10 @@ function EditPagoDialog({ pago, onClose, onSave, asistencias }: {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (estado === 'pagado' && (!monto || Number(monto) <= 0)) {
+      toast.error('Un pago en estado "Pagado" necesita el monto')
+      return
+    }
     setSaving(true)
     await onSave({ actividad_nombre: actividad, monto: monto ? Number(monto) : null, fecha_pago: fecha || null, metodo_pago: metodo, estado, notas: notas || null })
     setSaving(false)

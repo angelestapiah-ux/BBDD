@@ -34,6 +34,10 @@ export function PagoForm({ open, onOpenChange, onSubmit, asistencias }: Props) {
     e.preventDefault()
     if (!nombreFinal) return
     if (!metodo) { toast.error('Selecciona un método de pago'); return }
+    if (estado === 'pagado' && (!monto || Number(monto) <= 0)) {
+      toast.error('Un pago en estado "Pagado" necesita el monto')
+      return
+    }
     setSaving(true)
     await onSubmit({
       actividad_nombre: nombreFinal,

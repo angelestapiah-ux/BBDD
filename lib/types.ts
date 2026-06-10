@@ -120,6 +120,14 @@ export interface Seguimiento {
 
 export type SeguimientoInsert = Omit<Seguimiento, 'id' | 'created_at'>
 
+export interface EtapaHistorial {
+  id: string
+  cliente_id: string
+  etapa_anterior: EtapaFunnel | null
+  etapa_nueva: EtapaFunnel
+  created_at: string
+}
+
 export interface PlantillaWhatsapp {
   id: string
   nombre: string
@@ -133,4 +141,5 @@ export interface ClienteConDetalle extends Cliente {
   asistencias?: Asistencia[]
   pagos?: Pago[]
   seguimientos?: Seguimiento[]
+  etapa_historial?: EtapaHistorial[]
 }
