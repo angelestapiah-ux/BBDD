@@ -146,9 +146,12 @@ export default function ClientesPage() {
   const [page, setPage] = useState(1)
 
   // Pre-populate etapaFilter from URL (?etapa=...) when coming from the funnel chart
+  // ?nuevo=1 abre directo el dialog de nuevo cliente (desde Ctrl+K)
   useEffect(() => {
-    const etapa = new URLSearchParams(window.location.search).get('etapa') as EtapaFunnel
+    const params = new URLSearchParams(window.location.search)
+    const etapa = params.get('etapa') as EtapaFunnel
     if (etapa) setEtapaFilter(etapa)
+    if (params.get('nuevo')) setDialogOpen(true)
   }, [])
   const [loading, setLoading] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
