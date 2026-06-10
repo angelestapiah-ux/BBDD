@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Users, Calendar, FileText, Upload, DollarSign, BookOpen, Settings, LayoutDashboard, LogOut } from 'lucide-react'
+import { Users, Calendar, FileText, Upload, DollarSign, BookOpen, Settings, LayoutDashboard, LogOut, Sun } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getSupabase } from '@/lib/supabase'
 
 const navItems = [
+  { href: '/hoy', label: 'Hoy', icon: Sun },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/clientes', label: 'Clientes', icon: Users },
   { href: '/actividades', label: 'Actividades', icon: BookOpen },

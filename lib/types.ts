@@ -63,6 +63,7 @@ export interface Cliente {
   ciudad: string | null
   pais: string | null
   etapa: EtapaFunnel | null
+  proximo_contacto: string | null
   created_at: string
   updated_at: string
 }
@@ -118,6 +119,14 @@ export interface Seguimiento {
 }
 
 export type SeguimientoInsert = Omit<Seguimiento, 'id' | 'created_at'>
+
+export interface PlantillaWhatsapp {
+  id: string
+  nombre: string
+  cuerpo: string
+  orden: number
+  created_at: string
+}
 
 // Con joins
 export interface ClienteConDetalle extends Cliente {

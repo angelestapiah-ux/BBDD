@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Search, Plus, FileSpreadsheet, FileText, LayoutGrid, List, MessageSquare, Phone, Mail, CheckCircle2, X, Download, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
 import { ClienteFormDialog } from '@/components/clientes/ClienteFormDialog'
+import { ContactadoPanel } from '@/components/clientes/ContactadoPanel'
 import { toast } from 'sonner'
 import { exportarClientesExcel, exportarClientesPDF, exportarTodoExcel } from '@/lib/export'
 
@@ -42,71 +43,6 @@ const SEMAFORO_TITLE: Record<string, string> = {
   verde: 'Contactado hace menos de 48h',
   ambar: 'Sin contacto 48-72h',
   rojo:  'Sin contacto más de 72h',
-}
-
-// ─── Panel inline "Contactado" ────────────────────────────────────────────
-function ContactadoPanel({ clienteId, onSaved, pos }: { clienteId: string; onSaved: () => void; pos: { top: number; right: number } }) {
-  const [tipo, setTipo] = useState<'llamada' | 'whatsapp' | 'correo' | 'otro'>('whatsapp')
-  const [nota, setNota] = useState('')
-  const [saving, setSaving] = useState(false)
-
-  async function guardar() {
-    setSaving(true)
-    const hoy = new Date().toISOString().slice(0, 10)
-    const res = await fetch('/api/seguimientos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cliente_id: clienteId, tipo, notas: nota || `${tipo} registrado`, fecha: hoy }),
-    })
-    setSaving(false)
-    if (res.ok) {
-      toast.success('Seguimiento registrado')
-      onSaved()
-    } else {
-      toast.error('Error al guardar')
-    }
-  }
-
-  return (
-    <div
-      style={{ position: 'fixed', top: pos.top, right: pos.right, zIndex: 9999 }}
-      className="bg-white rounded-xl shadow-xl border border-gray-200 p-3 w-64"
-      onClick={e => e.stopPropagation()}
-    >
-      <p className="text-xs font-semibold text-gray-700 mb-2">Registrar contacto</p>
-      <div className="flex gap-1.5 mb-2">
-        {(['llamada', 'whatsapp', 'correo', 'otro'] as const).map(t => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => setTipo(t)}
-            className={`px-2 py-1 rounded text-xs border capitalize transition-colors ${
-              tipo === t
-                ? 'bg-orange-600 text-white border-orange-600'
-                : 'bg-white text-gray-500 border-gray-200 hover:border-orange-300'
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-      <input
-        type="text"
-        placeholder="Nota breve (opcional)..."
-        value={nota}
-        onChange={e => setNota(e.target.value)}
-        className="w-full text-xs border border-gray-200 rounded px-2 py-1.5 mb-2 focus:outline-none focus:border-orange-400"
-        onKeyDown={e => e.key === 'Enter' && guardar()}
-      />
-      <button
-        onClick={guardar}
-        disabled={saving}
-        className="w-full bg-orange-600 hover:bg-orange-700 text-white text-xs py-1.5 rounded font-medium transition-colors disabled:opacity-50"
-      >
-        {saving ? 'Guardando...' : '✓ Guardar contacto'}
-      </button>
-    </div>
-  )
 }
 
 // ─── Kanban view ──────────────────────────────────────────────────────────

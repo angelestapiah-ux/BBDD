@@ -21,6 +21,8 @@ interface Usuario {
 
 interface TipoCliente { id: string; nombre: string }
 
+interface Plantilla { id: string; nombre: string; cuerpo: string }
+
 export default function ConfiguracionPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [loading, setLoading] = useState(true)
@@ -34,6 +36,10 @@ export default function ConfiguracionPage() {
   const [nuevoTipo, setNuevoTipo] = useState('')
   const [savingTipo, setSavingTipo] = useState(false)
   const [nombreResponsable, setNombreResponsable] = useState('')
+  const [plantillas, setPlantillas] = useState<Plantilla[]>([])
+  const [nuevaPlantillaNombre, setNuevaPlantillaNombre] = useState('')
+  const [nuevaPlantillaCuerpo, setNuevaPlantillaCuerpo] = useState('')
+  const [savingPlantilla, setSavingPlantilla] = useState(false)
   const router = useRouter()
 
   const fetchUsuarios = useCallback(async () => {
@@ -47,12 +53,45 @@ export default function ConfiguracionPage() {
     if (res.ok) setTipos(await res.json())
   }, [])
 
+  const fetchPlantillas = useCallback(async () => {
+    const res = await fetch('/api/plantillas')
+    if (res.ok) {
+      const d = await res.json()
+      setPlantillas(Array.isArray(d) ? d : [])
+    }
+  }, [])
+
   useEffect(() => {
     fetchUsuarios()
     fetchTipos()
+    fetchPlantillas()
     // Cargar preferencia guardada en este navegador
     setNombreResponsable(localStorage.getItem('renova_responsable') || '')
-  }, [fetchUsuarios, fetchTipos])
+  }, [fetchUsuarios, fetchTipos, fetchPlantillas])
+
+  async function agregarPlantilla(e: React.FormEvent) {
+    e.preventDefault()
+    if (!nuevaPlantillaNombre.trim() || !nuevaPlantillaCuerpo.trim()) return
+    setSavingPlantilla(true)
+    const res = await fetch('/api/plantillas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre: nuevaPlantillaNombre.trim(), cuerpo: nuevaPlantillaCuerpo.trim() }),
+    })
+    if (res.ok) {
+      toast.success('Plantilla agregada')
+      setNuevaPlantillaNombre(''); setNuevaPlantillaCuerpo('')
+      fetchPlantillas()
+    } else toast.error('Error al agregar plantilla')
+    setSavingPlantilla(false)
+  }
+
+  async function eliminarPlantilla(p: Plantilla) {
+    if (!confirm(`¿Eliminar la plantilla "${p.nombre}"?`)) return
+    const res = await fetch(`/api/plantillas/${p.id}`, { method: 'DELETE' })
+    if (res.ok) { toast.success('Plantilla eliminada'); fetchPlantillas() }
+    else toast.error('Error al eliminar')
+  }
 
   function guardarNombreResponsable(e: React.FormEvent) {
     e.preventDefault()
@@ -253,6 +292,54 @@ export default function ConfiguracionPage() {
             <Button type="submit" disabled={savingTipo} size="sm" className="bg-orange-600 hover:bg-orange-700">
               <Plus className="h-4 w-4 mr-1" /> Agregar
             </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Plantillas de WhatsApp */}
+      <Card className="mt-6">
+        <CardHeader className="py-4">
+          <CardTitle className="text-base">Plantillas de WhatsApp</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-xs text-gray-400 mb-3">
+            Usa <code className="bg-gray-100 px-1 rounded">{'{nombre}'}</code> y{' '}
+            <code className="bg-gray-100 px-1 rounded">{'{actividad}'}</code> como variables — se reemplazan
+            automáticamente con los datos del cliente al enviar.
+          </p>
+          <div className="space-y-2 mb-4">
+            {plantillas.map(p => (
+              <div key={p.id} className="flex items-start justify-between gap-2 border border-gray-100 rounded-lg px-3 py-2 hover:bg-gray-50">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-800">{p.nombre}</p>
+                  <p className="text-xs text-gray-400">{p.cuerpo}</p>
+                </div>
+                <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-700 shrink-0" onClick={() => eliminarPlantilla(p)}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+            {plantillas.length === 0 && (
+              <p className="text-sm text-gray-400 px-1">Sin plantillas configuradas</p>
+            )}
+          </div>
+          <form onSubmit={agregarPlantilla} className="space-y-2">
+            <Input
+              placeholder="Nombre de la plantilla (ej: Primer contacto)"
+              value={nuevaPlantillaNombre}
+              onChange={e => setNuevaPlantillaNombre(e.target.value)}
+              className="max-w-sm"
+            />
+            <div className="flex gap-2">
+              <Input
+                placeholder="Mensaje... usa {nombre} y {actividad}"
+                value={nuevaPlantillaCuerpo}
+                onChange={e => setNuevaPlantillaCuerpo(e.target.value)}
+              />
+              <Button type="submit" disabled={savingPlantilla} size="sm" className="bg-orange-600 hover:bg-orange-700 shrink-0">
+                <Plus className="h-4 w-4 mr-1" /> Agregar
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
