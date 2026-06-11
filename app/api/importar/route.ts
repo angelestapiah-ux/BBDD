@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { parseExcelFile } from '@/lib/excel-import'
 import { requirePermiso } from '@/lib/permisos-server'
+import { auditar } from '@/lib/auditoria'
 
 export async function POST(req: NextRequest) {
   const bloqueo = await requirePermiso('importar')
   if (bloqueo) return bloqueo
+  auditar('importar', 'clientes', null, 'Importación de Excel de clientes')
   const supabase = createSupabaseAdminClient()
   const formData = await req.formData()
   const file = formData.get('file') as File | null

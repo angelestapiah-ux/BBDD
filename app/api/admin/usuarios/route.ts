@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { requirePermiso } from '@/lib/permisos-server'
+import { auditar } from '@/lib/auditoria'
 
 export async function GET() {
   const bloqueo = await requirePermiso('configuracion')
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
   // Crear el perfil del usuario nuevo (default: operación)
   const rolValido = ['admin', 'operacion', 'visor'].includes(rol) ? rol : 'operacion'
   await admin.from('perfiles_usuario').upsert({ user_id: data.user.id, rol: rolValido, permisos_extra: [] })
+  auditar('crear', 'usuarios', data.user.id, `Usuario: ${email} · rol: ${rolValido}`)
 
   return NextResponse.json({ id: data.user.id, email: data.user.email }, { status: 201 })
 }

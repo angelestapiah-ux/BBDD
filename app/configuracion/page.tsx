@@ -15,6 +15,24 @@ import { ROLES, PERMISOS, Rol, Permiso, permisosDeRol } from '@/lib/permisos'
 
 interface PerfilUsuario { user_id: string; rol: Rol; permisos_extra: Permiso[] }
 
+interface EventoAuditoria {
+  id: string
+  usuario: string
+  accion: string
+  tabla: string
+  detalle: string | null
+  created_at: string
+}
+
+const ACCION_BADGE: Record<string, string> = {
+  crear:    'bg-green-100 text-green-700',
+  editar:   'bg-blue-100 text-blue-700',
+  eliminar: 'bg-red-100 text-red-700',
+  exportar: 'bg-yellow-100 text-yellow-700',
+  importar: 'bg-violet-100 text-violet-700',
+  masiva:   'bg-orange-100 text-orange-700',
+}
+
 interface Usuario {
   id: string
   email: string
@@ -43,6 +61,9 @@ export default function ConfiguracionPage() {
   const [perfiles, setPerfiles] = useState<Record<string, PerfilUsuario>>({})
   const [permisosAbiertos, setPermisosAbiertos] = useState<string | null>(null)
   const [nuevoRol, setNuevoRol] = useState<Rol>('operacion')
+  const [auditoria, setAuditoria] = useState<EventoAuditoria[]>([])
+  const [auditoriaCargada, setAuditoriaCargada] = useState(false)
+  const [filtroUsuario, setFiltroUsuario] = useState('')
   const [nuevaPlantillaNombre, setNuevaPlantillaNombre] = useState('')
   const [nuevaPlantillaCuerpo, setNuevaPlantillaCuerpo] = useState('')
   const [savingPlantilla, setSavingPlantilla] = useState(false)
@@ -92,14 +113,26 @@ export default function ConfiguracionPage() {
     }
   }
 
+  const fetchAuditoria = useCallback(async (usuario?: string) => {
+    const params = new URLSearchParams({ limit: '100' })
+    if (usuario) params.set('usuario', usuario)
+    const res = await fetch(`/api/auditoria?${params}`)
+    if (res.ok) {
+      const d = await res.json()
+      setAuditoria(Array.isArray(d) ? d : [])
+    }
+    setAuditoriaCargada(true)
+  }, [])
+
   useEffect(() => {
     fetchUsuarios()
     fetchTipos()
     fetchPlantillas()
     fetchPerfiles()
+    fetchAuditoria()
     // Cargar preferencia guardada en este navegador
     setNombreResponsable(localStorage.getItem('renova_responsable') || '')
-  }, [fetchUsuarios, fetchTipos, fetchPlantillas, fetchPerfiles])
+  }, [fetchUsuarios, fetchTipos, fetchPlantillas, fetchPerfiles, fetchAuditoria])
 
   async function agregarPlantilla(e: React.FormEvent) {
     e.preventDefault()
@@ -474,6 +507,67 @@ export default function ConfiguracionPage() {
               </div>
             </div>
           </form>
+        </CardContent>
+      </Card>
+
+      {/* Auditoría */}
+      <Card className="mt-6">
+        <CardHeader className="flex flex-row items-center justify-between py-4">
+          <CardTitle className="text-base">Auditoría — últimas 100 acciones</CardTitle>
+          <select
+            value={filtroUsuario}
+            onChange={e => { setFiltroUsuario(e.target.value); fetchAuditoria(e.target.value || undefined) }}
+            className="h-8 pl-2 pr-7 rounded-lg border border-gray-200 text-xs text-gray-600 bg-white focus:outline-none focus:border-orange-400 cursor-pointer"
+          >
+            <option value="">Todos los usuarios</option>
+            {usuarios.map(u => (
+              <option key={u.id} value={u.email}>{u.email}</option>
+            ))}
+          </select>
+        </CardHeader>
+        <CardContent>
+          {!auditoriaCargada ? (
+            <p className="text-sm text-gray-400">Cargando...</p>
+          ) : auditoria.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-4">
+              Sin registros aún. Las acciones del equipo se registrarán automáticamente desde ahora.
+            </p>
+          ) : (
+            <div className="max-h-96 overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-gray-50 border-b sticky top-0">
+                  <tr>
+                    <th className="text-left px-2 py-2 font-medium text-gray-600">Fecha</th>
+                    <th className="text-left px-2 py-2 font-medium text-gray-600">Usuario</th>
+                    <th className="text-left px-2 py-2 font-medium text-gray-600">Acción</th>
+                    <th className="text-left px-2 py-2 font-medium text-gray-600">Sección</th>
+                    <th className="text-left px-2 py-2 font-medium text-gray-600">Detalle</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {auditoria.map(e => (
+                    <tr key={e.id} className="hover:bg-gray-50">
+                      <td className="px-2 py-2 text-gray-400 whitespace-nowrap">
+                        {fmt(e.created_at)}
+                      </td>
+                      <td className="px-2 py-2 text-gray-600 max-w-[140px] truncate" title={e.usuario}>
+                        {e.usuario}
+                      </td>
+                      <td className="px-2 py-2">
+                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${ACCION_BADGE[e.accion] || 'bg-gray-100 text-gray-600'}`}>
+                          {e.accion}
+                        </span>
+                      </td>
+                      <td className="px-2 py-2 text-gray-600 capitalize">{e.tabla}</td>
+                      <td className="px-2 py-2 text-gray-500 max-w-[280px] truncate" title={e.detalle || ''}>
+                        {e.detalle || '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
 

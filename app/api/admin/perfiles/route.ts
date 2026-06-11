@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { requirePermiso, getPerfilActual } from '@/lib/permisos-server'
+import { auditar } from '@/lib/auditoria'
 
 // Listar perfiles (user_id → rol + permisos extra)
 export async function GET() {
@@ -41,5 +42,6 @@ export async function PUT(req: NextRequest) {
     updated_at: new Date().toISOString(),
   })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  auditar('editar', 'perfiles', user_id, `Rol: ${rol}${(permisos_extra || []).length ? ` · extras: ${permisos_extra.join(', ')}` : ''}`)
   return NextResponse.json({ ok: true })
 }

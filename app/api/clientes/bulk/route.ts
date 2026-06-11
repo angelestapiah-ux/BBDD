@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { requirePermiso } from '@/lib/permisos-server'
+import { auditar } from '@/lib/auditoria'
 
 // Acciones masivas sobre clientes seleccionados.
 // POST { ids: string[], accion: 'etapa' | 'tipo' | 'eliminar', etapa?, tipo? }
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest) {
 
     const { error } = await supabase.from('clientes').update({ etapa }).in('id', ids)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    auditar('masiva', 'clientes', null, `${ids.length} clientes → etapa "${etapa}"`)
     return NextResponse.json({ ok: true, afectados: ids.length })
   }
 
@@ -54,12 +56,14 @@ export async function POST(req: NextRequest) {
         .eq('id', c.id)
       if (!upErr) afectados++
     }
+    auditar('masiva', 'clientes', null, `${afectados} clientes → tipo "${tipo}"`)
     return NextResponse.json({ ok: true, afectados })
   }
 
   if (accion === 'eliminar') {
     const { error } = await supabase.from('clientes').delete().in('id', ids)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    auditar('eliminar', 'clientes', null, `Eliminación masiva: ${ids.length} clientes`)
     return NextResponse.json({ ok: true, afectados: ids.length })
   }
 

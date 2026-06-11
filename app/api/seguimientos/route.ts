@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { requireEscritura } from '@/lib/permisos-server'
+import { auditar } from '@/lib/auditoria'
 
 export async function POST(req: NextRequest) {
     const bloqueo = await requireEscritura()
@@ -13,6 +14,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const { data, error } = await supabase.from('seguimientos').insert(body).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    auditar('crear', 'seguimientos', data.id, `${data.tipo}: ${(data.notas || '').slice(0, 80)}`)
     return NextResponse.json(data, { status: 201 })
 }
 

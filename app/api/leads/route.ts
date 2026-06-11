@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { auditar } from '@/lib/auditoria'
 
 // ─────────────────────────────────────────────────────────────────────
 // Endpoint PÚBLICO de captura de leads desde las webs de Renova.
@@ -106,6 +107,7 @@ export async function POST(req: NextRequest) {
       }),
       supabase.from('clientes').update({ proximo_contacto: hoy }).eq('id', existente.id),
     ])
+    auditar('crear', 'seguimientos', existente.id, detalle, `Formulario web (${canal})`)
     return NextResponse.json({ ok: true, existente: true }, { status: 201, headers })
   }
 
@@ -134,5 +136,6 @@ export async function POST(req: NextRequest) {
     usuario: 'Formulario web',
   })
 
+  auditar('crear', 'clientes', cliente.id, detalle, `Formulario web (${canal})`)
   return NextResponse.json({ ok: true, id: cliente.id }, { status: 201, headers })
 }

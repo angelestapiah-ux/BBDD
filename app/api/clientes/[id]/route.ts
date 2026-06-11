@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { requirePermiso, requireEscritura } from '@/lib/permisos-server'
+import { auditar } from '@/lib/auditoria'
 
 // Registra el cambio de etapa en etapa_historial (si la tabla existe y la etapa cambió)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -81,6 +82,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   await registrarCambioEtapa(supabase, id, etapa || null)
   const { data, error } = await supabase.from('clientes').update(campos).eq('id', id).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  auditar('editar', 'clientes', id, `Cliente: ${data.nombre}`)
   return NextResponse.json(data)
 }
 
@@ -94,6 +96,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ('etapa' in body) await registrarCambioEtapa(supabase, id, body.etapa)
   const { data, error } = await supabase.from('clientes').update(body).eq('id', id).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  auditar('editar', 'clientes', id, `Cliente: ${data.nombre} · campos: ${Object.keys(body).join(', ')}`)
   return NextResponse.json(data)
 }
 
@@ -102,7 +105,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { id } = await params
+  const { data: cliente } = await supabase.from('clientes').select('nombre').eq('id', id).single()
   const { error } = await supabase.from('clientes').delete().eq('id', id)
+  if (!error) auditar('eliminar', 'clientes', id, `Cliente: ${cliente?.nombre ?? id}`)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
