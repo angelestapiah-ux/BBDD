@@ -15,6 +15,29 @@ export async function POST(req: NextRequest) {
     const { data, error } = await supabase.from('pagos').insert(body).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     auditar('crear', 'pagos', data.id, `${data.actividad_nombre} · $${data.monto ?? 0} · ${data.estado}`)
+
+    // Honorarios automáticos: si el cliente es paciente con terapeuta asignado,
+    // este pago genera una boleta PENDIENTE para que el terapeuta la emita.
+    try {
+      const { data: cliente } = await supabase
+        .from('clientes')
+        .select('nombre, terapeuta')
+        .eq('id', data.cliente_id)
+        .single()
+      if (cliente?.terapeuta) {
+        await supabase.from('boletas_honorarios').insert({
+          prestador: cliente.terapeuta,
+          origen: 'terapia',
+          glosa: `${data.actividad_nombre} — paciente ${cliente.nombre}`,
+          paciente_nombre: cliente.nombre,
+          pago_id: data.id,
+          fecha: data.fecha_actividad || data.fecha_pago || new Date().toISOString().slice(0, 10),
+          estado: 'pendiente',
+        })
+        auditar('crear', 'honorarios', null, `Boleta pendiente para ${cliente.terapeuta} (paciente ${cliente.nombre})`, 'Sistema (pago de paciente)')
+      }
+    } catch { /* tabla puede no existir aún */ }
+
     return NextResponse.json(data, { status: 201 })
 }
 

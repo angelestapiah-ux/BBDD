@@ -22,6 +22,7 @@ export default function ReportesPage() {
   const [cumpleaneros, setCumpleaneros] = useState<Record<string, string>[]>([])
   const [procedencias, setProcedencias] = useState<{ procedencia: string; cantidad: number }[]>([])
   const [pendientesData, setPendientesData] = useState<{ pagos: Record<string, unknown>[]; total: number } | null>(null)
+  const [facturacionData, setFacturacionData] = useState<{ pagos: Record<string, unknown>[]; total: number; pendientes: number } | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
   const [actividades, setActividades] = useState<Actividad[]>([])
 
@@ -71,6 +72,32 @@ export default function ReportesPage() {
     const ws = XLSX.utils.json_to_sheet(filas)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Por cobrar')
+    XLSX.writeFile(wb, `${nombre}.xlsx`)
+  }
+
+  async function cargarFacturacion() {
+    setLoading('facturacion')
+    const res = await fetch('/api/reportes?tipo=facturacion')
+    setFacturacionData(await res.json())
+    setLoading(null)
+  }
+
+  function exportarFacturacion(data: Record<string, unknown>[], nombre: string) {
+    const filas = data.map(p => ({
+      'Cliente': (p.clientes as Record<string, string>)?.nombre || '—',
+      'RUT': (p.clientes as Record<string, string>)?.documento_identidad || '',
+      'Actividad': p.actividad_nombre as string || '',
+      'Monto': p.monto ?? '',
+      'Método': p.metodo_pago as string || '',
+      'Fecha pago': p.fecha_pago as string || '',
+      'Fecha actividad': p.fecha_actividad as string || '',
+      'Requiere factura': p.requiere_factura ? 'Sí' : 'No',
+      'N° factura': p.numero_factura as string || '',
+      'Facturación interna': p.factura_interna as string || '',
+    }))
+    const ws = XLSX.utils.json_to_sheet(filas)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Facturación')
     XLSX.writeFile(wb, `${nombre}.xlsx`)
   }
 
@@ -165,7 +192,97 @@ export default function ReportesPage() {
           <TabsTrigger value="pagos">Pagos por actividad</TabsTrigger>
           <TabsTrigger value="cumpleanos">Cumpleaños del mes</TabsTrigger>
           <TabsTrigger value="procedencias">Procedencias</TabsTrigger>
+          <TabsTrigger value="facturacion">🧾 Facturación</TabsTrigger>
         </TabsList>
+
+        {/* ─── Facturación (SII) ──────────────────────────────────────── */}
+        <TabsContent value="facturacion">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Registro de facturación</CardTitle>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Pagos con factura solicitada, factura emitida o folio de facturación interna (SII)
+                </p>
+              </div>
+              <Button onClick={cargarFacturacion} size="sm" disabled={loading === 'facturacion'}>
+                <Search className="h-4 w-4 mr-2" /> {loading === 'facturacion' ? 'Cargando...' : 'Cargar'}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {!facturacionData && loading !== 'facturacion' && (
+                <p className="text-sm text-gray-400">Haz clic en Cargar para ver el registro de facturación</p>
+              )}
+              {loading === 'facturacion' && <p className="text-sm text-gray-400 animate-pulse">Cargando...</p>}
+              {facturacionData && (
+                <>
+                  <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <span className="text-sm font-semibold text-orange-700">
+                        Total facturable: ${facturacionData.total.toLocaleString('es-CL')}
+                      </span>
+                      <Badge variant="secondary">{facturacionData.pagos.length} registro{facturacionData.pagos.length !== 1 ? 's' : ''}</Badge>
+                      {facturacionData.pendientes > 0 && (
+                        <Badge variant="outline" className="border-yellow-400 text-yellow-700">
+                          {facturacionData.pendientes} factura{facturacionData.pendientes === 1 ? '' : 's'} sin emitir
+                        </Badge>
+                      )}
+                    </div>
+                    <Button size="sm" variant="outline" onClick={() => exportarFacturacion(facturacionData.pagos, 'facturacion')}>
+                      <Download className="h-3 w-3 mr-1" /> Exportar Excel
+                    </Button>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-orange-50">
+                        <tr>
+                          <th className="text-left p-2 font-medium text-gray-600">Cliente</th>
+                          <th className="text-left p-2 font-medium text-gray-600">RUT</th>
+                          <th className="text-left p-2 font-medium text-gray-600">Actividad</th>
+                          <th className="text-right p-2 font-medium text-gray-600">Monto</th>
+                          <th className="text-left p-2 font-medium text-gray-600">Fecha pago</th>
+                          <th className="text-left p-2 font-medium text-gray-600">N° factura</th>
+                          <th className="text-left p-2 font-medium text-gray-600">Fact. interna</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {facturacionData.pagos.map((p, i) => {
+                          const cliente = p.clientes as Record<string, string> | null
+                          const sinEmitir = p.requiere_factura && !p.numero_factura
+                          return (
+                            <tr key={i} className={`hover:bg-orange-50/40 transition-colors ${sinEmitir ? 'bg-yellow-50/40' : ''}`}>
+                              <td className="p-2 font-medium">
+                                {cliente?.id ? (
+                                  <a href={`/clientes/${cliente.id}`} className="hover:text-orange-600 hover:underline">
+                                    {cliente.nombre || '—'}
+                                  </a>
+                                ) : (cliente?.nombre || '—')}
+                              </td>
+                              <td className="p-2 text-gray-500">{cliente?.documento_identidad || '—'}</td>
+                              <td className="p-2 text-gray-600 max-w-[160px] truncate">{p.actividad_nombre as string || '—'}</td>
+                              <td className="p-2 text-right font-semibold">
+                                {p.monto ? `$${Number(p.monto).toLocaleString('es-CL')}` : '—'}
+                              </td>
+                              <td className="p-2 text-gray-500">{(p.fecha_pago as string) || '—'}</td>
+                              <td className="p-2">
+                                {p.numero_factura ? (
+                                  <span className="font-medium text-green-700">{p.numero_factura as string}</span>
+                                ) : p.requiere_factura ? (
+                                  <span className="text-xs text-yellow-700 font-medium">⚠ sin emitir</span>
+                                ) : '—'}
+                              </td>
+                              <td className="p-2 text-gray-500">{(p.factura_interna as string) || '—'}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* ─── Por cobrar ─────────────────────────────────────────────── */}
         <TabsContent value="pendientes">

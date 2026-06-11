@@ -22,11 +22,18 @@ export function PagoForm({ open, onOpenChange, onSubmit, asistencias }: Props) {
   const [customActividad, setCustomActividad] = useState('')
   const [monto, setMonto] = useState('')
   const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10))
+  const [fechaActividad, setFechaActividad] = useState('')
   const [metodo, setMetodo] = useState('')
   const [estado, setEstado] = useState('pagado')
   const [notas, setNotas] = useState('')
   const [requiereFactura, setRequiereFactura] = useState(false)
+  const [numeroFactura, setNumeroFactura] = useState('')
+  const [facturaInterna, setFacturaInterna] = useState('')
   const [saving, setSaving] = useState(false)
+
+  const esSinCobro = metodo === 'sin_cobro'
+  // Facturación interna (registro SII): para pagos que NO pasan por tarjeta/webpay
+  const aplicaFacturaInterna = !!metodo && !['tarjeta', 'webpay', 'sin_cobro'].includes(metodo)
 
   const nombreFinal = actividad === '__otro__' ? customActividad : actividad
 
@@ -34,21 +41,25 @@ export function PagoForm({ open, onOpenChange, onSubmit, asistencias }: Props) {
     e.preventDefault()
     if (!nombreFinal) return
     if (!metodo) { toast.error('Selecciona un método de pago'); return }
-    if (estado === 'pagado' && (!monto || Number(monto) <= 0)) {
+    if (estado === 'pagado' && !esSinCobro && (!monto || Number(monto) <= 0)) {
       toast.error('Un pago en estado "Pagado" necesita el monto')
       return
     }
     setSaving(true)
     await onSubmit({
       actividad_nombre: nombreFinal,
-      monto,
+      monto: esSinCobro ? '0' : monto,
       fecha_pago: fecha,
+      fecha_actividad: fechaActividad,
       metodo_pago: metodo,
       estado,
       notas,
       requiere_factura: requiereFactura,
+      numero_factura: numeroFactura,
+      factura_interna: facturaInterna,
     })
     setActividad(''); setCustomActividad(''); setMonto(''); setNotas(''); setRequiereFactura(false); setMetodo('')
+    setFechaActividad(''); setNumeroFactura(''); setFacturaInterna('')
     setSaving(false)
   }
 
@@ -99,28 +110,17 @@ export function PagoForm({ open, onOpenChange, onSubmit, asistencias }: Props) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Monto</Label>
-              <Input type="number" placeholder="0" value={monto} onChange={e => setMonto(e.target.value)} />
+              <Label>Monto{esSinCobro && ' (sin cobro)'}</Label>
+              <Input type="number" placeholder="0" value={esSinCobro ? '0' : monto} disabled={esSinCobro} onChange={e => setMonto(e.target.value)} />
             </div>
             <div>
-              <Label>Fecha</Label>
+              <Label>Fecha de pago</Label>
               <Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
             </div>
             <div>
-              <Label>Método *</Label>
-              <Select value={metodo || '__vacio__'} onValueChange={v => setMetodo(v === '__vacio__' ? '' : (v ?? ''))}>
-                <SelectTrigger className={!metodo ? 'text-gray-400' : ''}>
-                  <SelectValue placeholder="Selecciona..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__vacio__" disabled>Selecciona un método...</SelectItem>
-                  <SelectItem value="transferencia">Transferencia</SelectItem>
-                  <SelectItem value="efectivo">Efectivo</SelectItem>
-                  <SelectItem value="tarjeta">Tarjeta</SelectItem>
-                  <SelectItem value="webpay">Link de pago Webpay</SelectItem>
-                  <SelectItem value="otro">Otro</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Fecha de la actividad</Label>
+              <Input type="date" value={fechaActividad} onChange={e => setFechaActividad(e.target.value)} />
+              <p className="text-xs text-gray-400 mt-0.5">Si es distinta a la fecha de pago</p>
             </div>
             <div>
               <Label>Estado</Label>
@@ -132,6 +132,38 @@ export function PagoForm({ open, onOpenChange, onSubmit, asistencias }: Props) {
                   <SelectItem value="parcial">Parcial</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="col-span-2">
+              <Label>Método *</Label>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <Select value={metodo || '__vacio__'} onValueChange={v => setMetodo(v === '__vacio__' ? '' : (v ?? ''))}>
+                    <SelectTrigger className={!metodo ? 'text-gray-400' : ''}>
+                      <SelectValue placeholder="Selecciona..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__vacio__" disabled>Selecciona un método...</SelectItem>
+                      <SelectItem value="transferencia">Transferencia</SelectItem>
+                      <SelectItem value="efectivo">Efectivo</SelectItem>
+                      <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                      <SelectItem value="webpay">Link de pago Webpay</SelectItem>
+                      <SelectItem value="sin_cobro">Sin cobro</SelectItem>
+                      <SelectItem value="otro">Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setMetodo(esSinCobro ? '' : 'sin_cobro'); if (!esSinCobro) setMonto('0') }}
+                  className={`px-3 rounded-lg text-xs font-medium border transition-colors shrink-0 ${
+                    esSinCobro
+                      ? 'bg-gray-700 text-white border-gray-700'
+                      : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
+                  }`}
+                >
+                  Sin cobro
+                </button>
+              </div>
             </div>
           </div>
 
@@ -149,6 +181,28 @@ export function PagoForm({ open, onOpenChange, onSubmit, asistencias }: Props) {
             />
             <span className="text-sm font-medium text-gray-700">Cliente requiere factura</span>
           </label>
+
+          {requiereFactura && (
+            <div>
+              <Label>N° de factura</Label>
+              <Input
+                value={numeroFactura}
+                onChange={e => setNumeroFactura(e.target.value)}
+                placeholder="ej: 1745 (déjalo vacío si aún no se emite)"
+              />
+            </div>
+          )}
+
+          {aplicaFacturaInterna && (
+            <div>
+              <Label>Facturación interna (registro SII)</Label>
+              <Input
+                value={facturaInterna}
+                onChange={e => setFacturaInterna(e.target.value)}
+                placeholder="N° o folio interno para pagos sin tarjeta/link"
+              />
+            </div>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>

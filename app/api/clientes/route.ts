@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { requireEscritura } from '@/lib/permisos-server'
 import { auditar } from '@/lib/auditoria'
+import { sincronizarAsistencias } from '@/lib/sincronizar-asistencias'
 
 export async function GET(req: NextRequest) {
   const supabase = createSupabaseAdminClient()
@@ -15,7 +16,9 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('clientes')
     .select('*', { count: 'exact' })
-    .order('created_at', { ascending: false })
+    // Con búsqueda activa, ordenar alfabéticamente para que todos los
+    // resultados relevantes quepan dentro del límite (no por fecha de creación)
+    .order(q ? 'nombre' : 'created_at', { ascending: !!q })
     .range(offset, offset + limit - 1)
 
   if (q) {
@@ -65,5 +68,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase.from('clientes').insert(body).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   auditar('crear', 'clientes', data.id, `Cliente: ${data.nombre}`)
+  // Tipos de cliente que son actividades del catálogo → registrar asistencias
+  await sincronizarAsistencias(supabase, data.id, data.tipos_cliente)
   return NextResponse.json(data, { status: 201 })
 }

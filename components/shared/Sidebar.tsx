@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Users, Calendar, FileText, Upload, DollarSign, BookOpen, Settings, LayoutDashboard, LogOut, Sun, GraduationCap } from 'lucide-react'
+import { Users, Calendar, FileText, Upload, DollarSign, BookOpen, Settings, LayoutDashboard, LogOut, Sun, GraduationCap, FileSignature, Wallet } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getSupabase } from '@/lib/supabase'
 import { usePerfil } from './usePerfil'
@@ -15,6 +15,8 @@ const navItems: { href: string; label: string; icon: typeof Sun; permiso?: Permi
   { href: '/actividades', label: 'Actividades', icon: BookOpen },
   { href: '/seguimientos', label: 'Seguimientos', icon: Calendar },
   { href: '/pagos', label: 'Pagos', icon: DollarSign },
+  { href: '/honorarios', label: 'Honorarios', icon: FileSignature, permiso: 'reportes' },
+  { href: '/gastos', label: 'Gastos empresa', icon: Wallet, permiso: 'reportes' },
   { href: '/reportes', label: 'Reportes', icon: FileText, permiso: 'reportes' },
   { href: '/importar', label: 'Importar Excel', icon: Upload, permiso: 'importar' },
   { href: '/configuracion', label: 'Configuración', icon: Settings, permiso: 'configuracion' },

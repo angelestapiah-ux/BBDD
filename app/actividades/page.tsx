@@ -130,8 +130,14 @@ export default function ActividadesPage() {
                       {TIPOS[a.tipo] || a.tipo}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-500">{fmt(a.fecha_inicio)}</td>
-                  <td className="px-4 py-3 text-gray-500">{fmt(a.fecha_fin)}</td>
+                  <td className="px-4 py-3 text-gray-500" colSpan={!a.fecha_inicio && !a.fecha_fin ? 2 : 1}>
+                    {!a.fecha_inicio && !a.fecha_fin
+                      ? <span className="text-xs text-gray-400 italic">Indefinida</span>
+                      : fmt(a.fecha_inicio)}
+                  </td>
+                  {(a.fecha_inicio || a.fecha_fin) && (
+                    <td className="px-4 py-3 text-gray-500">{fmt(a.fecha_fin)}</td>
+                  )}
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
                       <Button size="sm" variant="ghost" onClick={() => openEdit(a)}>
@@ -179,6 +185,18 @@ export default function ActividadesPage() {
                 <Label>Fecha fin</Label>
                 <Input type="date" value={form.fecha_fin || ''} onChange={e => set('fecha_fin', e.target.value)} />
               </div>
+              <p className="col-span-2 text-xs text-gray-400 -mt-2">
+                Las fechas son opcionales — deja ambas vacías si la actividad es de duración indefinida.
+              </p>
+              {(form.fecha_inicio || form.fecha_fin) && (
+                <button
+                  type="button"
+                  onClick={() => setForm(prev => ({ ...prev, fecha_inicio: null, fecha_fin: null }))}
+                  className="col-span-2 -mt-2 text-xs text-orange-600 hover:underline text-left"
+                >
+                  Marcar como indefinida (limpiar fechas)
+                </button>
+              )}
             </div>
             <div>
               <Label>Descripción</Label>

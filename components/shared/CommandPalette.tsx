@@ -64,10 +64,18 @@ export function CommandPalette() {
     const t = setTimeout(async () => {
       setBuscando(true)
       try {
-        const res = await fetch(`/api/clientes?q=${encodeURIComponent(q)}&limit=6`)
+        const res = await fetch(`/api/clientes?q=${encodeURIComponent(q)}&limit=20`)
         if (res.ok) {
           const json = await res.json()
-          setClientes(json.data || [])
+          // Relevancia: primero los nombres que EMPIEZAN con lo buscado
+          const nq = normalizar(q)
+          const lista: Cliente[] = json.data || []
+          lista.sort((a, b) => {
+            const aEmpieza = normalizar(a.nombre).startsWith(nq) ? 0 : 1
+            const bEmpieza = normalizar(b.nombre).startsWith(nq) ? 0 : 1
+            return aEmpieza - bEmpieza || a.nombre.localeCompare(b.nombre)
+          })
+          setClientes(lista.slice(0, 8))
         }
       } finally {
         setBuscando(false)

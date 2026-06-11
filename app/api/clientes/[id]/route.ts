@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { requirePermiso, requireEscritura } from '@/lib/permisos-server'
 import { auditar } from '@/lib/auditoria'
+import { sincronizarAsistencias } from '@/lib/sincronizar-asistencias'
 
 // Registra el cambio de etapa en etapa_historial (si la tabla existe y la etapa cambió)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -83,6 +84,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const { data, error } = await supabase.from('clientes').update(campos).eq('id', id).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   auditar('editar', 'clientes', id, `Cliente: ${data.nombre}`)
+  await sincronizarAsistencias(supabase, id, data.tipos_cliente)
   return NextResponse.json(data)
 }
 

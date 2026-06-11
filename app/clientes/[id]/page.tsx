@@ -438,11 +438,11 @@ export default function ClienteDetailPage() {
           <TabsTrigger value="seguimientos">
             Seguimientos ({cliente.seguimientos?.length ?? 0})
           </TabsTrigger>
-          <TabsTrigger value="pagos">
-            Pagos ({cliente.pagos?.length ?? 0})
-          </TabsTrigger>
-          <TabsTrigger value="asistencias">
-            Asistencias ({cliente.asistencias?.length ?? 0})
+          <TabsTrigger value="actividades">
+            Actividades y pagos ({new Set([
+              ...(cliente.asistencias ?? []).map(a => a.actividad_nombre),
+              ...(cliente.pagos ?? []).map(p => p.actividad_nombre),
+            ]).size})
           </TabsTrigger>
           <TabsTrigger value="etapas">
             Etapas ({cliente.etapa_historial?.length ?? 0})
@@ -493,90 +493,120 @@ export default function ClienteDetailPage() {
           </Card>
         </TabsContent>
 
-        {/* PAGOS */}
-        <TabsContent value="pagos">
+        {/* ACTIVIDADES Y PAGOS — vista combinada agrupada por actividad */}
+        <TabsContent value="actividades">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between py-3">
-              <CardTitle className="text-sm font-medium">Pagos</CardTitle>
-              <Button size="sm" variant="outline" onClick={() => setPagoOpen(true)}>
-                <Plus className="h-3 w-3 mr-1" /> Agregar
-              </Button>
+              <CardTitle className="text-sm font-medium">Actividades y pagos</CardTitle>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => setAsistenciaOpen(true)}>
+                  <Plus className="h-3 w-3 mr-1" /> Actividad
+                </Button>
+                <Button size="sm" variant="outline" className="border-green-600 text-green-700 hover:bg-green-50" onClick={() => setPagoOpen(true)}>
+                  <Plus className="h-3 w-3 mr-1" /> Pago
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              {!cliente.pagos?.length ? (
-                <div className="text-center py-6">
-                  <p className="text-sm text-gray-400 mb-3">Sin pagos registrados</p>
-                  <Button size="sm" className="bg-orange-600 hover:bg-orange-700" onClick={() => setPagoOpen(true)}>
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Agregar pago
-                  </Button>
-                </div>
-              ) : (
-                <ul className="space-y-2">
-                  {cliente.pagos.map(p => (
-                    <li key={p.id} className="text-sm border-b border-gray-100 last:border-0 pb-2 last:pb-0 group">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="font-medium">{p.actividad_nombre}</span>
-                          {p.monto && <span className="ml-2 text-orange-600 font-semibold">${p.monto.toLocaleString()}</span>}
-                          {p.requiere_factura && <span title="Requiere factura"><Receipt className="inline h-3.5 w-3.5 text-orange-500 ml-1" /></span>}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={p.estado === 'pagado' ? 'default' : p.estado === 'parcial' ? 'secondary' : 'outline'}>
-                            {p.estado}
-                          </Badge>
-                          <span className="text-gray-400">{fmt(p.fecha_pago)}</span>
-                          <Button size="sm" variant="ghost" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100" onClick={() => setEditPago(p)}>
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <Button size="sm" variant="ghost" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-red-500" onClick={() => deletePago(p)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                      {p.notas && <p className="text-gray-400 mt-0.5 text-xs">{p.notas}</p>}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+              {(() => {
+                const asistencias = cliente.asistencias ?? []
+                const pagos = cliente.pagos ?? []
+                const nombres = Array.from(new Set([
+                  ...asistencias.map(a => a.actividad_nombre),
+                  ...pagos.map(p => p.actividad_nombre),
+                ]))
 
-        {/* ASISTENCIAS */}
-        <TabsContent value="asistencias">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between py-3">
-              <CardTitle className="text-sm font-medium">Actividades asistidas</CardTitle>
-              <Button size="sm" variant="outline" onClick={() => setAsistenciaOpen(true)}>
-                <Plus className="h-3 w-3 mr-1" /> Agregar
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {!cliente.asistencias?.length ? (
-                <div className="text-center py-6">
-                  <p className="text-sm text-gray-400 mb-3">Sin asistencias registradas</p>
-                  <Button size="sm" className="bg-orange-600 hover:bg-orange-700" onClick={() => setAsistenciaOpen(true)}>
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Registrar asistencia
-                  </Button>
-                </div>
-              ) : (
-                <ul className="space-y-2">
-                  {cliente.asistencias.map(a => (
-                    <li key={a.id} className="flex items-center justify-between text-sm group">
-                      <span className="font-medium">{a.actividad_nombre}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-400">{fmt(a.fecha_asistencia)}</span>
-                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100" onClick={() => setEditAsistencia(a)}>
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                        <Button size="sm" variant="ghost" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-red-500" onClick={() => deleteAsistencia(a)}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                if (nombres.length === 0) {
+                  return (
+                    <div className="text-center py-6">
+                      <p className="text-sm text-gray-400 mb-3">Sin actividades ni pagos registrados</p>
+                      <Button size="sm" className="bg-orange-600 hover:bg-orange-700" onClick={() => setPagoOpen(true)}>
+                        <Plus className="h-3.5 w-3.5 mr-1" /> Registrar pago
+                      </Button>
+                    </div>
+                  )
+                }
+
+                return (
+                  <div className="space-y-4">
+                    {nombres.map(nombre => {
+                      const asis = asistencias.filter(a => a.actividad_nombre === nombre)
+                      const pgs = pagos.filter(p => p.actividad_nombre === nombre)
+                      const totalPagado = pgs.filter(p => p.estado === 'pagado').reduce((s, p) => s + (p.monto || 0), 0)
+
+                      return (
+                        <div key={nombre} className="border border-gray-100 rounded-xl overflow-hidden">
+                          {/* Encabezado de la actividad */}
+                          <div className="flex items-center justify-between gap-2 px-3 py-2 bg-gray-50 group">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-sm font-semibold text-gray-800 truncate">{nombre}</span>
+                              {asis[0]?.fecha_asistencia && (
+                                <span className="text-xs text-gray-400 shrink-0">desde {fmt(asis[0].fecha_asistencia)}</span>
+                              )}
+                              {asis.length === 0 && (
+                                <span className="text-xs text-gray-300 shrink-0">(solo pago, sin asistencia)</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {totalPagado > 0 && (
+                                <span className="text-xs font-semibold text-green-700">${totalPagado.toLocaleString('es-CL')} pagado</span>
+                              )}
+                              {asis[0] && (
+                                <>
+                                  <Button size="sm" variant="ghost" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100" onClick={() => setEditAsistencia(asis[0])}>
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  <Button size="sm" variant="ghost" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-red-500" onClick={() => deleteAsistencia(asis[0])}>
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Pagos de la actividad */}
+                          {pgs.length > 0 ? (
+                            <ul className="divide-y divide-gray-50">
+                              {pgs.map(p => (
+                                <li key={p.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm group">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <Badge variant={p.estado === 'pagado' ? 'default' : p.estado === 'parcial' ? 'secondary' : 'outline'} className="shrink-0">
+                                      {p.estado}
+                                    </Badge>
+                                    <span className="font-semibold text-orange-600 shrink-0">
+                                      {p.metodo_pago === 'sin_cobro' ? 'Sin cobro' : p.monto ? `$${p.monto.toLocaleString('es-CL')}` : '—'}
+                                    </span>
+                                    {p.requiere_factura && (
+                                      <span title={p.numero_factura ? `Factura N° ${p.numero_factura}` : 'Requiere factura (sin número aún)'}>
+                                        <Receipt className={`h-3.5 w-3.5 ${p.numero_factura ? 'text-green-600' : 'text-orange-500'}`} />
+                                      </span>
+                                    )}
+                                    {p.notas && <span className="text-xs text-gray-400 truncate">{p.notas}</span>}
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <span className="text-xs text-gray-400">
+                                      {fmt(p.fecha_pago)}
+                                      {p.fecha_actividad && p.fecha_actividad !== p.fecha_pago && ` · act: ${fmt(p.fecha_actividad)}`}
+                                    </span>
+                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100" onClick={() => setEditPago(p)}>
+                                      <Pencil className="h-3 w-3" />
+                                    </Button>
+                                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-red-500" onClick={() => deletePago(p)}>
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="px-3 py-2 text-xs text-gray-300">Sin pagos para esta actividad</p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
             </CardContent>
           </Card>
         </TabsContent>
@@ -741,21 +771,38 @@ function EditPagoDialog({ pago, onClose, onSave, asistencias }: {
   const [actividad, setActividad] = useState(pago.actividad_nombre)
   const [monto, setMonto] = useState(pago.monto?.toString() || '')
   const [fecha, setFecha] = useState(pago.fecha_pago || '')
+  const [fechaActividad, setFechaActividad] = useState(pago.fecha_actividad || '')
   const [metodo, setMetodo] = useState(pago.metodo_pago || 'transferencia')
   const [estado, setEstado] = useState(pago.estado)
   const [notas, setNotas] = useState(pago.notas || '')
+  const [requiereFactura, setRequiereFactura] = useState(pago.requiere_factura)
+  const [numeroFactura, setNumeroFactura] = useState(pago.numero_factura || '')
+  const [facturaInterna, setFacturaInterna] = useState(pago.factura_interna || '')
   const [saving, setSaving] = useState(false)
 
+  const esSinCobro = metodo === 'sin_cobro'
+  const aplicaFacturaInterna = !['tarjeta', 'webpay', 'sin_cobro'].includes(metodo)
   const actividadesUnicas = Array.from(new Map(asistencias.map(a => [a.actividad_nombre, a])).values())
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (estado === 'pagado' && (!monto || Number(monto) <= 0)) {
+    if (estado === 'pagado' && !esSinCobro && (!monto || Number(monto) <= 0)) {
       toast.error('Un pago en estado "Pagado" necesita el monto')
       return
     }
     setSaving(true)
-    await onSave({ actividad_nombre: actividad, monto: monto ? Number(monto) : null, fecha_pago: fecha || null, metodo_pago: metodo, estado, notas: notas || null })
+    await onSave({
+      actividad_nombre: actividad,
+      monto: esSinCobro ? 0 : (monto ? Number(monto) : null),
+      fecha_pago: fecha || null,
+      fecha_actividad: fechaActividad || null,
+      metodo_pago: metodo,
+      estado,
+      notas: notas || null,
+      requiere_factura: requiereFactura,
+      numero_factura: numeroFactura || null,
+      factura_interna: facturaInterna || null,
+    })
     setSaving(false)
   }
 
@@ -778,25 +825,16 @@ function EditPagoDialog({ pago, onClose, onSave, asistencias }: {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Monto</Label>
-              <Input type="number" value={monto} onChange={e => setMonto(e.target.value)} />
+              <Label>Monto{esSinCobro && ' (sin cobro)'}</Label>
+              <Input type="number" value={esSinCobro ? '0' : monto} disabled={esSinCobro} onChange={e => setMonto(e.target.value)} />
             </div>
             <div>
-              <Label>Fecha</Label>
+              <Label>Fecha de pago</Label>
               <Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
             </div>
             <div>
-              <Label>Método</Label>
-              <Select value={metodo} onValueChange={v => v && setMetodo(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="transferencia">Transferencia</SelectItem>
-                  <SelectItem value="efectivo">Efectivo</SelectItem>
-                  <SelectItem value="tarjeta">Tarjeta</SelectItem>
-                  <SelectItem value="webpay">Link de pago Webpay</SelectItem>
-                  <SelectItem value="otro">Otro</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>Fecha de la actividad</Label>
+              <Input type="date" value={fechaActividad} onChange={e => setFechaActividad(e.target.value)} />
             </div>
             <div>
               <Label>Estado</Label>
@@ -809,11 +847,46 @@ function EditPagoDialog({ pago, onClose, onSave, asistencias }: {
                 </SelectContent>
               </Select>
             </div>
+            <div className="col-span-2">
+              <Label>Método</Label>
+              <Select value={metodo} onValueChange={v => v && setMetodo(v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="transferencia">Transferencia</SelectItem>
+                  <SelectItem value="efectivo">Efectivo</SelectItem>
+                  <SelectItem value="tarjeta">Tarjeta</SelectItem>
+                  <SelectItem value="webpay">Link de pago Webpay</SelectItem>
+                  <SelectItem value="sin_cobro">Sin cobro</SelectItem>
+                  <SelectItem value="otro">Otro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div>
             <Label>Notas</Label>
             <Textarea rows={2} value={notas} onChange={e => setNotas(e.target.value)} />
           </div>
+          <label className="flex items-center gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={requiereFactura}
+              onChange={e => setRequiereFactura(e.target.checked)}
+              className="h-4 w-4 rounded accent-orange-600"
+            />
+            <span className="text-sm font-medium text-gray-700">Cliente requiere factura</span>
+          </label>
+          {requiereFactura && (
+            <div>
+              <Label>N° de factura</Label>
+              <Input value={numeroFactura} onChange={e => setNumeroFactura(e.target.value)} placeholder="ej: 1745" />
+            </div>
+          )}
+          {aplicaFacturaInterna && (
+            <div>
+              <Label>Facturación interna (registro SII)</Label>
+              <Input value={facturaInterna} onChange={e => setFacturaInterna(e.target.value)} placeholder="N° o folio interno" />
+            </div>
+          )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
             <Button type="submit" disabled={saving} className="bg-orange-600 hover:bg-orange-700">

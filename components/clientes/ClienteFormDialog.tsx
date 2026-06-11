@@ -12,6 +12,7 @@ import { TiposClienteSelect } from './TiposClienteSelect'
 import { ETAPAS_FUNNEL, EtapaFunnel } from '@/lib/types'
 import { ChevronDown, ChevronUp, Zap, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
+import { PAISES, CIUDADES } from '@/lib/geo'
 
 interface Duplicado {
   id: string
@@ -291,12 +292,18 @@ export function ClienteFormDialog({ open, onOpenChange, onSubmit, title, initial
                 <Input id="profesion" value={form.profesion || ''} onChange={e => set('profesion', e.target.value)} placeholder="ej: Psicóloga" />
               </div>
               <div>
-                <Label htmlFor="ciudad">Ciudad</Label>
-                <Input id="ciudad" value={form.ciudad || ''} onChange={e => set('ciudad', e.target.value)} placeholder="ej: Santiago" />
+                <Label htmlFor="pais">País</Label>
+                <Input id="pais" list="lista-paises" value={form.pais || ''} onChange={e => set('pais', e.target.value)} placeholder="ej: Chile" />
+                <datalist id="lista-paises">
+                  {PAISES.map(p => <option key={p} value={p} />)}
+                </datalist>
               </div>
               <div>
-                <Label htmlFor="pais">País</Label>
-                <Input id="pais" value={form.pais || ''} onChange={e => set('pais', e.target.value)} placeholder="ej: Chile" />
+                <Label htmlFor="ciudad">Ciudad</Label>
+                <Input id="ciudad" list="lista-ciudades" value={form.ciudad || ''} onChange={e => set('ciudad', e.target.value)} placeholder="ej: Santiago" />
+                <datalist id="lista-ciudades">
+                  {(CIUDADES[form.pais || 'Chile'] || CIUDADES['Chile']).map(c => <option key={c} value={c} />)}
+                </datalist>
               </div>
               <div>
                 <Label htmlFor="procedencia">Procedencia</Label>

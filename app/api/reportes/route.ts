@@ -88,5 +88,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ pagos: data, total })
   }
 
+  if (tipo === 'facturacion') {
+    // Pagos con factura solicitada, factura emitida o folio interno (registro SII)
+    const { data, error } = await supabase
+      .from('pagos')
+      .select('*, clientes(id, nombre, correo, telefono, documento_identidad)')
+      .or('requiere_factura.eq.true,numero_factura.not.is.null,factura_interna.not.is.null')
+      .order('fecha_pago', { ascending: false })
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pendientes = (data || []).filter((p: any) => p.requiere_factura && !p.numero_factura)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const total = (data || []).reduce((sum: number, p: any) => sum + (p.monto || 0), 0)
+    return NextResponse.json({ pagos: data ?? [], total, pendientes: pendientes.length })
+  }
+
   return NextResponse.json({ error: 'Tipo de reporte no válido' }, { status: 400 })
 }

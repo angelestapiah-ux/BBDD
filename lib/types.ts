@@ -98,10 +98,13 @@ export interface Pago {
   actividad_nombre: string
   monto: number | null
   fecha_pago: string | null
+  fecha_actividad: string | null
   metodo_pago: string | null
   estado: 'pagado' | 'pendiente' | 'parcial'
   notas: string | null
   requiere_factura: boolean
+  numero_factura: string | null
+  factura_interna: string | null
   created_at: string
 }
 
@@ -125,6 +128,50 @@ export interface EtapaHistorial {
   cliente_id: string
   etapa_anterior: EtapaFunnel | null
   etapa_nueva: EtapaFunnel
+  created_at: string
+}
+
+export interface BoletaHonorario {
+  id: string
+  prestador: string
+  origen: 'terapia' | 'clases' | 'manual'
+  glosa: string
+  paciente_nombre: string | null
+  pago_id: string | null
+  monto_liquido: number | null
+  retencion: number | null
+  monto_bruto: number | null
+  numero_boleta: string | null
+  fecha: string | null
+  estado: 'pendiente' | 'emitida'
+  notas: string | null
+  created_at: string
+}
+
+export interface Gasto {
+  id: string
+  fecha: string
+  categoria: string | null
+  descripcion: string
+  tienda: string | null
+  tipo_pago: string | null
+  documento: 'boleta' | 'factura' | 'otro'
+  numero_documento: string | null
+  monto: number
+  notas: string | null
+  created_at: string
+}
+
+export interface ArriendoSala {
+  id: string
+  profesional: string
+  motivo: string | null
+  fecha_sesion: string | null
+  forma_pago: string | null
+  fecha_pago: string | null
+  monto: number
+  numero_factura: string | null
+  notas: string | null
   created_at: string
 }
 

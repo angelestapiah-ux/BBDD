@@ -6,19 +6,26 @@ import { ChevronDown, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface TipoCliente { id: string; nombre: string }
+interface ActividadOpcion { id: string; nombre: string }
 
 interface Props {
   value: string[]
   onChange: (value: string[]) => void
 }
 
+// Selector de tipos de cliente. Las opciones combinan:
+// 1. Las ACTIVIDADES del catálogo (sincronía con la pestaña Actividades) —
+//    al guardar el cliente, estas se registran también como asistencias.
+// 2. Los tipos configurables (Paciente, Docente, etc.) de Configuración.
 export function TiposClienteSelect({ value, onChange }: Props) {
   const [tipos, setTipos] = useState<TipoCliente[]>([])
+  const [actividades, setActividades] = useState<ActividadOpcion[]>([])
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetch('/api/tipos-cliente').then(r => r.json()).then(d => setTipos(Array.isArray(d) ? d : []))
+    fetch('/api/actividades').then(r => r.json()).then(d => setActividades(Array.isArray(d) ? d : []))
   }, [])
 
   useEffect(() => {
@@ -38,6 +45,22 @@ export function TiposClienteSelect({ value, onChange }: Props) {
     e.stopPropagation()
     onChange(value.filter(v => v !== nombre))
   }
+
+  // No duplicar: si una actividad tiene el mismo nombre que un tipo, mostrarla solo como actividad
+  const nombresActividades = new Set(actividades.map(a => a.nombre))
+  const tiposFiltrados = tipos.filter(t => !nombresActividades.has(t.nombre))
+
+  const renderOpcion = (key: string, nombre: string) => (
+    <label key={key} className="flex items-center gap-2 px-3 py-2 hover:bg-orange-50 cursor-pointer text-sm">
+      <input
+        type="checkbox"
+        checked={value.includes(nombre)}
+        onChange={() => toggle(nombre)}
+        className="accent-orange-600"
+      />
+      {nombre}
+    </label>
+  )
 
   return (
     <div ref={ref} className="relative">
@@ -61,20 +84,25 @@ export function TiposClienteSelect({ value, onChange }: Props) {
 
       {open && (
         <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg py-1 max-h-60 overflow-auto">
-          {tipos.length === 0 && (
-            <p className="text-sm text-gray-400 px-3 py-2">Sin tipos configurados</p>
+          {actividades.length > 0 && (
+            <>
+              <p className="px-3 pt-1.5 pb-0.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                Actividades del catálogo
+              </p>
+              {actividades.map(a => renderOpcion(`act-${a.id}`, a.nombre))}
+            </>
           )}
-          {tipos.map(t => (
-            <label key={t.id} className="flex items-center gap-2 px-3 py-2 hover:bg-orange-50 cursor-pointer text-sm">
-              <input
-                type="checkbox"
-                checked={value.includes(t.nombre)}
-                onChange={() => toggle(t.nombre)}
-                className="accent-orange-600"
-              />
-              {t.nombre}
-            </label>
-          ))}
+          {tiposFiltrados.length > 0 && (
+            <>
+              <p className="px-3 pt-2 pb-0.5 text-xs font-semibold text-gray-400 uppercase tracking-wide border-t border-gray-100 mt-1">
+                Otros tipos
+              </p>
+              {tiposFiltrados.map(t => renderOpcion(`tipo-${t.id}`, t.nombre))}
+            </>
+          )}
+          {actividades.length === 0 && tiposFiltrados.length === 0 && (
+            <p className="text-sm text-gray-400 px-3 py-2">Sin tipos ni actividades configuradas</p>
+          )}
         </div>
       )}
     </div>
