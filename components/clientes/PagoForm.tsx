@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -31,9 +31,15 @@ export function PagoForm({ open, onOpenChange, onSubmit, asistencias }: Props) {
   const [facturaInterna, setFacturaInterna] = useState('')
   const [saving, setSaving] = useState(false)
 
+  const [catalogo, setCatalogo] = useState<{ id: string; nombre: string }[]>([])
+
+  useEffect(() => {
+    if (open) {
+      fetch('/api/actividades').then(r => r.json()).then(d => setCatalogo(Array.isArray(d) ? d : []))
+    }
+  }, [open])
+
   const esSinCobro = metodo === 'sin_cobro'
-  // Facturación interna (registro SII): para pagos que NO pasan por tarjeta/webpay
-  const aplicaFacturaInterna = !!metodo && !['tarjeta', 'webpay', 'sin_cobro'].includes(metodo)
 
   const nombreFinal = actividad === '__otro__' ? customActividad : actividad
 
@@ -91,6 +97,19 @@ export function PagoForm({ open, onOpenChange, onSubmit, asistencias }: Props) {
                     <div className="my-1 border-t border-gray-100" />
                   </>
                 )}
+                {(() => {
+                  const delCliente = new Set(actividadesCliente.map(a => a.actividad_nombre))
+                  const resto = catalogo.filter(a => !delCliente.has(a.nombre))
+                  return resto.length > 0 ? (
+                    <>
+                      <div className="px-2 py-1 text-xs text-gray-400 font-medium">Catálogo (se agregará al perfil)</div>
+                      {resto.map(a => (
+                        <SelectItem key={a.id} value={a.nombre}>{a.nombre}</SelectItem>
+                      ))}
+                      <div className="my-1 border-t border-gray-100" />
+                    </>
+                  ) : null
+                })()}
                 <SelectItem value="__otro__">Otra (escribir manualmente)</SelectItem>
               </SelectContent>
             </Select>
@@ -193,16 +212,14 @@ export function PagoForm({ open, onOpenChange, onSubmit, asistencias }: Props) {
             </div>
           )}
 
-          {aplicaFacturaInterna && (
-            <div>
-              <Label>Facturación interna (registro SII)</Label>
-              <Input
-                value={facturaInterna}
-                onChange={e => setFacturaInterna(e.target.value)}
-                placeholder="N° o folio interno para pagos sin tarjeta/link"
-              />
-            </div>
-          )}
+          <div>
+            <Label>Facturación interna (registro SII)</Label>
+            <Input
+              value={facturaInterna}
+              onChange={e => setFacturaInterna(e.target.value)}
+              placeholder="N° o folio interno"
+            />
+          </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>

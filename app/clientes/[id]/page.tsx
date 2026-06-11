@@ -447,7 +447,44 @@ export default function ClienteDetailPage() {
           <TabsTrigger value="etapas">
             Etapas ({cliente.etapa_historial?.length ?? 0})
           </TabsTrigger>
+          {(cliente.boletas_prestador?.length ?? 0) > 0 && (
+            <TabsTrigger value="honorarios">
+              Honorarios ({cliente.boletas_prestador!.length})
+            </TabsTrigger>
+          )}
         </TabsList>
+
+        {/* HONORARIOS — boletas donde este cliente es el prestador */}
+        {(cliente.boletas_prestador?.length ?? 0) > 0 && (
+          <TabsContent value="honorarios">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between py-3">
+                <CardTitle className="text-sm font-medium">Boletas de honorarios como prestador</CardTitle>
+                <Link href="/honorarios" className="text-xs text-orange-600 hover:underline">Ver sección Honorarios →</Link>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2">
+                  {cliente.boletas_prestador!.map(b => (
+                    <li key={b.id} className="flex items-center justify-between gap-2 text-sm border-b border-gray-100 last:border-0 pb-2 last:pb-0">
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{b.glosa}</p>
+                        <p className="text-xs text-gray-400">
+                          {b.fecha?.slice(0, 10).split('-').reverse().join('/')}
+                          {b.monto_bruto ? ` · bruto $${Math.round(b.monto_bruto).toLocaleString('es-CL')}` : ''}
+                        </p>
+                      </div>
+                      <span className={`shrink-0 px-2 py-0.5 rounded text-xs font-medium ${
+                        b.estado === 'emitida' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {b.estado === 'emitida' ? `Emitida${b.numero_boleta ? ` · ${b.numero_boleta}` : ''}` : 'Pendiente'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
 
         {/* SEGUIMIENTOS */}
         <TabsContent value="seguimientos">
@@ -497,15 +534,13 @@ export default function ClienteDetailPage() {
         <TabsContent value="actividades">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between py-3">
-              <CardTitle className="text-sm font-medium">Actividades y pagos</CardTitle>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={() => setAsistenciaOpen(true)}>
-                  <Plus className="h-3 w-3 mr-1" /> Actividad
-                </Button>
-                <Button size="sm" variant="outline" className="border-green-600 text-green-700 hover:bg-green-50" onClick={() => setPagoOpen(true)}>
-                  <Plus className="h-3 w-3 mr-1" /> Pago
-                </Button>
+              <div>
+                <CardTitle className="text-sm font-medium">Actividades y pagos</CardTitle>
+                <p className="text-xs text-gray-400 mt-0.5">Al registrar un pago, la actividad se agrega sola al perfil</p>
               </div>
+              <Button size="sm" variant="outline" className="border-green-600 text-green-700 hover:bg-green-50" onClick={() => setPagoOpen(true)}>
+                <Plus className="h-3 w-3 mr-1" /> Pago
+              </Button>
             </CardHeader>
             <CardContent>
               {(() => {
@@ -781,7 +816,6 @@ function EditPagoDialog({ pago, onClose, onSave, asistencias }: {
   const [saving, setSaving] = useState(false)
 
   const esSinCobro = metodo === 'sin_cobro'
-  const aplicaFacturaInterna = !['tarjeta', 'webpay', 'sin_cobro'].includes(metodo)
   const actividadesUnicas = Array.from(new Map(asistencias.map(a => [a.actividad_nombre, a])).values())
 
   async function handleSubmit(e: React.FormEvent) {
@@ -881,12 +915,10 @@ function EditPagoDialog({ pago, onClose, onSave, asistencias }: {
               <Input value={numeroFactura} onChange={e => setNumeroFactura(e.target.value)} placeholder="ej: 1745" />
             </div>
           )}
-          {aplicaFacturaInterna && (
-            <div>
-              <Label>Facturación interna (registro SII)</Label>
-              <Input value={facturaInterna} onChange={e => setFacturaInterna(e.target.value)} placeholder="N° o folio interno" />
-            </div>
-          )}
+          <div>
+            <Label>Facturación interna (registro SII)</Label>
+            <Input value={facturaInterna} onChange={e => setFacturaInterna(e.target.value)} placeholder="N° o folio interno" />
+          </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
             <Button type="submit" disabled={saving} className="bg-orange-600 hover:bg-orange-700">

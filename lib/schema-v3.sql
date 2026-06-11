@@ -10,6 +10,7 @@ alter table pagos add column if not exists factura_interna text;
 create table if not exists boletas_honorarios (
   id uuid default gen_random_uuid() primary key,
   prestador text not null,
+  prestador_cliente_id uuid references clientes(id) on delete set null,
   origen text check (origen in ('terapia','clases','manual')) default 'manual',
   glosa text not null,
   paciente_nombre text,
@@ -23,6 +24,9 @@ create table if not exists boletas_honorarios (
   notas text,
   created_at timestamptz default now()
 );
+-- (por si la tabla ya existía de una ejecución anterior)
+alter table boletas_honorarios add column if not exists prestador_cliente_id uuid references clientes(id) on delete set null;
+
 create index if not exists boletas_prestador_idx on boletas_honorarios (prestador);
 create index if not exists boletas_estado_idx on boletas_honorarios (estado);
 

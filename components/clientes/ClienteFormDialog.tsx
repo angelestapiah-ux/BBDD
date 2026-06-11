@@ -87,11 +87,6 @@ export function ClienteFormDialog({ open, onOpenChange, onSubmit, title, initial
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, form.nombre, form.telefono, form.correo, initial?.id])
 
-  const esPaciente = (form.tipos_cliente || []).some(t =>
-    ['Paciente', 'Paciente Fabiola', 'Paciente Rodolfo'].includes(t)
-  )
-  const esPacienteGeneral = (form.tipos_cliente || []).includes('Paciente')
-
   function set(key: keyof Cliente, value: string) {
     setForm(prev => ({ ...prev, [key]: value || null }))
   }
@@ -342,18 +337,19 @@ export function ClienteFormDialog({ open, onOpenChange, onSubmit, title, initial
                   onChange={v => setForm(prev => ({ ...prev, tipos_cliente: v }))}
                 />
               </div>
-              {esPacienteGeneral && (
-                <div className="col-span-2">
-                  <Label htmlFor="terapeuta">Terapeuta</Label>
-                  <Input
-                    id="terapeuta"
-                    placeholder="Nombre del terapeuta..."
-                    value={form.terapeuta || ''}
-                    onChange={e => set('terapeuta', e.target.value)}
-                  />
-                </div>
-              )}
-              {esPaciente && (
+              <div className="col-span-2">
+                <Label htmlFor="terapeuta">Terapeuta (si es paciente)</Label>
+                <Input
+                  id="terapeuta"
+                  placeholder="Nombre del terapeuta que lo atiende..."
+                  value={form.terapeuta || ''}
+                  onChange={e => set('terapeuta', e.target.value)}
+                />
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Con terapeuta asignado, cada pago genera automáticamente la boleta de honorarios pendiente.
+                </p>
+              </div>
+              {form.terapeuta && (
                 <div className="col-span-2">
                   <Label>Modalidad de atención</Label>
                   <div className="flex gap-4 mt-1">

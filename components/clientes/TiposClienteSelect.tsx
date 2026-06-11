@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge'
 import { ChevronDown, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-interface TipoCliente { id: string; nombre: string }
 interface ActividadOpcion { id: string; nombre: string }
 
 interface Props {
@@ -13,18 +12,15 @@ interface Props {
   onChange: (value: string[]) => void
 }
 
-// Selector de tipos de cliente. Las opciones combinan:
-// 1. Las ACTIVIDADES del catálogo (sincronía con la pestaña Actividades) —
-//    al guardar el cliente, estas se registran también como asistencias.
-// 2. Los tipos configurables (Paciente, Docente, etc.) de Configuración.
+// Selector de tipos de cliente: 100% sincronizado con el catálogo de Actividades.
+// Cada tipo asignado se registra automáticamente como asistencia al guardar,
+// así ningún cliente queda con un tipo sin su asistencia correspondiente.
 export function TiposClienteSelect({ value, onChange }: Props) {
-  const [tipos, setTipos] = useState<TipoCliente[]>([])
   const [actividades, setActividades] = useState<ActividadOpcion[]>([])
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    fetch('/api/tipos-cliente').then(r => r.json()).then(d => setTipos(Array.isArray(d) ? d : []))
     fetch('/api/actividades').then(r => r.json()).then(d => setActividades(Array.isArray(d) ? d : []))
   }, [])
 
@@ -45,10 +41,6 @@ export function TiposClienteSelect({ value, onChange }: Props) {
     e.stopPropagation()
     onChange(value.filter(v => v !== nombre))
   }
-
-  // No duplicar: si una actividad tiene el mismo nombre que un tipo, mostrarla solo como actividad
-  const nombresActividades = new Set(actividades.map(a => a.nombre))
-  const tiposFiltrados = tipos.filter(t => !nombresActividades.has(t.nombre))
 
   const renderOpcion = (key: string, nombre: string) => (
     <label key={key} className="flex items-center gap-2 px-3 py-2 hover:bg-orange-50 cursor-pointer text-sm">
@@ -84,24 +76,12 @@ export function TiposClienteSelect({ value, onChange }: Props) {
 
       {open && (
         <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg py-1 max-h-60 overflow-auto">
-          {actividades.length > 0 && (
-            <>
-              <p className="px-3 pt-1.5 pb-0.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                Actividades del catálogo
-              </p>
-              {actividades.map(a => renderOpcion(`act-${a.id}`, a.nombre))}
-            </>
-          )}
-          {tiposFiltrados.length > 0 && (
-            <>
-              <p className="px-3 pt-2 pb-0.5 text-xs font-semibold text-gray-400 uppercase tracking-wide border-t border-gray-100 mt-1">
-                Otros tipos
-              </p>
-              {tiposFiltrados.map(t => renderOpcion(`tipo-${t.id}`, t.nombre))}
-            </>
-          )}
-          {actividades.length === 0 && tiposFiltrados.length === 0 && (
-            <p className="text-sm text-gray-400 px-3 py-2">Sin tipos ni actividades configuradas</p>
+          {actividades.length > 0 ? (
+            actividades.map(a => renderOpcion(`act-${a.id}`, a.nombre))
+          ) : (
+            <p className="text-sm text-gray-400 px-3 py-2">
+              Sin actividades en el catálogo — créalas primero en la sección Actividades
+            </p>
           )}
         </div>
       )}

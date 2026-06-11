@@ -134,6 +134,7 @@ export interface EtapaHistorial {
 export interface BoletaHonorario {
   id: string
   prestador: string
+  prestador_cliente_id: string | null
   origen: 'terapia' | 'clases' | 'manual'
   glosa: string
   paciente_nombre: string | null
@@ -189,4 +190,5 @@ export interface ClienteConDetalle extends Cliente {
   pagos?: Pago[]
   seguimientos?: Seguimiento[]
   etapa_historial?: EtapaHistorial[]
+  boletas_prestador?: BoletaHonorario[]
 }

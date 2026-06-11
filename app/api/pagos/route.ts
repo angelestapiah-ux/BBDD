@@ -16,6 +16,24 @@ export async function POST(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     auditar('crear', 'pagos', data.id, `${data.actividad_nombre} · $${data.monto ?? 0} · ${data.estado}`)
 
+    // Consistencia actividad↔pago: si el cliente no tiene la asistencia
+    // de esta actividad, se registra automáticamente.
+    try {
+      const { data: asis } = await supabase
+        .from('asistencias')
+        .select('id')
+        .eq('cliente_id', data.cliente_id)
+        .eq('actividad_nombre', data.actividad_nombre)
+        .limit(1)
+      if (!asis || asis.length === 0) {
+        await supabase.from('asistencias').insert({
+          cliente_id: data.cliente_id,
+          actividad_nombre: data.actividad_nombre,
+          fecha_asistencia: data.fecha_actividad || data.fecha_pago || null,
+        })
+      }
+    } catch { /* best-effort */ }
+
     // Honorarios automáticos: si el cliente es paciente con terapeuta asignado,
     // este pago genera una boleta PENDIENTE para que el terapeuta la emita.
     try {
@@ -25,8 +43,16 @@ export async function POST(req: NextRequest) {
         .eq('id', data.cliente_id)
         .single()
       if (cliente?.terapeuta) {
+        // Vincular al perfil del terapeuta si existe como cliente (match por nombre)
+        const { data: prestadorCliente } = await supabase
+          .from('clientes')
+          .select('id')
+          .ilike('nombre', cliente.terapeuta.trim())
+          .limit(1)
+          .maybeSingle()
         await supabase.from('boletas_honorarios').insert({
           prestador: cliente.terapeuta,
+          prestador_cliente_id: prestadorCliente?.id ?? null,
           origen: 'terapia',
           glosa: `${data.actividad_nombre} — paciente ${cliente.nombre}`,
           paciente_nombre: cliente.nombre,

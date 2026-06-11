@@ -31,6 +31,21 @@ function BoletaDialog({ boleta, prestadores, onClose, onSaved }: {
   onSaved: () => void
 }) {
   const [prestador, setPrestador] = useState(boleta?.prestador || '')
+  const [prestadorId, setPrestadorId] = useState<string | null>(boleta?.prestador_cliente_id || null)
+  const [resultados, setResultados] = useState<{ id: string; nombre: string; telefono: string | null }[]>([])
+
+  // Búsqueda en vivo sobre el listado de clientes (el prestador suele ser un cliente)
+  useEffect(() => {
+    if (!prestador.trim() || prestadorId) { setResultados([]); return }
+    const t = setTimeout(async () => {
+      const res = await fetch(`/api/clientes?q=${encodeURIComponent(prestador)}&limit=5`)
+      if (res.ok) {
+        const json = await res.json()
+        setResultados(json.data || [])
+      }
+    }, 300)
+    return () => clearTimeout(t)
+  }, [prestador, prestadorId])
   const [glosa, setGlosa] = useState(boleta?.glosa || '')
   const [fecha, setFecha] = useState(boleta?.fecha?.slice(0, 10) || new Date().toISOString().slice(0, 10))
   const [liquido, setLiquido] = useState(boleta?.monto_liquido?.toString() || '')
@@ -47,6 +62,7 @@ function BoletaDialog({ boleta, prestadores, onClose, onSaved }: {
     setSaving(true)
     const payload = {
       prestador: prestador.trim(),
+      prestador_cliente_id: prestadorId,
       glosa: glosa.trim(),
       fecha,
       monto_liquido: liquido ? Number(liquido) : null,
@@ -76,16 +92,37 @@ function BoletaDialog({ boleta, prestadores, onClose, onSaved }: {
         <form onSubmit={guardar} className="space-y-4">
           <div>
             <Label>Prestador (docente / terapeuta) *</Label>
-            <Input
-              required
-              list="lista-prestadores"
-              value={prestador}
-              onChange={e => setPrestador(e.target.value)}
-              placeholder="Nombre de quien boletea"
-            />
-            <datalist id="lista-prestadores">
-              {prestadores.map(p => <option key={p} value={p} />)}
-            </datalist>
+            <div className="relative">
+              <Input
+                required
+                list="lista-prestadores"
+                value={prestador}
+                onChange={e => { setPrestador(e.target.value); setPrestadorId(null) }}
+                placeholder="Busca en clientes o escribe el nombre..."
+              />
+              <datalist id="lista-prestadores">
+                {prestadores.map(p => <option key={p} value={p} />)}
+              </datalist>
+              {resultados.length > 0 && (
+                <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg py-1 max-h-44 overflow-auto">
+                  <p className="px-3 py-1 text-xs text-gray-400 font-medium">Clientes registrados</p>
+                  {resultados.map(c => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => { setPrestador(c.nombre); setPrestadorId(c.id); setResultados([]) }}
+                      className="w-full text-left px-3 py-1.5 hover:bg-orange-50 text-sm"
+                    >
+                      <span className="font-medium">{c.nombre}</span>
+                      {c.telefono && <span className="text-gray-400 text-xs ml-2">{c.telefono}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            {prestadorId && (
+              <p className="text-xs text-green-600 mt-1">✓ Vinculado al perfil del cliente — sus boletas quedarán en su ficha</p>
+            )}
           </div>
           <div>
             <Label>Glosa *</Label>
@@ -282,7 +319,13 @@ export default function HonorariosPage() {
             <tbody className="divide-y divide-gray-100">
               {boletas.map(b => (
                 <tr key={b.id} className={cn('hover:bg-gray-50 transition-colors group', b.estado === 'pendiente' && 'bg-yellow-50/30')}>
-                  <td className="px-4 py-3 font-medium">{b.prestador}</td>
+                  <td className="px-4 py-3 font-medium">
+                    {b.prestador_cliente_id ? (
+                      <a href={`/clientes/${b.prestador_cliente_id}`} className="hover:text-orange-600 hover:underline">
+                        {b.prestador}
+                      </a>
+                    ) : b.prestador}
+                  </td>
                   <td className="px-4 py-3 text-gray-600 max-w-[260px] truncate" title={b.glosa}>{b.glosa}</td>
                   <td className="px-4 py-3 text-xs text-gray-500 hidden md:table-cell">{ORIGEN_LABEL[b.origen] || b.origen}</td>
                   <td className="px-4 py-3 text-right text-gray-600">{formatoCLP(b.monto_liquido)}</td>

@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
   const supabase = createSupabaseAdminClient()
   const body = await req.json()
-  const { prestador, glosa, monto_liquido, numero_boleta, fecha, origen, notas, paciente_nombre } = body
+  const { prestador, prestador_cliente_id, glosa, monto_liquido, numero_boleta, fecha, origen, notas, paciente_nombre } = body
 
   if (!prestador || !glosa) {
     return NextResponse.json({ error: 'Prestador y glosa son requeridos' }, { status: 400 })
@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
     .from('boletas_honorarios')
     .insert({
       prestador,
+      prestador_cliente_id: prestador_cliente_id || null,
       glosa,
       origen: ['terapia', 'clases', 'manual'].includes(origen) ? origen : 'manual',
       paciente_nombre: paciente_nombre || null,
