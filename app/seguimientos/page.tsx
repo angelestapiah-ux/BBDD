@@ -18,6 +18,7 @@ import {
 import { toast } from 'sonner'
 import { getSupabase } from '@/lib/supabase'
 import { Actividad } from '@/lib/types'
+import { VistaClientes } from '@/components/seguimientos/VistaClientes'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface SeguimientoConCliente {
@@ -300,6 +301,9 @@ export default function SeguimientosPage() {
   const [resultado, setResultado]   = useState<ResultadoImport | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // ── Modo de la página: por cliente (workbench) | historial de contactos ───
+  const [modo, setModo] = useState<'clientes' | 'historial'>('clientes')
+
   // ── Vista Excel ────────────────────────────────────────────────────────────
   const [vistaExcel, setVistaExcel] = useState(false)
   const [drafts, setDrafts] = useState<Record<string, Partial<SeguimientoConCliente>>>({})
@@ -403,23 +407,44 @@ export default function SeguimientosPage() {
     <div className="p-6 max-w-6xl">
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between mb-6 flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Seguimientos</h2>
-          <p className="text-gray-500 text-sm mt-1">Historial de contactos con prospectos y clientes.</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {modo === 'clientes'
+              ? 'Todos los clientes con su estado de seguimiento — ordena cualquier columna con un click.'
+              : 'Historial de contactos con prospectos y clientes.'}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => { setVistaExcel(v => !v); setDrafts({}); setColFiltros({ tipo: '', cliente: '', notas: '' }) }}
-            className={`h-10 px-3 text-sm rounded-lg border flex items-center gap-2 transition-colors ${
-              vistaExcel
-                ? 'bg-orange-600 text-white border-orange-600'
-                : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300'
-            }`}
-          >
-            <TableProperties className="h-4 w-4" />
-            Vista Excel
-          </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Toggle de modo: Por cliente | Historial */}
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+            <button
+              onClick={() => setModo('clientes')}
+              className={`px-3 py-2 text-sm font-medium transition-colors ${modo === 'clientes' ? 'bg-orange-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+            >
+              Por cliente
+            </button>
+            <button
+              onClick={() => setModo('historial')}
+              className={`px-3 py-2 text-sm font-medium transition-colors border-l border-gray-200 ${modo === 'historial' ? 'bg-orange-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
+            >
+              Historial
+            </button>
+          </div>
+          {modo === 'historial' && (
+            <button
+              onClick={() => { setVistaExcel(v => !v); setDrafts({}); setColFiltros({ tipo: '', cliente: '', notas: '' }) }}
+              className={`h-10 px-3 text-sm rounded-lg border flex items-center gap-2 transition-colors ${
+                vistaExcel
+                  ? 'bg-orange-600 text-white border-orange-600'
+                  : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300'
+              }`}
+            >
+              <TableProperties className="h-4 w-4" />
+              Vista Excel
+            </button>
+          )}
           <Button
             onClick={() => setNuevoOpen(true)}
             className="bg-orange-600 hover:bg-orange-700 flex items-center gap-2"
@@ -429,6 +454,11 @@ export default function SeguimientosPage() {
         </div>
       </div>
 
+      {/* ─── MODO POR CLIENTE ─── */}
+      {modo === 'clientes' && <VistaClientes />}
+
+      {modo === 'historial' && (
+      <>
       {/* Filters (S1 + S2) */}
       <div className="flex flex-wrap gap-3 mb-5 items-end">
         {/* Tipo filter */}
@@ -858,6 +888,8 @@ export default function SeguimientosPage() {
             {savingDrafts ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </div>
+      )}
+      </>
       )}
 
       {/* Nuevo seguimiento dialog (S3) */}
