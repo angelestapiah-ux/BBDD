@@ -75,6 +75,7 @@ function NuevoSeguimientoDialog({
   const [usuario, setUsuario] = useState(defaultUsuario)
   const [actividadNombre, setActividadNombre] = useState('')
   const [actividades, setActividades] = useState<Actividad[]>([])
+  const [responsables, setResponsables] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
 
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -91,6 +92,7 @@ function NuevoSeguimientoDialog({
       setActividadNombre('')
       setUsuario(defaultUsuario)
       fetch('/api/actividades').then(r => r.json()).then(d => setActividades(Array.isArray(d) ? d : []))
+      fetch('/api/responsables').then(r => r.ok ? r.json() : []).then(d => setResponsables(Array.isArray(d) ? d : [])).catch(() => {})
     }
   }, [open, defaultUsuario])
 
@@ -237,9 +239,13 @@ function NuevoSeguimientoDialog({
                 <Label>Responsable</Label>
                 <Input
                   placeholder="Nombre de quien contactó"
+                  list="responsables-nuevo-seg"
                   value={usuario}
                   onChange={e => setUsuario(e.target.value)}
                 />
+                <datalist id="responsables-nuevo-seg">
+                  {responsables.map(r => <option key={r} value={r} />)}
+                </datalist>
               </div>
 
               <div>

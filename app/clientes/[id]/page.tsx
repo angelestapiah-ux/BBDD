@@ -744,7 +744,12 @@ function EditSeguimientoDialog({ seg, onClose, onSave }: {
   const [notas, setNotas] = useState(seg.notas)
   const [fecha, setFecha] = useState(seg.fecha?.slice(0, 16) || '')
   const [usuario, setUsuario] = useState(seg.usuario || '')
+  const [responsables, setResponsables] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/responsables').then(r => r.ok ? r.json() : []).then(d => setResponsables(Array.isArray(d) ? d : [])).catch(() => {})
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -779,7 +784,10 @@ function EditSeguimientoDialog({ seg, onClose, onSave }: {
           </div>
           <div>
             <Label>Responsable</Label>
-            <Input value={usuario} onChange={e => setUsuario(e.target.value)} />
+            <Input list="responsables-edit-seg" value={usuario} onChange={e => setUsuario(e.target.value)} />
+            <datalist id="responsables-edit-seg">
+              {responsables.map(r => <option key={r} value={r} />)}
+            </datalist>
           </div>
           <div>
             <Label>Notas *</Label>

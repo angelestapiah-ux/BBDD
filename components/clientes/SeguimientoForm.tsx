@@ -23,6 +23,7 @@ export function SeguimientoForm({ open, onOpenChange, onSubmit, defaultUsuario }
   const [usuario, setUsuario] = useState(defaultUsuario || '')
   const [actividadNombre, setActividadNombre] = useState('')
   const [actividades, setActividades] = useState<Actividad[]>([])
+  const [responsables, setResponsables] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
 
   // Sincronizar defaultUsuario cuando cambie (o cuando abra el dialog)
@@ -30,6 +31,7 @@ export function SeguimientoForm({ open, onOpenChange, onSubmit, defaultUsuario }
     if (open) {
       setUsuario(prev => prev || defaultUsuario || '')
       fetch('/api/actividades').then(r => r.json()).then(d => setActividades(Array.isArray(d) ? d : []))
+      fetch('/api/responsables').then(r => r.ok ? r.json() : []).then(d => setResponsables(Array.isArray(d) ? d : [])).catch(() => {})
     }
   }, [open, defaultUsuario])
 
@@ -82,9 +84,13 @@ export function SeguimientoForm({ open, onOpenChange, onSubmit, defaultUsuario }
             <Label>Responsable</Label>
             <Input
               placeholder="Nombre de quien contactó"
+              list="responsables-seg-form"
               value={usuario}
               onChange={e => setUsuario(e.target.value)}
             />
+            <datalist id="responsables-seg-form">
+              {responsables.map(r => <option key={r} value={r} />)}
+            </datalist>
           </div>
           <div>
             <Label>Notas *</Label>
