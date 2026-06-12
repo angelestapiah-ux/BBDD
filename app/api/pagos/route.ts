@@ -12,6 +12,10 @@ export async function POST(req: NextRequest) {
     if (bloqueo) return bloqueo
     const supabase = createSupabaseAdminClient()
     const body = await req.json()
+    // Campos opcionales vacíos ("") → null (Postgres rechaza "" en fechas)
+    for (const campo of ['fecha_pago', 'fecha_actividad', 'numero_factura', 'factura_interna', 'notas', 'monto']) {
+        if (campo in body && body[campo] === '') body[campo] = null
+    }
     const { data, error } = await supabase.from('pagos').insert(body).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     auditar('crear', 'pagos', data.id, `${data.actividad_nombre} · $${data.monto ?? 0} · ${data.estado}`)
