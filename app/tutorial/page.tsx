@@ -42,6 +42,7 @@ const CAPITULOS = [
     pasos: [
       { t: 'Crear un cliente toma 10 segundos', d: 'Botón "Nuevo cliente" → nombre, teléfono y canal de origen. Nada más. Los demás datos se completan después, cuando los tengas.' },
       { t: 'Si ya existe, el sistema te avisa', d: 'Al escribir el teléfono o correo de alguien registrado aparece una alerta amarilla con link a su perfil. Mejor actualizar que duplicar.' },
+      { t: 'El "tipo de cliente" son las actividades', d: 'Al asignarle una actividad como tipo, su asistencia se registra sola en el perfil. ¿Falta un tipo? Créalo en la sección Actividades.' },
       { t: 'Las etapas cuentan la historia de la venta', d: 'Nuevo → Contactado → Con interés → Cotización enviada → Negociando → Inscrito. Mueve al cliente cada vez que avance.' },
       { t: 'Dos formas de mover de etapa', d: 'Vista Kanban (arrastras la tarjeta de columna) o click en la etiqueta de etapa en la tabla o el perfil. Se guarda solo.' },
       { t: 'Edita directo en la tabla', d: 'Click sobre el correo o teléfono de cualquier fila y lo corriges ahí mismo. Enter guarda.' },
@@ -55,13 +56,14 @@ const CAPITULOS = [
     titulo: 'Pagos y cobranza',
     resumen: 'Registrar pagos, marcar pendientes y no perder ninguna cuota.',
     pasos: [
-      { t: 'Registrar un pago', d: 'Desde el perfil del cliente (botón verde "Pago") o desde la página Pagos. Eliges la actividad, monto, método y estado.' },
-      { t: 'Estados: Pagado, Pendiente, Parcial', d: 'Usa "Pendiente" para cuotas comprometidas y "Parcial" para abonos. Un pago "Pagado" siempre exige el monto.' },
+      { t: 'Registrar un pago', d: 'Desde el perfil (botón verde "Pago"). Eliges la actividad — si es nueva para el cliente, se agrega sola a su perfil. Tiene fecha de pago y fecha de actividad separadas, y botón "Sin cobro" para becas o cortesías.' },
+      { t: 'Estados: Pagado, Pendiente, Parcial', d: 'Usa "Pendiente" para cuotas comprometidas y "Parcial" para abonos. Un pago "Pagado" siempre exige el monto (salvo "Sin cobro").' },
       { t: 'Cobrar pendientes en un click', d: 'En la página Pagos, los pendientes tienen el botón verde "Pagado" para confirmarlos al instante. Los totales de arriba se actualizan solos.' },
-      { t: 'Reporte "Por cobrar"', d: 'En Reportes está la lista completa de deudas con contacto rápido por WhatsApp — útil para la cobranza semanal.' },
-      { t: 'Marca "requiere factura" cuando corresponda', d: 'El cliente queda con el ícono de boleta 🧾 visible en todos los listados.' },
+      { t: 'Facturación', d: 'Marca "requiere factura" y anota el N° al emitirla; el campo "Facturación interna" lleva el folio para el SII. Todo se consolida en Reportes → pestaña Facturación.' },
+      { t: 'Honorarios automáticos', d: 'Si el cliente es paciente con terapeuta asignado, cada pago genera sola la boleta pendiente del terapeuta en la sección Honorarios. Las de docentes se ingresan manualmente ahí mismo: pones el líquido y el sistema calcula el bruto a boletear.' },
+      { t: 'Gastos de la empresa', d: 'En "Gastos empresa" se registran los gastos varios del día a día y el arriendo de sala, con totales por boleta/factura como en la antigua planilla.' },
     ],
-    tip: 'Revisa la página Pagos cada lunes con el filtro "Pendiente": esa es tu cobranza de la semana.',
+    tip: 'Revisa cada lunes: Pagos con filtro "Pendiente" (tu cobranza) y Honorarios con filtro "Pendiente" (boletas por emitir).',
   },
   {
     id: 'atajos',

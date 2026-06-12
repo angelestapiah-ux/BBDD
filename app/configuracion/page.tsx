@@ -40,8 +40,6 @@ interface Usuario {
   last_sign_in_at: string | null
 }
 
-interface TipoCliente { id: string; nombre: string }
-
 interface Plantilla { id: string; nombre: string; cuerpo: string }
 
 export default function ConfiguracionPage() {
@@ -53,9 +51,6 @@ export default function ConfiguracionPage() {
   const [password, setPassword] = useState('')
   const [newPass, setNewPass] = useState('')
   const [saving, setSaving] = useState(false)
-  const [tipos, setTipos] = useState<TipoCliente[]>([])
-  const [nuevoTipo, setNuevoTipo] = useState('')
-  const [savingTipo, setSavingTipo] = useState(false)
   const [nombreResponsable, setNombreResponsable] = useState('')
   const [plantillas, setPlantillas] = useState<Plantilla[]>([])
   const [perfiles, setPerfiles] = useState<Record<string, PerfilUsuario>>({})
@@ -75,10 +70,6 @@ export default function ConfiguracionPage() {
     setLoading(false)
   }, [])
 
-  const fetchTipos = useCallback(async () => {
-    const res = await fetch('/api/tipos-cliente')
-    if (res.ok) setTipos(await res.json())
-  }, [])
 
   const fetchPlantillas = useCallback(async () => {
     const res = await fetch('/api/plantillas')
@@ -126,13 +117,12 @@ export default function ConfiguracionPage() {
 
   useEffect(() => {
     fetchUsuarios()
-    fetchTipos()
     fetchPlantillas()
     fetchPerfiles()
     fetchAuditoria()
     // Cargar preferencia guardada en este navegador
     setNombreResponsable(localStorage.getItem('renova_responsable') || '')
-  }, [fetchUsuarios, fetchTipos, fetchPlantillas, fetchPerfiles, fetchAuditoria])
+  }, [fetchUsuarios, fetchPlantillas, fetchPerfiles, fetchAuditoria])
 
   async function agregarPlantilla(e: React.FormEvent) {
     e.preventDefault()
@@ -162,27 +152,6 @@ export default function ConfiguracionPage() {
     e.preventDefault()
     localStorage.setItem('renova_responsable', nombreResponsable.trim())
     toast.success('Preferencia guardada')
-  }
-
-  async function agregarTipo(e: React.FormEvent) {
-    e.preventDefault()
-    if (!nuevoTipo.trim()) return
-    setSavingTipo(true)
-    const res = await fetch('/api/tipos-cliente', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre: nuevoTipo.trim() }),
-    })
-    if (res.ok) { toast.success('Tipo agregado'); setNuevoTipo(''); fetchTipos() }
-    else toast.error('Error al agregar tipo')
-    setSavingTipo(false)
-  }
-
-  async function eliminarTipo(t: TipoCliente) {
-    if (!confirm(`¿Eliminar el tipo "${t.nombre}"?`)) return
-    const res = await fetch(`/api/tipos-cliente/${t.id}`, { method: 'DELETE' })
-    if (res.ok) { toast.success('Tipo eliminado'); fetchTipos() }
-    else toast.error('Error al eliminar')
   }
 
   async function handleLogout() {
@@ -397,40 +366,19 @@ export default function ConfiguracionPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Tipos de cliente */}
+      {/* Tipos de cliente: ahora son el catálogo de Actividades */}
       <Card className="mt-6">
         <CardHeader className="py-4">
           <CardTitle className="text-base">Tipos de cliente</CardTitle>
         </CardHeader>
         <CardContent>
-          <table className="w-full text-sm mb-4">
-            <tbody className="divide-y divide-gray-100">
-              {tipos.map(t => (
-                <tr key={t.id} className="hover:bg-gray-50">
-                  <td className="px-3 py-2">{t.nombre}</td>
-                  <td className="px-3 py-2 text-right">
-                    <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-700" onClick={() => eliminarTipo(t)}>
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-              {tipos.length === 0 && (
-                <tr><td className="px-3 py-2 text-gray-400">Sin tipos configurados</td></tr>
-              )}
-            </tbody>
-          </table>
-          <form onSubmit={agregarTipo} className="flex gap-2">
-            <Input
-              placeholder="Nombre del tipo..."
-              value={nuevoTipo}
-              onChange={e => setNuevoTipo(e.target.value)}
-              className="max-w-xs"
-            />
-            <Button type="submit" disabled={savingTipo} size="sm" className="bg-orange-600 hover:bg-orange-700">
-              <Plus className="h-4 w-4 mr-1" /> Agregar
-            </Button>
-          </form>
+          <p className="text-sm text-gray-500">
+            Los tipos de cliente están 100% sincronizados con el catálogo de{' '}
+            <a href="/actividades" className="text-orange-600 hover:underline font-medium">Actividades</a>.
+            Para agregar un tipo nuevo, crea la actividad correspondiente ahí — aparecerá
+            automáticamente como opción al crear o editar clientes, y al asignarla se
+            registrará también su asistencia.
+          </p>
         </CardContent>
       </Card>
 

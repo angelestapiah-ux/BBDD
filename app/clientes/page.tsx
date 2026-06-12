@@ -315,11 +315,12 @@ export default function ClientesPage() {
   // Limpiar selección al cambiar de página/filtros
   useEffect(() => { setSeleccion(new Set()) }, [page, q, etapaFilter])
 
-  // Tipos de cliente para la acción masiva "asignar tipo"
+  // Actividades del catálogo para la acción masiva "asignar tipo"
+  // (los tipos de cliente son las actividades — 100% sincronizados)
   useEffect(() => {
-    fetch('/api/tipos-cliente')
+    fetch('/api/actividades')
       .then(r => r.ok ? r.json() : [])
-      .then(d => setTiposDisponibles(Array.isArray(d) ? d.map((t: { nombre: string }) => t.nombre) : []))
+      .then(d => setTiposDisponibles(Array.isArray(d) ? d.map((a: { nombre: string }) => a.nombre) : []))
       .catch(() => {})
   }, [])
 

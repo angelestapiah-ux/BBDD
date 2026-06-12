@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { requirePermiso } from '@/lib/permisos-server'
 import { auditar } from '@/lib/auditoria'
+import { sincronizarAsistencias } from '@/lib/sincronizar-asistencias'
 
 // Acciones masivas sobre clientes seleccionados.
 // POST { ids: string[], accion: 'etapa' | 'tipo' | 'eliminar', etapa?, tipo? }
@@ -54,7 +55,11 @@ export async function POST(req: NextRequest) {
         .from('clientes')
         .update({ tipos_cliente: [...tipos, tipo] })
         .eq('id', c.id)
-      if (!upErr) afectados++
+      if (!upErr) {
+        afectados++
+        // El tipo es una actividad: registrar también la asistencia
+        await sincronizarAsistencias(supabase, c.id, [tipo])
+      }
     }
     auditar('masiva', 'clientes', null, `${afectados} clientes → tipo "${tipo}"`)
     return NextResponse.json({ ok: true, afectados })
