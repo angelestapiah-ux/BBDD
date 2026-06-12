@@ -143,6 +143,25 @@ export default function ClienteDetailPage() {
     else toast.error('Error al actualizar')
   }
 
+  // Marcas de prestador: un click en el perfil define docente/terapeuta
+  async function toggleMarca(campo: 'es_docente' | 'es_terapeuta') {
+    if (!cliente) return
+    const nuevoValor = !cliente[campo]
+    const res = await fetch(`/api/clientes/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [campo]: nuevoValor }),
+    })
+    if (res.ok) {
+      setCliente(prev => prev ? { ...prev, [campo]: nuevoValor } : prev)
+      toast.success(nuevoValor
+        ? `Marcado como ${campo === 'es_docente' ? 'docente' : 'terapeuta'} — entra al flujo de Honorarios`
+        : 'Marca quitada')
+    } else {
+      toast.error('Error al actualizar')
+    }
+  }
+
   async function handleEtapaChange(etapa: EtapaFunnel) {
     setEtapaCambiando(true)
     const res = await fetch(`/api/clientes/${id}`, {
@@ -299,6 +318,37 @@ export default function ClienteDetailPage() {
                   ))}
                 </SelectContent>
               </Select>
+            )}
+
+            {/* Marcas de prestador (un click) */}
+            <button
+              onClick={() => toggleMarca('es_docente')}
+              title={cliente.es_docente ? 'Quitar marca de docente' : 'Marcar como docente (entra al flujo de Honorarios)'}
+              className={`h-6 px-2 rounded-full text-xs font-medium border transition-colors ${
+                cliente.es_docente
+                  ? 'bg-indigo-100 text-indigo-700 border-indigo-200'
+                  : 'bg-white text-gray-300 border-dashed border-gray-300 hover:text-indigo-600 hover:border-indigo-300'
+              }`}
+            >
+              🎓 Docente
+            </button>
+            <button
+              onClick={() => toggleMarca('es_terapeuta')}
+              title={cliente.es_terapeuta ? 'Quitar marca de terapeuta' : 'Marcar como terapeuta (entra al flujo de Honorarios)'}
+              className={`h-6 px-2 rounded-full text-xs font-medium border transition-colors ${
+                cliente.es_terapeuta
+                  ? 'bg-teal-100 text-teal-700 border-teal-200'
+                  : 'bg-white text-gray-300 border-dashed border-gray-300 hover:text-teal-600 hover:border-teal-300'
+              }`}
+            >
+              🩺 Terapeuta
+            </button>
+
+            {/* Etiqueta derivada: paciente de su terapeuta */}
+            {cliente.terapeuta && (
+              <span className="h-6 px-2 rounded-full text-xs font-medium bg-rose-100 text-rose-700 inline-flex items-center">
+                Paciente de {cliente.terapeuta}
+              </span>
             )}
           </div>
 

@@ -57,6 +57,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     nombre, correo, correo2, telefono, telefono2, comentario, procedencia,
     cumpleanos, fecha_incorporacion, genero, tipos_cliente, modalidad_paciente,
     terapeuta, edad, documento_identidad, estado_civil, profesion, ciudad, pais, etapa,
+    es_docente, es_terapeuta,
   } = body
 
   const campos = {
@@ -80,6 +81,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     ciudad: ciudad || null,
     pais: pais || null,
     etapa: etapa || null,
+    es_docente: !!es_docente,
+    es_terapeuta: !!es_terapeuta,
   }
 
   await registrarCambioEtapa(supabase, id, etapa || null)

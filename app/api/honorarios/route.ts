@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('boletas_honorarios')
-    .select('*')
+    .select('*, pagos(monto, fecha_pago)')
     .order('created_at', { ascending: false })
     .limit(500)
   if (estado) query = query.eq('estado', estado)
@@ -26,15 +26,16 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Prestadores conocidos: terapeutas asignados a pacientes + tipos Docente/Terapeuta
+  // Prestadores conocidos: clientes marcados docente/terapeuta + terapeutas
+  // asignados a pacientes + prestadores ya usados en boletas
   const { data: clientes } = await supabase
     .from('clientes')
-    .select('nombre, terapeuta, tipos_cliente')
+    .select('nombre, terapeuta, es_docente, es_terapeuta')
+    .or('es_docente.eq.true,es_terapeuta.eq.true,terapeuta.not.is.null')
   const prestadores = new Set<string>()
-  for (const c of (clientes ?? []) as Array<{ nombre: string; terapeuta: string | null; tipos_cliente: string[] | null }>) {
+  for (const c of (clientes ?? []) as Array<{ nombre: string; terapeuta: string | null; es_docente: boolean; es_terapeuta: boolean }>) {
+    if (c.es_docente || c.es_terapeuta) prestadores.add(c.nombre)
     if (c.terapeuta) prestadores.add(c.terapeuta.trim())
-    const tipos = (c.tipos_cliente ?? []).map(t => t.toLowerCase())
-    if (tipos.some(t => t.includes('docente') || t.includes('terapeuta'))) prestadores.add(c.nombre)
   }
   for (const b of (data ?? []) as Array<{ prestador: string }>) prestadores.add(b.prestador)
 

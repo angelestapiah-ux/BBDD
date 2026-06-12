@@ -309,6 +309,7 @@ export default function HonorariosPage() {
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Prestador</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Glosa</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600 hidden md:table-cell">Origen</th>
+                <th className="text-right px-4 py-3 font-medium text-gray-600 hidden lg:table-cell" title="Monto del pago del paciente — referencial, no es el monto a boletear">Pago ref.</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-600">Líquido</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-600">Bruto</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Estado</th>
@@ -328,6 +329,9 @@ export default function HonorariosPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-600 max-w-[260px] truncate" title={b.glosa}>{b.glosa}</td>
                   <td className="px-4 py-3 text-xs text-gray-500 hidden md:table-cell">{ORIGEN_LABEL[b.origen] || b.origen}</td>
+                  <td className="px-4 py-3 text-right text-xs text-gray-400 hidden lg:table-cell" title="Pago del paciente (referencial)">
+                    {b.pagos?.monto ? formatoCLP(b.pagos.monto) : '—'}
+                  </td>
                   <td className="px-4 py-3 text-right text-gray-600">{formatoCLP(b.monto_liquido)}</td>
                   <td className="px-4 py-3 text-right font-semibold">{formatoCLP(b.monto_bruto)}</td>
                   <td className="px-4 py-3">

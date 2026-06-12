@@ -44,6 +44,17 @@ export function ClienteFormDialog({ open, onOpenChange, onSubmit, title, initial
   const [modoRapido, setModoRapido] = useState(!initial)
 
   const [duplicados, setDuplicados] = useState<Duplicado[]>([])
+  const [terapeutas, setTerapeutas] = useState<{ id: string; nombre: string }[]>([])
+
+  // Terapeutas registrados (clientes marcados como terapeuta) para el selector
+  useEffect(() => {
+    if (open) {
+      fetch('/api/prestadores')
+        .then(r => r.ok ? r.json() : null)
+        .then(d => setTerapeutas(d?.terapeutas || []))
+        .catch(() => {})
+    }
+  }, [open])
   // Tras detectar duplicados al guardar, se exige un segundo click de confirmación
   const [confirmarDuplicado, setConfirmarDuplicado] = useState(false)
 
@@ -337,16 +348,44 @@ export function ClienteFormDialog({ open, onOpenChange, onSubmit, title, initial
                   onChange={v => setForm(prev => ({ ...prev, tipos_cliente: v }))}
                 />
               </div>
+
+              {/* Prestador: docente / terapeuta (entra al flujo de Honorarios) */}
+              <div className="col-span-2 flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer select-none text-sm">
+                  <input
+                    type="checkbox"
+                    checked={!!form.es_docente}
+                    onChange={e => setForm(prev => ({ ...prev, es_docente: e.target.checked }))}
+                    className="h-4 w-4 rounded accent-orange-600"
+                  />
+                  🎓 Es docente
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer select-none text-sm">
+                  <input
+                    type="checkbox"
+                    checked={!!form.es_terapeuta}
+                    onChange={e => setForm(prev => ({ ...prev, es_terapeuta: e.target.checked }))}
+                    className="h-4 w-4 rounded accent-orange-600"
+                  />
+                  🩺 Es terapeuta
+                </label>
+                <span className="text-xs text-gray-400 self-center">→ entra al flujo de boletas de honorarios</span>
+              </div>
               <div className="col-span-2">
                 <Label htmlFor="terapeuta">Terapeuta (si es paciente)</Label>
                 <Input
                   id="terapeuta"
-                  placeholder="Nombre del terapeuta que lo atiende..."
+                  list="lista-terapeutas"
+                  placeholder={terapeutas.length > 0 ? 'Elige un terapeuta registrado...' : 'Nombre del terapeuta que lo atiende...'}
                   value={form.terapeuta || ''}
                   onChange={e => set('terapeuta', e.target.value)}
                 />
+                <datalist id="lista-terapeutas">
+                  {terapeutas.map(t => <option key={t.id} value={t.nombre} />)}
+                </datalist>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Con terapeuta asignado, cada pago genera automáticamente la boleta de honorarios pendiente.
+                  El cliente queda como &quot;Paciente de {form.terapeuta || 'NN'}&quot; y cada pago genera
+                  automáticamente la boleta de honorarios pendiente del terapeuta.
                 </p>
               </div>
               {form.terapeuta && (

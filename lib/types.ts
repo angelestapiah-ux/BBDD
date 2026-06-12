@@ -64,6 +64,8 @@ export interface Cliente {
   pais: string | null
   etapa: EtapaFunnel | null
   proximo_contacto: string | null
+  es_docente: boolean
+  es_terapeuta: boolean
   created_at: string
   updated_at: string
 }
@@ -147,6 +149,8 @@ export interface BoletaHonorario {
   estado: 'pendiente' | 'emitida'
   notas: string | null
   created_at: string
+  // Join opcional: pago del paciente que originó la boleta (monto referencial)
+  pagos?: { monto: number | null; fecha_pago: string | null } | null
 }
 
 export interface Gasto {
