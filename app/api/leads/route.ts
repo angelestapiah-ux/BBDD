@@ -23,6 +23,7 @@ const ORIGENES_PERMITIDOS = [
   'https://tu-pnl-renovada.vercel.app',
   'https://renova-empresas.vercel.app',
   'https://academia-renova.netlify.app',
+  'https://academia-renova.vercel.app',
   'https://ciclo-renova-mujer-2026.vercel.app',
   'https://libera-el-dolor.vercel.app',
   'https://workshop-inmobiliario-2026.vercel.app',
