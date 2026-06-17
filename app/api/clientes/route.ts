@@ -13,35 +13,45 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(searchParams.get('limit') || '50')
   const offset = (page - 1) * limit
 
-  let query = supabase
-    .from('clientes')
-    .select('*', { count: 'exact' })
-    // Con búsqueda activa, ordenar alfabéticamente para que todos los
-    // resultados relevantes quepan dentro del límite (no por fecha de creación)
-    .order(q ? 'nombre' : 'created_at', { ascending: !!q })
-    .range(offset, offset + limit - 1)
+  let data: Record<string, unknown>[] = []
+  let count: number | null = null
+  let errorMsg: string | null = null
 
   if (q) {
-    query = query.or(`nombre.ilike.%${q}%,correo.ilike.%${q}%,telefono.ilike.%${q}%`)
-  }
-  if (etapa) {
-    query = query.eq('etapa', etapa)
+    // Búsqueda sin tildes + por palabras sueltas (funciones SQL buscar_clientes / contar_clientes).
+    // "Juan Pérez" encuentra a "Juan Carlos Pérez Soto"; "maria" encuentra a "María".
+    const [resData, resCount] = await Promise.all([
+      supabase.rpc('buscar_clientes', { termino: q, etapa_filtro: etapa, lim: limit, off: offset }),
+      supabase.rpc('contar_clientes', { termino: q, etapa_filtro: etapa }),
+    ])
+    data = (resData.data as Record<string, unknown>[] | null) ?? []
+    errorMsg = resData.error?.message ?? resCount.error?.message ?? null
+    count = resCount.data == null ? data.length : Number(resCount.data)
+  } else {
+    let query = supabase
+      .from('clientes')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+    if (etapa) query = query.eq('etapa', etapa)
+    const res = await query
+    data = (res.data as Record<string, unknown>[] | null) ?? []
+    count = res.count ?? null
+    errorMsg = res.error?.message ?? null
   }
 
-  const { data, error, count } = await query
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (errorMsg) return NextResponse.json({ error: errorMsg }, { status: 500 })
 
   // Enriquecer con último seguimiento (para semáforo en la lista)
-  if (data && data.length > 0) {
-    const clientIds = data.map((c: { id: string }) => c.id)
+  if (data.length > 0) {
+    const clientIds = data.map((c) => c.id as string)
     const { data: segs } = await supabase
       .from('seguimientos')
       .select('cliente_id, created_at')
       .in('cliente_id', clientIds)
       .order('created_at', { ascending: false })
 
-    // Keep only the most recent seguimiento per client
+    // Solo el seguimiento más reciente por cliente
     const ultimoSeg: Record<string, string> = {}
     for (const s of segs ?? []) {
       if (!ultimoSeg[s.cliente_id]) {
@@ -49,15 +59,15 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const dataEnriquecida = data.map((c: { id: string }) => ({
+    const dataEnriquecida = data.map((c) => ({
       ...c,
-      ultimo_seguimiento: ultimoSeg[c.id] || null,
+      ultimo_seguimiento: ultimoSeg[c.id as string] || null,
     }))
 
     return NextResponse.json({ data: dataEnriquecida, count, page, limit })
   }
 
-  return NextResponse.json({ data: data || [], count, page, limit })
+  return NextResponse.json({ data, count, page, limit })
 }
 
 export async function POST(req: NextRequest) {
