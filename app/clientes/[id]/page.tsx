@@ -99,6 +99,7 @@ export default function ClienteDetailPage() {
   const [asistenciaOpen, setAsistenciaOpen] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)  // P5
+  const [inscribirPrompt, setInscribirPrompt] = useState<{ actividad: string; opId?: string } | null>(null)
 
   // dialogs de edición
   const [editSeg, setEditSeg] = useState<Seguimiento | null>(null)
@@ -232,8 +233,38 @@ export default function ClienteDetailPage() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...data, cliente_id: id }),
     })
-    if (res.ok) { toast.success('Pago registrado'); setPagoOpen(false); fetchCliente() }
-    else toast.error('Error al guardar')
+    if (res.ok) {
+      toast.success('Pago registrado')
+      setPagoOpen(false)
+      // ¿Este pago deja al cliente inscrito en esa actividad?
+      const actividad = String(data.actividad_nombre || '')
+      if (actividad) {
+        const op = (cliente?.oportunidades ?? []).find(o => o.actividad_nombre === actividad)
+        if (!op || op.etapa !== 'inscrito') setInscribirPrompt({ actividad, opId: op?.id })
+      }
+      fetchCliente()
+    } else {
+      toast.error('Error al guardar')
+    }
+  }
+
+  async function confirmarInscrito() {
+    if (!inscribirPrompt) return
+    const { actividad, opId } = inscribirPrompt
+    if (opId) {
+      await fetch('/api/oportunidades', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: opId, etapa: 'inscrito' }),
+      })
+    } else {
+      await fetch('/api/oportunidades', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cliente_id: id, actividad_nombre: actividad, etapa: 'inscrito', responsable: currentUserEmail || null }),
+      })
+    }
+    toast.success('Marcado como Inscrito')
+    setInscribirPrompt(null)
+    fetchCliente()
   }
 
   async function addAsistencia(data: Record<string, string>) {
@@ -863,6 +894,27 @@ export default function ClienteDetailPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Prompt: ¿queda inscrito tras el pago? */}
+      {inscribirPrompt && (
+        <Dialog open onOpenChange={() => setInscribirPrompt(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-green-700">
+                <Target className="h-5 w-5" />
+                ¿Queda inscrito?
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-gray-600">
+              ¿Este pago deja a <span className="font-semibold">{cliente.nombre}</span> inscrito en{' '}
+              <span className="font-semibold">{inscribirPrompt.actividad}</span>?
+            </p>
+            <DialogFooter className="gap-2 mt-2">
+              <Button variant="outline" onClick={() => setInscribirPrompt(null)}>Ahora no</Button>
+              <Button onClick={confirmarInscrito} className="bg-green-600 hover:bg-green-700">Sí, marcar Inscrito</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
       {editSeg && <EditSeguimientoDialog seg={editSeg} onClose={() => setEditSeg(null)} onSave={saveEditSeg} />}
       {editPago && <EditPagoDialog pago={editPago} onClose={() => setEditPago(null)} onSave={saveEditPago} asistencias={cliente.asistencias ?? []} />}
       {editAsistencia && <EditAsistenciaDialog asistencia={editAsistencia} onClose={() => setEditAsistencia(null)} onSave={saveEditAsistencia} />}
