@@ -87,7 +87,7 @@ export default function ClienteDetailPage() {
   const [cliente, setCliente] = useState<ClienteConDetalle | null>(null)
   const [loading, setLoading] = useState(true)
   const [showAllFields, setShowAllFields] = useState(false)
-  const [tab, setTab] = useState('oportunidades')
+  const [tab, setTab] = useState('actividades')
 
   // P3: usuario logueado para pre-llenar responsable
   const [currentUserEmail, setCurrentUserEmail] = useState('')
@@ -321,7 +321,7 @@ export default function ClienteDetailPage() {
 
             {/* Resumen de oportunidades (funnel por actividad) — abre la pestaña */}
             <button
-              onClick={() => setTab('oportunidades')}
+              onClick={() => setTab('actividades')}
               title="Ver oportunidades por actividad"
               className="h-6 px-2 rounded-full text-xs font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors inline-flex items-center gap-1"
             >
@@ -494,9 +494,6 @@ export default function ClienteDetailPage() {
       {/* ─── Tabs ──────────────────────────────────────────────────────── */}
       <Tabs value={tab} onValueChange={v => setTab(v ?? 'oportunidades')}>
         <TabsList>
-          <TabsTrigger value="oportunidades">
-            Oportunidades ({oportunidades.length})
-          </TabsTrigger>
           <TabsTrigger value="seguimientos">
             Seguimientos ({cliente.seguimientos?.length ?? 0})
           </TabsTrigger>
@@ -504,6 +501,7 @@ export default function ClienteDetailPage() {
             Actividades y pagos ({new Set([
               ...(cliente.asistencias ?? []).map(a => a.actividad_nombre),
               ...(cliente.pagos ?? []).map(p => p.actividad_nombre),
+              ...oportunidades.map(o => o.actividad_nombre),
             ]).size})
           </TabsTrigger>
           <TabsTrigger value="etapas">
@@ -515,99 +513,6 @@ export default function ClienteDetailPage() {
             </TabsTrigger>
           )}
         </TabsList>
-
-        {/* OPORTUNIDADES — funnel por actividad */}
-        <TabsContent value="oportunidades">
-          <Card>
-            <CardHeader className="py-3">
-              <CardTitle className="text-sm font-medium">Oportunidades por actividad</CardTitle>
-              <p className="text-xs text-gray-400 mt-0.5">Cada actividad avanza en su propio funnel, independiente de las demás.</p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-
-              {/* Agregar nueva oportunidad */}
-              <div className="bg-gray-50 rounded-xl p-3 space-y-2">
-                <div className="flex flex-wrap items-end gap-2">
-                  <div className="flex-1 min-w-[180px]">
-                    <p className="text-xs text-gray-400 mb-1">Actividad</p>
-                    <Select value={nuevaOpActividad || undefined} onValueChange={v => setNuevaOpActividad(v ?? '')}>
-                      <SelectTrigger><SelectValue placeholder="Elige una actividad..." /></SelectTrigger>
-                      <SelectContent>
-                        {opcionesActividad.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
-                        <SelectItem value="__otra__">Otra (escribir)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="w-44">
-                    <p className="text-xs text-gray-400 mb-1">Etapa inicial</p>
-                    <Select value={nuevaOpEtapa} onValueChange={v => v && setNuevaOpEtapa(v as EtapaFunnel)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {ETAPAS_FUNNEL.map(e => <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="bg-orange-600 hover:bg-orange-700"
-                    disabled={!nuevaOpActividadFinal}
-                    onClick={() => nuevaOpActividadFinal && addOportunidad(nuevaOpActividadFinal, nuevaOpEtapa)}
-                  >
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Agregar
-                  </Button>
-                </div>
-                {nuevaOpActividad === '__otra__' && (
-                  <Input
-                    placeholder="Nombre de la actividad"
-                    value={nuevaOpCustom}
-                    onChange={e => setNuevaOpCustom(e.target.value)}
-                  />
-                )}
-              </div>
-
-              {/* Lista de oportunidades */}
-              {oportunidades.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">
-                  Sin oportunidades aún. Agrega la primera arriba para iniciar el funnel de esta persona.
-                </p>
-              ) : (
-                <ul className="space-y-2">
-                  {oportunidades.map(op => {
-                    const cfg = ETAPA_BADGE[op.etapa]
-                    return (
-                      <li key={op.id} className="flex items-center gap-3 border border-gray-100 rounded-xl px-3 py-2 group">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-800 truncate">{op.actividad_nombre}</p>
-                          {op.fecha_cambio_etapa && (
-                            <p className="text-xs text-gray-400">desde {fmt(op.fecha_cambio_etapa.slice(0, 10))}</p>
-                          )}
-                        </div>
-                        <Select value={op.etapa} onValueChange={v => v && cambiarEtapaOportunidad(op, v as EtapaFunnel)}>
-                          <SelectTrigger className={`h-7 text-xs px-2 border-0 shadow-none w-auto gap-1 font-medium rounded-full ${cfg.bg} ${cfg.text}`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ETAPAS_FUNNEL.map(e => {
-                              const c = ETAPA_BADGE[e.value]
-                              return (
-                                <SelectItem key={e.value} value={e.value}>
-                                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${c.bg} ${c.text}`}>{e.label}</span>
-                                </SelectItem>
-                              )
-                            })}
-                          </SelectContent>
-                        </Select>
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-red-500" onClick={() => deleteOportunidad(op)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* HONORARIOS — boletas donde este cliente es el prestador */}
         {(cliente.boletas_prestador?.length ?? 0) > 0 && (
@@ -685,31 +590,72 @@ export default function ClienteDetailPage() {
           </Card>
         </TabsContent>
 
-        {/* ACTIVIDADES Y PAGOS — vista combinada agrupada por actividad */}
+        {/* ACTIVIDADES, PAGOS Y FUNNEL — todo por actividad en un solo lugar */}
         <TabsContent value="actividades">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between py-3">
               <div>
                 <CardTitle className="text-sm font-medium">Actividades y pagos</CardTitle>
-                <p className="text-xs text-gray-400 mt-0.5">Al registrar un pago, la actividad se agrega sola al perfil</p>
+                <p className="text-xs text-gray-400 mt-0.5">Cada actividad lleva su etapa del funnel, sus pagos y su avance, todo junto.</p>
               </div>
               <Button size="sm" variant="outline" className="border-green-600 text-green-700 hover:bg-green-50" onClick={() => setPagoOpen(true)}>
                 <Plus className="h-3 w-3 mr-1" /> Pago
               </Button>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+
+              {/* Sumar una actividad al funnel (sin necesidad de un pago) */}
+              <div className="bg-gray-50 rounded-xl p-3 space-y-2">
+                <p className="text-xs text-gray-500 font-medium">Sumar una actividad al funnel</p>
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="flex-1 min-w-[180px]">
+                    <Select value={nuevaOpActividad || undefined} onValueChange={v => setNuevaOpActividad(v ?? '')}>
+                      <SelectTrigger><SelectValue placeholder="Elige una actividad..." /></SelectTrigger>
+                      <SelectContent>
+                        {opcionesActividad.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+                        <SelectItem value="__otra__">Otra (escribir)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-44">
+                    <Select value={nuevaOpEtapa} onValueChange={v => v && setNuevaOpEtapa(v as EtapaFunnel)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {ETAPAS_FUNNEL.map(e => <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="bg-orange-600 hover:bg-orange-700"
+                    disabled={!nuevaOpActividadFinal}
+                    onClick={() => nuevaOpActividadFinal && addOportunidad(nuevaOpActividadFinal, nuevaOpEtapa)}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Agregar
+                  </Button>
+                </div>
+                {nuevaOpActividad === '__otra__' && (
+                  <Input
+                    placeholder="Nombre de la actividad"
+                    value={nuevaOpCustom}
+                    onChange={e => setNuevaOpCustom(e.target.value)}
+                  />
+                )}
+              </div>
+
               {(() => {
                 const asistencias = cliente.asistencias ?? []
                 const pagos = cliente.pagos ?? []
                 const nombres = Array.from(new Set([
                   ...asistencias.map(a => a.actividad_nombre),
                   ...pagos.map(p => p.actividad_nombre),
+                  ...oportunidades.map(o => o.actividad_nombre),
                 ]))
 
                 if (nombres.length === 0) {
                   return (
                     <div className="text-center py-6">
-                      <p className="text-sm text-gray-400 mb-3">Sin actividades ni pagos registrados</p>
+                      <p className="text-sm text-gray-400 mb-3">Sin actividades, pagos ni oportunidades registradas</p>
                       <Button size="sm" className="bg-orange-600 hover:bg-orange-700" onClick={() => setPagoOpen(true)}>
                         <Plus className="h-3.5 w-3.5 mr-1" /> Registrar pago
                       </Button>
@@ -722,24 +668,55 @@ export default function ClienteDetailPage() {
                     {nombres.map(nombre => {
                       const asis = asistencias.filter(a => a.actividad_nombre === nombre)
                       const pgs = pagos.filter(p => p.actividad_nombre === nombre)
+                      const op = oportunidades.find(o => o.actividad_nombre === nombre)
                       const totalPagado = pgs.filter(p => p.estado === 'pagado').reduce((s, p) => s + (p.monto || 0), 0)
+                      const cfg = op ? ETAPA_BADGE[op.etapa] : null
 
                       return (
                         <div key={nombre} className="border border-gray-100 rounded-xl overflow-hidden">
-                          {/* Encabezado de la actividad */}
+                          {/* Encabezado de la actividad: nombre + etapa del funnel */}
                           <div className="flex items-center justify-between gap-2 px-3 py-2 bg-gray-50 group">
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="text-sm font-semibold text-gray-800 truncate">{nombre}</span>
                               {asis[0]?.fecha_asistencia && (
                                 <span className="text-xs text-gray-400 shrink-0">desde {fmt(asis[0].fecha_asistencia)}</span>
                               )}
-                              {asis.length === 0 && (
-                                <span className="text-xs text-gray-300 shrink-0">(solo pago, sin asistencia)</span>
+                              {asis.length === 0 && pgs.length === 0 && (
+                                <span className="text-xs text-gray-300 shrink-0">(en funnel, sin pago aún)</span>
                               )}
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               {totalPagado > 0 && (
                                 <span className="text-xs font-semibold text-green-700">${totalPagado.toLocaleString('es-CL')} pagado</span>
+                              )}
+                              {/* Etapa del funnel de esta actividad */}
+                              {op ? (
+                                <Select value={op.etapa} onValueChange={v => v && cambiarEtapaOportunidad(op, v as EtapaFunnel)}>
+                                  <SelectTrigger className={`h-7 text-xs px-2 border-0 shadow-none w-auto gap-1 font-medium rounded-full ${cfg!.bg} ${cfg!.text}`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {ETAPAS_FUNNEL.map(e => {
+                                      const c = ETAPA_BADGE[e.value]
+                                      return (
+                                        <SelectItem key={e.value} value={e.value}>
+                                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${c.bg} ${c.text}`}>{e.label}</span>
+                                        </SelectItem>
+                                      )
+                                    })}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                <Select value={undefined} onValueChange={v => v && addOportunidad(nombre, v as EtapaFunnel)}>
+                                  <SelectTrigger className="h-7 text-xs px-2 border-dashed border-gray-300 text-gray-400 w-auto shadow-none rounded-full">
+                                    <SelectValue placeholder="+ etapa" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {ETAPAS_FUNNEL.map(e => (
+                                      <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               )}
                               {asis[0] && (
                                 <>
@@ -750,6 +727,11 @@ export default function ClienteDetailPage() {
                                     <Trash2 className="h-3 w-3" />
                                   </Button>
                                 </>
+                              )}
+                              {op && asis.length === 0 && pgs.length === 0 && (
+                                <Button size="sm" variant="ghost" className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 text-red-500" onClick={() => deleteOportunidad(op)} title="Quitar del funnel">
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
                               )}
                             </div>
                           </div>
