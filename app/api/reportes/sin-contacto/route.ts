@@ -12,8 +12,9 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  const rows = (data ?? []) as Record<string, unknown>[]
   const vacio = (v: unknown) => v == null || String(v).trim() === ''
-  const clientes = (data ?? []).filter(
+  const clientes = rows.filter(
     (c) => vacio(c.telefono) && vacio(c.telefono2) && vacio(c.correo) && vacio(c.correo2),
   )
 
