@@ -16,10 +16,18 @@ interface Props {
   defaultUsuario?: string   // P3: pre-fill con usuario logueado
 }
 
+// Hora LOCAL del dispositivo en formato "YYYY-MM-DDTHH:mm" para <input type="datetime-local">.
+// (new Date().toISOString() entrega UTC, por eso el campo se corría varias horas.)
+function ahoraLocalInput(): string {
+  const d = new Date()
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
+  return d.toISOString().slice(0, 16)
+}
+
 export function SeguimientoForm({ open, onOpenChange, onSubmit, defaultUsuario }: Props) {
   const [tipo, setTipo] = useState('whatsapp')
   const [notas, setNotas] = useState('')
-  const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 16))
+  const [fecha, setFecha] = useState(ahoraLocalInput())
   const [usuario, setUsuario] = useState(defaultUsuario || '')
   const [actividadNombre, setActividadNombre] = useState('')
   const [actividades, setActividades] = useState<Actividad[]>([])
@@ -29,6 +37,7 @@ export function SeguimientoForm({ open, onOpenChange, onSubmit, defaultUsuario }
   // Sincronizar defaultUsuario cuando cambie (o cuando abra el dialog)
   useEffect(() => {
     if (open) {
+      setFecha(ahoraLocalInput())   // refresca a la hora del dispositivo cada vez que se abre
       setUsuario(prev => prev || defaultUsuario || '')
       fetch('/api/actividades').then(r => r.json()).then(d => setActividades(Array.isArray(d) ? d : []))
       fetch('/api/responsables').then(r => r.ok ? r.json() : []).then(d => setResponsables(Array.isArray(d) ? d : [])).catch(() => {})
@@ -38,7 +47,9 @@ export function SeguimientoForm({ open, onOpenChange, onSubmit, defaultUsuario }
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
-    await onSubmit({ tipo, notas, fecha, usuario, actividad_nombre: actividadNombre })
+    // Enviar el instante exacto con zona horaria, para que se guarde tal cual lo ve el usuario.
+    const fechaISO = fecha ? new Date(fecha).toISOString() : new Date().toISOString()
+    await onSubmit({ tipo, notas, fecha: fechaISO, usuario, actividad_nombre: actividadNombre })
     setNotas('')
     setActividadNombre('')
     setSaving(false)
