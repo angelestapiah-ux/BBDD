@@ -467,7 +467,12 @@ export default function ClientesPage() {
 
       {/* ─── VISTA KANBAN ─── */}
       {vista === 'kanban' && !loading && (
-        <KanbanView clientes={clientes} onOportunidadEtapa={handleOportunidadEtapa} />
+        <>
+          <div className="flex justify-end mb-2">
+            <Link href="/funnel" className="text-xs text-orange-600 hover:underline">Ver funnel completo (todas las oportunidades) →</Link>
+          </div>
+          <KanbanView clientes={clientes} onOportunidadEtapa={handleOportunidadEtapa} />
+        </>
       )}
 
       {/* ─── VISTA LISTA ─── */}

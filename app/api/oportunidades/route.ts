@@ -8,9 +8,14 @@ export async function GET(req: NextRequest) {
   const supabase = createSupabaseAdminClient()
   const { searchParams } = new URL(req.url)
   const cliente_id = searchParams.get('cliente_id')
+  const actividad = searchParams.get('actividad')
 
-  let query = supabase.from('oportunidades').select('*').order('created_at', { ascending: false })
+  let query = supabase
+    .from('oportunidades')
+    .select('id, cliente_id, actividad_nombre, etapa, responsable, fecha_cambio_etapa, clientes(nombre, telefono, procedencia)')
+    .order('fecha_cambio_etapa', { ascending: false })
   if (cliente_id) query = query.eq('cliente_id', cliente_id)
+  if (actividad) query = query.eq('actividad_nombre', actividad)
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
