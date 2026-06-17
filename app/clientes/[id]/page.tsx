@@ -492,7 +492,7 @@ export default function ClienteDetailPage() {
       </Card>
 
       {/* ─── Tabs ──────────────────────────────────────────────────────── */}
-      <Tabs value={tab} onValueChange={setTab}>
+      <Tabs value={tab} onValueChange={v => setTab(v ?? 'oportunidades')}>
         <TabsList>
           <TabsTrigger value="oportunidades">
             Oportunidades ({oportunidades.length})
@@ -530,7 +530,7 @@ export default function ClienteDetailPage() {
                 <div className="flex flex-wrap items-end gap-2">
                   <div className="flex-1 min-w-[180px]">
                     <p className="text-xs text-gray-400 mb-1">Actividad</p>
-                    <Select value={nuevaOpActividad || undefined} onValueChange={setNuevaOpActividad}>
+                    <Select value={nuevaOpActividad || undefined} onValueChange={v => setNuevaOpActividad(v ?? '')}>
                       <SelectTrigger><SelectValue placeholder="Elige una actividad..." /></SelectTrigger>
                       <SelectContent>
                         {opcionesActividad.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
