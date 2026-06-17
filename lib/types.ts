@@ -140,6 +140,16 @@ export interface Oportunidad {
 
 export type OportunidadInsert = Omit<Oportunidad, 'id' | 'created_at' | 'updated_at' | 'fecha_cambio_etapa'>
 
+export interface OportunidadHistorial {
+  id: string
+  oportunidad_id: string
+  cliente_id: string
+  actividad_nombre: string | null
+  etapa_anterior: EtapaFunnel | null
+  etapa_nueva: EtapaFunnel
+  created_at: string
+}
+
 export interface EtapaHistorial {
   id: string
   cliente_id: string
@@ -211,4 +221,5 @@ export interface ClienteConDetalle extends Cliente {
   etapa_historial?: EtapaHistorial[]
   boletas_prestador?: BoletaHonorario[]
   oportunidades?: Oportunidad[]
+  oportunidad_historial?: OportunidadHistorial[]
 }

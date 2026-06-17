@@ -24,7 +24,7 @@ async function registrarCambioEtapa(supabase: any, clienteId: string, etapaNueva
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const supabase = createSupabaseAdminClient()
   const { id } = await params
-  const [clienteRes, asistenciasRes, pagosRes, seguimientosRes, historialRes, boletasRes, oportunidadesRes] = await Promise.all([
+  const [clienteRes, asistenciasRes, pagosRes, seguimientosRes, historialRes, boletasRes, oportunidadesRes, oportunidadHistorialRes] = await Promise.all([
     supabase.from('clientes').select('*').eq('id', id).single(),
     supabase.from('asistencias').select('*').eq('cliente_id', id).order('fecha_asistencia', { ascending: false }),
     supabase.from('pagos').select('*').eq('cliente_id', id).order('fecha_pago', { ascending: false }),
@@ -32,6 +32,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     supabase.from('etapa_historial').select('*').eq('cliente_id', id).order('created_at', { ascending: false }),
     supabase.from('boletas_honorarios').select('*').eq('prestador_cliente_id', id).order('created_at', { ascending: false }),
     supabase.from('oportunidades').select('*').eq('cliente_id', id).order('created_at', { ascending: false }),
+    supabase.from('oportunidad_historial').select('*').eq('cliente_id', id).order('created_at', { ascending: false }),
   ])
 
   if (clienteRes.error) return NextResponse.json({ error: clienteRes.error.message }, { status: 404 })
@@ -45,6 +46,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     etapa_historial: historialRes.data ?? [],
     boletas_prestador: boletasRes.data ?? [],
     oportunidades: oportunidadesRes.data ?? [],
+    oportunidad_historial: oportunidadHistorialRes.data ?? [],
   })
 }
 

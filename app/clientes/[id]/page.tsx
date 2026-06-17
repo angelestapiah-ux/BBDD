@@ -536,7 +536,7 @@ export default function ClienteDetailPage() {
             ]).size})
           </TabsTrigger>
           <TabsTrigger value="etapas">
-            Historial ({cliente.etapa_historial?.length ?? 0})
+            Historial ({cliente.oportunidad_historial?.length ?? 0})
           </TabsTrigger>
           {(cliente.boletas_prestador?.length ?? 0) > 0 && (
             <TabsTrigger value="honorarios">
@@ -813,47 +813,54 @@ export default function ClienteDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        {/* HISTORIAL DE ETAPAS (versión anterior, por cliente) */}
+        {/* HISTORIAL — recorrido del funnel por actividad (oportunidad) */}
         <TabsContent value="etapas">
           <Card>
             <CardHeader className="py-3">
-              <CardTitle className="text-sm font-medium">Recorrido por el funnel (histórico)</CardTitle>
+              <CardTitle className="text-sm font-medium">Recorrido por el funnel (por actividad)</CardTitle>
             </CardHeader>
             <CardContent>
-              {!cliente.etapa_historial?.length ? (
+              {!cliente.oportunidad_historial?.length ? (
                 <p className="text-sm text-gray-400 text-center py-6">
-                  Sin cambios de etapa registrados. El avance ahora se lleva por actividad en la pestaña Oportunidades.
+                  Sin movimientos de etapa registrados aún. Se irán registrando a medida que avances cada oportunidad.
                 </p>
-              ) : (
-                <ul className="space-y-3">
-                  {cliente.etapa_historial.map((h, i) => {
-                    const anterior = h.etapa_anterior ? ETAPAS_FUNNEL.find(e => e.value === h.etapa_anterior)?.label : 'Sin etapa'
-                    const nueva = ETAPAS_FUNNEL.find(e => e.value === h.etapa_nueva)?.label || h.etapa_nueva
-                    const cfg = ETAPA_BADGE[h.etapa_nueva]
-                    // Tiempo que estuvo en la etapa anterior (diferencia con el cambio previo)
-                    const siguiente = cliente.etapa_historial![i + 1]
-                    const desde = siguiente ? new Date(siguiente.created_at) : new Date(cliente.created_at)
-                    const dias = Math.round((new Date(h.created_at).getTime() - desde.getTime()) / 86_400_000)
-                    return (
-                      <li key={h.id} className="flex items-center gap-3 text-sm border-l-2 border-orange-200 pl-3">
-                        <span className="text-gray-400 text-xs w-32 shrink-0">
-                          {format(new Date(h.created_at), 'dd/MM/yyyy HH:mm', { locale: es })}
-                        </span>
-                        <span className="text-gray-500">{anterior}</span>
-                        <span className="text-gray-300">→</span>
-                        {cfg ? (
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.text}`}>{nueva}</span>
-                        ) : (
-                          <span className="font-medium">{nueva}</span>
-                        )}
-                        {dias > 0 && (
-                          <span className="text-xs text-gray-400 ml-auto">{dias} día{dias === 1 ? '' : 's'} en etapa anterior</span>
-                        )}
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
+              ) : (() => {
+                const hist = cliente.oportunidad_historial!
+                const actividades = Array.from(new Set(hist.map(h => h.actividad_nombre || '—')))
+                return (
+                  <div className="space-y-4">
+                    {actividades.map(act => {
+                      const items = hist.filter(h => (h.actividad_nombre || '—') === act)
+                      return (
+                        <div key={act}>
+                          <p className="text-sm font-semibold text-gray-800 mb-2">{act}</p>
+                          <ul className="space-y-2">
+                            {items.map(h => {
+                              const anterior = h.etapa_anterior ? ETAPAS_FUNNEL.find(e => e.value === h.etapa_anterior)?.label : 'Inicio'
+                              const nueva = ETAPAS_FUNNEL.find(e => e.value === h.etapa_nueva)?.label || h.etapa_nueva
+                              const cfg = ETAPA_BADGE[h.etapa_nueva]
+                              return (
+                                <li key={h.id} className="flex items-center gap-3 text-sm border-l-2 border-orange-200 pl-3">
+                                  <span className="text-gray-400 text-xs w-32 shrink-0">
+                                    {format(new Date(h.created_at), 'dd/MM/yyyy HH:mm', { locale: es })}
+                                  </span>
+                                  <span className="text-gray-500">{anterior}</span>
+                                  <span className="text-gray-300">→</span>
+                                  {cfg ? (
+                                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.text}`}>{nueva}</span>
+                                  ) : (
+                                    <span className="font-medium">{nueva}</span>
+                                  )}
+                                </li>
+                              )
+                            })}
+                          </ul>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
             </CardContent>
           </Card>
         </TabsContent>
