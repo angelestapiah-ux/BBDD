@@ -180,15 +180,11 @@ export default function ClientesPage() {
   const [clientes, setClientes] = useState<ClienteEnriquecido[]>([])
   const [total, setTotal] = useState(0)
   const [q, setQ] = useState('')
-  const [etapaFilter, setEtapaFilter] = useState<EtapaFunnel | ''>('')
   const [page, setPage] = useState(1)
 
-  // Pre-populate etapaFilter from URL (?etapa=...) when coming from the funnel chart
   // ?nuevo=1 abre directo el dialog de nuevo cliente (desde Ctrl+K)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const etapa = params.get('etapa') as EtapaFunnel
-    if (etapa) setEtapaFilter(etapa)
     if (params.get('nuevo')) setDialogOpen(true)
   }, [])
   const [loading, setLoading] = useState(false)
@@ -208,13 +204,12 @@ export default function ClientesPage() {
   const fetchClientes = useCallback(async () => {
     setLoading(true)
     const params = new URLSearchParams({ q, page: String(page), limit: String(limit) })
-    if (etapaFilter) params.set('etapa', etapaFilter)
     const res = await fetch(`/api/clientes?${params}`)
     const json = await res.json()
     setClientes(json.data || [])
     setTotal(json.count || 0)
     setLoading(false)
-  }, [q, page, etapaFilter])
+  }, [q, page])
 
   useEffect(() => {
     const t = setTimeout(fetchClientes, 300)
@@ -306,7 +301,7 @@ export default function ClientesPage() {
   }
 
   // Limpiar selección al cambiar de página/filtros
-  useEffect(() => { setSeleccion(new Set()) }, [page, q, etapaFilter])
+  useEffect(() => { setSeleccion(new Set()) }, [page, q])
 
   // Actividades del catálogo para la acción masiva "asignar tipo"
   // (los tipos de cliente son las actividades — 100% sincronizados)
@@ -430,21 +425,6 @@ export default function ClientesPage() {
             value={q}
             onChange={e => { setQ(e.target.value); setPage(1) }}
           />
-        </div>
-
-        {/* C5: Filtro etapa */}
-        <div className="relative">
-          <select
-            value={etapaFilter}
-            onChange={e => { setEtapaFilter(e.target.value as EtapaFunnel | ''); setPage(1) }}
-            className="h-10 pl-3 pr-8 rounded-lg border border-gray-200 text-sm text-gray-600 bg-white focus:outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-400 appearance-none cursor-pointer"
-          >
-            <option value="">Todas las etapas</option>
-            {ETAPAS_FUNNEL.map(e => (
-              <option key={e.value} value={e.value}>{e.label}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 pointer-events-none" />
         </div>
 
         <div className="flex rounded-lg border border-gray-200 overflow-hidden">
