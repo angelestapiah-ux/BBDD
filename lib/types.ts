@@ -125,6 +125,21 @@ export interface Seguimiento {
 
 export type SeguimientoInsert = Omit<Seguimiento, 'id' | 'created_at'>
 
+// Funnel por actividad: una oportunidad = una persona avanzando en UNA actividad
+export interface Oportunidad {
+  id: string
+  cliente_id: string
+  actividad_nombre: string
+  etapa: EtapaFunnel
+  responsable: string | null
+  notas: string | null
+  fecha_cambio_etapa: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type OportunidadInsert = Omit<Oportunidad, 'id' | 'created_at' | 'updated_at' | 'fecha_cambio_etapa'>
+
 export interface EtapaHistorial {
   id: string
   cliente_id: string
@@ -195,4 +210,5 @@ export interface ClienteConDetalle extends Cliente {
   seguimientos?: Seguimiento[]
   etapa_historial?: EtapaHistorial[]
   boletas_prestador?: BoletaHonorario[]
+  oportunidades?: Oportunidad[]
 }

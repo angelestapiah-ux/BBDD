@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ClienteConDetalle, Asistencia, Pago, Seguimiento, ETAPAS_FUNNEL, EtapaFunnel } from '@/lib/types'
+import { ClienteConDetalle, Asistencia, Pago, Seguimiento, Actividad, Oportunidad, ETAPAS_FUNNEL, EtapaFunnel } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Pencil, Trash2, Plus, FileSpreadsheet, FileText, Receipt, MessageSquare, Phone, Mail, MoreHorizontal, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, Plus, FileSpreadsheet, FileText, Receipt, MessageSquare, Phone, Mail, MoreHorizontal, AlertTriangle, Target } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { ClienteFormDialog } from '@/components/clientes/ClienteFormDialog'
@@ -87,7 +87,7 @@ export default function ClienteDetailPage() {
   const [cliente, setCliente] = useState<ClienteConDetalle | null>(null)
   const [loading, setLoading] = useState(true)
   const [showAllFields, setShowAllFields] = useState(false)
-  const [etapaCambiando, setEtapaCambiando] = useState(false)
+  const [tab, setTab] = useState('oportunidades')
 
   // P3: usuario logueado para pre-llenar responsable
   const [currentUserEmail, setCurrentUserEmail] = useState('')
@@ -105,6 +105,12 @@ export default function ClienteDetailPage() {
   const [editPago, setEditPago] = useState<Pago | null>(null)
   const [editAsistencia, setEditAsistencia] = useState<Asistencia | null>(null)
 
+  // Oportunidades (funnel por actividad): catálogo + formulario de alta
+  const [catalogo, setCatalogo] = useState<Actividad[]>([])
+  const [nuevaOpActividad, setNuevaOpActividad] = useState('')
+  const [nuevaOpCustom, setNuevaOpCustom] = useState('')
+  const [nuevaOpEtapa, setNuevaOpEtapa] = useState<EtapaFunnel>('nuevo')
+
   const fetchCliente = useCallback(async () => {
     const res = await fetch(`/api/clientes/${id}`)
     if (!res.ok) { router.push('/clientes'); return }
@@ -113,6 +119,11 @@ export default function ClienteDetailPage() {
   }, [id, router])
 
   useEffect(() => { fetchCliente() }, [fetchCliente])
+
+  // Catálogo de actividades para el selector de nueva oportunidad
+  useEffect(() => {
+    fetch('/api/actividades').then(r => r.ok ? r.json() : []).then(d => setCatalogo(Array.isArray(d) ? d : [])).catch(() => {})
+  }, [])
 
   // P3: responsable por defecto — preferencia guardada en localStorage, fallback al email
   useEffect(() => {
@@ -162,20 +173,37 @@ export default function ClienteDetailPage() {
     }
   }
 
-  async function handleEtapaChange(etapa: EtapaFunnel) {
-    setEtapaCambiando(true)
-    const res = await fetch(`/api/clientes/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ etapa }),
+  // ── Oportunidades (funnel por actividad) ──────────────────────────────
+  async function addOportunidad(actividad_nombre: string, etapa: EtapaFunnel) {
+    const res = await fetch('/api/oportunidades', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cliente_id: id, actividad_nombre, etapa, responsable: currentUserEmail || null }),
     })
-    setEtapaCambiando(false)
     if (res.ok) {
-      setCliente(prev => prev ? { ...prev, etapa } : prev)
-      toast.success('Etapa actualizada')
+      toast.success('Oportunidad agregada')
+      setNuevaOpActividad(''); setNuevaOpCustom(''); setNuevaOpEtapa('nuevo')
+      fetchCliente()
     } else {
-      toast.error('Error al actualizar')
+      const e = await res.json().catch(() => ({}))
+      toast.error(e.error || 'Error al agregar')
     }
+  }
+
+  async function cambiarEtapaOportunidad(op: Oportunidad, etapa: EtapaFunnel) {
+    setCliente(prev => prev ? { ...prev, oportunidades: prev.oportunidades?.map(o => o.id === op.id ? { ...o, etapa } : o) } : prev)
+    const res = await fetch('/api/oportunidades', {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: op.id, etapa }),
+    })
+    if (res.ok) toast.success('Etapa actualizada')
+    else { toast.error('Error al actualizar'); fetchCliente() }
+  }
+
+  async function deleteOportunidad(op: Oportunidad) {
+    if (!confirm(`¿Quitar la oportunidad de "${op.actividad_nombre}"?`)) return
+    const res = await fetch(`/api/oportunidades?id=${op.id}`, { method: 'DELETE' })
+    if (res.ok) { toast.success('Oportunidad quitada'); fetchCliente() }
+    else toast.error('Error al quitar')
   }
 
   // P5: abre modal de confirmación
@@ -268,8 +296,15 @@ export default function ClienteDetailPage() {
   if (loading) return <div className="p-8 text-gray-400">Cargando...</div>
   if (!cliente) return null
 
-  const etapaCfg = cliente.etapa ? ETAPA_BADGE[cliente.etapa] : null
-  const etapaLabel = cliente.etapa ? ETAPAS_FUNNEL.find(e => e.value === cliente.etapa)?.label : null
+  // Opciones de actividad para una nueva oportunidad (sin las que ya tienen una)
+  const oportunidades = cliente.oportunidades ?? []
+  const actividadesConOportunidad = new Set(oportunidades.map(o => o.actividad_nombre))
+  const opcionesActividad = Array.from(new Set([
+    ...(cliente.asistencias ?? []).map(a => a.actividad_nombre),
+    ...(cliente.pagos ?? []).map(p => p.actividad_nombre),
+    ...catalogo.map(a => a.nombre),
+  ])).filter(n => n && !actividadesConOportunidad.has(n))
+  const nuevaOpActividadFinal = nuevaOpActividad === '__otra__' ? nuevaOpCustom.trim() : nuevaOpActividad
 
   return (
     <div className="p-6 max-w-4xl">
@@ -284,41 +319,15 @@ export default function ClienteDetailPage() {
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-2xl font-bold text-gray-900">{cliente.nombre}</h2>
 
-            {/* Etapa — clickable select */}
-            {etapaCfg && etapaLabel && (
-              <Select
-                value={cliente.etapa || 'nuevo'}
-                onValueChange={v => handleEtapaChange(v as EtapaFunnel)}
-                disabled={etapaCambiando}
-              >
-                <SelectTrigger className={`h-6 text-xs px-2 border-0 shadow-none w-auto gap-1 font-medium rounded-full ${etapaCfg.bg} ${etapaCfg.text}`}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ETAPAS_FUNNEL.map(e => {
-                    const cfg = ETAPA_BADGE[e.value]
-                    return (
-                      <SelectItem key={e.value} value={e.value}>
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.text}`}>{e.label}</span>
-                      </SelectItem>
-                    )
-                  })}
-                </SelectContent>
-              </Select>
-            )}
-
-            {!cliente.etapa && (
-              <Select value="" onValueChange={v => handleEtapaChange(v as EtapaFunnel)}>
-                <SelectTrigger className="h-6 text-xs px-2 border-dashed border-gray-300 text-gray-400 w-auto shadow-none">
-                  <SelectValue placeholder="+ etapa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ETAPAS_FUNNEL.map(e => (
-                    <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            {/* Resumen de oportunidades (funnel por actividad) — abre la pestaña */}
+            <button
+              onClick={() => setTab('oportunidades')}
+              title="Ver oportunidades por actividad"
+              className="h-6 px-2 rounded-full text-xs font-medium bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors inline-flex items-center gap-1"
+            >
+              <Target className="h-3 w-3" />
+              {oportunidades.length} oportunidad{oportunidades.length === 1 ? '' : 'es'}
+            </button>
 
             {/* Marcas de prestador (un click) */}
             <button
@@ -483,8 +492,11 @@ export default function ClienteDetailPage() {
       </Card>
 
       {/* ─── Tabs ──────────────────────────────────────────────────────── */}
-      <Tabs defaultValue="seguimientos">
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
+          <TabsTrigger value="oportunidades">
+            Oportunidades ({oportunidades.length})
+          </TabsTrigger>
           <TabsTrigger value="seguimientos">
             Seguimientos ({cliente.seguimientos?.length ?? 0})
           </TabsTrigger>
@@ -495,7 +507,7 @@ export default function ClienteDetailPage() {
             ]).size})
           </TabsTrigger>
           <TabsTrigger value="etapas">
-            Etapas ({cliente.etapa_historial?.length ?? 0})
+            Historial ({cliente.etapa_historial?.length ?? 0})
           </TabsTrigger>
           {(cliente.boletas_prestador?.length ?? 0) > 0 && (
             <TabsTrigger value="honorarios">
@@ -503,6 +515,99 @@ export default function ClienteDetailPage() {
             </TabsTrigger>
           )}
         </TabsList>
+
+        {/* OPORTUNIDADES — funnel por actividad */}
+        <TabsContent value="oportunidades">
+          <Card>
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm font-medium">Oportunidades por actividad</CardTitle>
+              <p className="text-xs text-gray-400 mt-0.5">Cada actividad avanza en su propio funnel, independiente de las demás.</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+
+              {/* Agregar nueva oportunidad */}
+              <div className="bg-gray-50 rounded-xl p-3 space-y-2">
+                <div className="flex flex-wrap items-end gap-2">
+                  <div className="flex-1 min-w-[180px]">
+                    <p className="text-xs text-gray-400 mb-1">Actividad</p>
+                    <Select value={nuevaOpActividad || undefined} onValueChange={setNuevaOpActividad}>
+                      <SelectTrigger><SelectValue placeholder="Elige una actividad..." /></SelectTrigger>
+                      <SelectContent>
+                        {opcionesActividad.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+                        <SelectItem value="__otra__">Otra (escribir)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-44">
+                    <p className="text-xs text-gray-400 mb-1">Etapa inicial</p>
+                    <Select value={nuevaOpEtapa} onValueChange={v => v && setNuevaOpEtapa(v as EtapaFunnel)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {ETAPAS_FUNNEL.map(e => <SelectItem key={e.value} value={e.value}>{e.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="bg-orange-600 hover:bg-orange-700"
+                    disabled={!nuevaOpActividadFinal}
+                    onClick={() => nuevaOpActividadFinal && addOportunidad(nuevaOpActividadFinal, nuevaOpEtapa)}
+                  >
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Agregar
+                  </Button>
+                </div>
+                {nuevaOpActividad === '__otra__' && (
+                  <Input
+                    placeholder="Nombre de la actividad"
+                    value={nuevaOpCustom}
+                    onChange={e => setNuevaOpCustom(e.target.value)}
+                  />
+                )}
+              </div>
+
+              {/* Lista de oportunidades */}
+              {oportunidades.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-6">
+                  Sin oportunidades aún. Agrega la primera arriba para iniciar el funnel de esta persona.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {oportunidades.map(op => {
+                    const cfg = ETAPA_BADGE[op.etapa]
+                    return (
+                      <li key={op.id} className="flex items-center gap-3 border border-gray-100 rounded-xl px-3 py-2 group">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-800 truncate">{op.actividad_nombre}</p>
+                          {op.fecha_cambio_etapa && (
+                            <p className="text-xs text-gray-400">desde {fmt(op.fecha_cambio_etapa.slice(0, 10))}</p>
+                          )}
+                        </div>
+                        <Select value={op.etapa} onValueChange={v => v && cambiarEtapaOportunidad(op, v as EtapaFunnel)}>
+                          <SelectTrigger className={`h-7 text-xs px-2 border-0 shadow-none w-auto gap-1 font-medium rounded-full ${cfg.bg} ${cfg.text}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {ETAPAS_FUNNEL.map(e => {
+                              const c = ETAPA_BADGE[e.value]
+                              return (
+                                <SelectItem key={e.value} value={e.value}>
+                                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${c.bg} ${c.text}`}>{e.label}</span>
+                                </SelectItem>
+                              )
+                            })}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 text-red-500" onClick={() => deleteOportunidad(op)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* HONORARIOS — boletas donde este cliente es el prestador */}
         {(cliente.boletas_prestador?.length ?? 0) > 0 && (
@@ -695,16 +800,16 @@ export default function ClienteDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        {/* HISTORIAL DE ETAPAS */}
+        {/* HISTORIAL DE ETAPAS (versión anterior, por cliente) */}
         <TabsContent value="etapas">
           <Card>
             <CardHeader className="py-3">
-              <CardTitle className="text-sm font-medium">Recorrido por el funnel</CardTitle>
+              <CardTitle className="text-sm font-medium">Recorrido por el funnel (histórico)</CardTitle>
             </CardHeader>
             <CardContent>
               {!cliente.etapa_historial?.length ? (
                 <p className="text-sm text-gray-400 text-center py-6">
-                  Sin cambios de etapa registrados aún. Se registrarán automáticamente desde ahora.
+                  Sin cambios de etapa registrados. El avance ahora se lleva por actividad en la pestaña Oportunidades.
                 </p>
               ) : (
                 <ul className="space-y-3">
@@ -760,7 +865,7 @@ export default function ClienteDetailPage() {
           <p className="text-sm text-gray-600">
             ¿Estás segura de que deseas eliminar a{' '}
             <span className="font-semibold">{cliente.nombre}</span>?
-            Esta acción también eliminará sus seguimientos, pagos y asistencias,
+            Esta acción también eliminará sus seguimientos, pagos, asistencias y oportunidades,
             y no se puede deshacer.
           </p>
           <DialogFooter className="gap-2 mt-2">
