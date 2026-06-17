@@ -18,8 +18,7 @@ export async function GET(req: NextRequest) {
   let errorMsg: string | null = null
 
   if (q) {
-    // Búsqueda sin tildes + por palabras sueltas (funciones SQL buscar_clientes / contar_clientes).
-    // "Juan Pérez" encuentra a "Juan Carlos Pérez Soto"; "maria" encuentra a "María".
+    // Busqueda sin tildes + por palabras sueltas (funciones SQL buscar_clientes / contar_clientes).
     const [resData, resCount] = await Promise.all([
       supabase.rpc('buscar_clientes', { termino: q, etapa_filtro: etapa, lim: limit, off: offset }),
       supabase.rpc('contar_clientes', { termino: q, etapa_filtro: etapa }),
@@ -42,26 +41,28 @@ export async function GET(req: NextRequest) {
 
   if (errorMsg) return NextResponse.json({ error: errorMsg }, { status: 500 })
 
-  // Enriquecer con último seguimiento (para semáforo en la lista)
+  // Enriquecer con ultimo seguimiento (semaforo) y oportunidades por actividad (chips en la lista)
   if (data.length > 0) {
     const clientIds = data.map((c) => c.id as string)
-    const { data: segs } = await supabase
-      .from('seguimientos')
-      .select('cliente_id, created_at')
-      .in('cliente_id', clientIds)
-      .order('created_at', { ascending: false })
+    const [segsRes, opsRes] = await Promise.all([
+      supabase.from('seguimientos').select('cliente_id, created_at').in('cliente_id', clientIds).order('created_at', { ascending: false }),
+      supabase.from('oportunidades').select('cliente_id, actividad_nombre, etapa').in('cliente_id', clientIds),
+    ])
 
-    // Solo el seguimiento más reciente por cliente
     const ultimoSeg: Record<string, string> = {}
-    for (const s of segs ?? []) {
-      if (!ultimoSeg[s.cliente_id]) {
-        ultimoSeg[s.cliente_id] = s.created_at
-      }
+    for (const s of segsRes.data ?? []) {
+      if (!ultimoSeg[s.cliente_id]) ultimoSeg[s.cliente_id] = s.created_at
+    }
+
+    const opsPorCliente: Record<string, { actividad_nombre: string; etapa: string }[]> = {}
+    for (const o of opsRes.data ?? []) {
+      ;(opsPorCliente[o.cliente_id] ??= []).push({ actividad_nombre: o.actividad_nombre, etapa: o.etapa })
     }
 
     const dataEnriquecida = data.map((c) => ({
       ...c,
       ultimo_seguimiento: ultimoSeg[c.id as string] || null,
+      oportunidades: opsPorCliente[c.id as string] || [],
     }))
 
     return NextResponse.json({ data: dataEnriquecida, count, page, limit })
@@ -78,7 +79,6 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase.from('clientes').insert(body).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   auditar('crear', 'clientes', data.id, `Cliente: ${data.nombre}`)
-  // Tipos de cliente que son actividades del catálogo → registrar asistencias
   await sincronizarAsistencias(supabase, data.id, data.tipos_cliente)
   return NextResponse.json(data, { status: 201 })
 }

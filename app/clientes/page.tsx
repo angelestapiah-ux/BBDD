@@ -13,7 +13,7 @@ import { usePerfil } from '@/components/shared/usePerfil'
 import { toast } from 'sonner'
 import { exportarClientesExcel, exportarClientesPDF, exportarTodoExcel } from '@/lib/export'
 
-type ClienteEnriquecido = Cliente & { ultimo_seguimiento: string | null }
+type ClienteEnriquecido = Cliente & { ultimo_seguimiento: string | null; oportunidades?: { actividad_nombre: string; etapa: EtapaFunnel }[] }
 
 // ─── Colores por etapa ────────────────────────────────────────────────────
 const ETAPA_BADGE: Record<EtapaFunnel, { bg: string; text: string; label: string }> = {
@@ -503,7 +503,7 @@ export default function ClientesPage() {
                   <th className="text-left px-4 py-3 font-medium text-gray-600 w-6"></th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Nombre</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Contacto</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Etapa</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Funnel</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600">Canal</th>
                   <th className="px-4 py-3"></th>
                 </tr>
@@ -511,7 +511,6 @@ export default function ClientesPage() {
               <tbody className="divide-y divide-gray-100">
                 {clientes.map(c => {
                   const sem = calcSemaforo(c)
-                  const etapaCfg = c.etapa ? ETAPA_BADGE[c.etapa] : null
                   const isContactadoOpen = contactadoId === c.id
 
                   return (
@@ -562,24 +561,27 @@ export default function ClientesPage() {
                         </div>
                       </td>
 
-                      {/* Etapa — select inline disfrazado de badge */}
+                      {/* Funnel — oportunidades por actividad (chips) */}
                       <td className="px-4 py-3">
-                        <div className="relative inline-block">
-                          <select
-                            value={c.etapa || ''}
-                            onChange={e => e.target.value && handleEtapaChange(c.id, e.target.value as EtapaFunnel)}
-                            title="Cambiar etapa"
-                            className={`appearance-none cursor-pointer text-xs font-medium pl-2 pr-5 py-0.5 rounded-full border-0 focus:outline-none focus:ring-1 focus:ring-orange-400 ${
-                              etapaCfg ? `${etapaCfg.bg} ${etapaCfg.text}` : 'bg-gray-100 text-gray-400'
-                            }`}
-                          >
-                            {!c.etapa && <option value="">— etapa —</option>}
-                            {ETAPAS_FUNNEL.map(e => (
-                              <option key={e.value} value={e.value}>{e.label}</option>
-                            ))}
-                          </select>
-                          <ChevronDown className="absolute right-1 top-1/2 -translate-y-1/2 h-2.5 w-2.5 opacity-50 pointer-events-none" />
-                        </div>
+                        {c.oportunidades && c.oportunidades.length > 0 ? (
+                          <div className="flex flex-col gap-1 items-start">
+                            {c.oportunidades.map((o, i) => {
+                              const cfg = ETAPA_BADGE[o.etapa]
+                              return (
+                                <span
+                                  key={i}
+                                  className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${cfg ? `${cfg.bg} ${cfg.text}` : 'bg-gray-100 text-gray-500'}`}
+                                  title={`${o.actividad_nombre} - ${cfg ? cfg.label : o.etapa}`}
+                                >
+                                  <span className="font-medium truncate max-w-[130px]">{o.actividad_nombre}</span>
+                                  <span className="opacity-70">- {cfg ? cfg.label : o.etapa}</span>
+                                </span>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <Link href={`/clientes/${c.id}`} className="text-xs text-gray-300 hover:text-orange-500">+ funnel</Link>
+                        )}
                       </td>
 
                       {/* Canal */}
