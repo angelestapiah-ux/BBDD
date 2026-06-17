@@ -23,6 +23,7 @@ export default function ReportesPage() {
   const [procedencias, setProcedencias] = useState<{ procedencia: string; cantidad: number }[]>([])
   const [pendientesData, setPendientesData] = useState<{ pagos: Record<string, unknown>[]; total: number } | null>(null)
   const [facturacionData, setFacturacionData] = useState<{ pagos: Record<string, unknown>[]; total: number; pendientes: number } | null>(null)
+  const [sinContacto, setSinContacto] = useState<{ clientes: Record<string, string>[]; total: number } | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
   const [actividades, setActividades] = useState<Actividad[]>([])
 
@@ -106,6 +107,21 @@ export default function ReportesPage() {
     const res = await fetch('/api/reportes?tipo=procedencias')
     setProcedencias(await res.json() || [])
     setLoading(null)
+  }
+
+  async function cargarSinContacto() {
+    setLoading('sin_contacto')
+    const res = await fetch('/api/reportes/sin-contacto')
+    setSinContacto(await res.json())
+    setLoading(null)
+  }
+
+  function exportarSinContacto(data: Record<string, string>[]) {
+    const filas = data.map(c => ({ 'Cliente': c.nombre || '—', 'Procedencia': c.procedencia || '' }))
+    const ws = XLSX.utils.json_to_sheet(filas)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Sin contacto')
+    XLSX.writeFile(wb, 'clientes_sin_contacto.xlsx')
   }
 
   function exportarAsistentes(data: Record<string, unknown>[], nombre: string) {
@@ -193,6 +209,7 @@ export default function ReportesPage() {
           <TabsTrigger value="cumpleanos">Cumpleaños del mes</TabsTrigger>
           <TabsTrigger value="procedencias">Procedencias</TabsTrigger>
           <TabsTrigger value="facturacion">🧾 Facturación</TabsTrigger>
+          <TabsTrigger value="sin_contacto">📇 Sin contacto</TabsTrigger>
         </TabsList>
 
         {/* ─── Facturación (SII) ──────────────────────────────────────── */}
@@ -550,6 +567,68 @@ export default function ReportesPage() {
                     </li>
                   ))}
                 </ul>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        {/* ─── Clientes sin datos de contacto ─────────────────────────── */}
+        <TabsContent value="sin_contacto">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Clientes sin datos de contacto</CardTitle>
+                <p className="text-xs text-gray-400 mt-0.5">Sin teléfono ni correo (ni los secundarios) — para completar su perfil</p>
+              </div>
+              <Button onClick={cargarSinContacto} size="sm" disabled={loading === 'sin_contacto'}>
+                <Search className="h-4 w-4 mr-2" /> {loading === 'sin_contacto' ? 'Cargando...' : 'Cargar'}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {!sinContacto && loading !== 'sin_contacto' && (
+                <p className="text-sm text-gray-400">Haz clic en Cargar para ver los clientes sin contacto</p>
+              )}
+              {loading === 'sin_contacto' && <p className="text-sm text-gray-400 animate-pulse">Cargando...</p>}
+              {sinContacto && (
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <Badge variant="secondary">{sinContacto.total} cliente{sinContacto.total === 1 ? '' : 's'} sin contacto</Badge>
+                    {sinContacto.total > 0 && (
+                      <Button size="sm" variant="outline" onClick={() => exportarSinContacto(sinContacto.clientes)}>
+                        <Download className="h-3 w-3 mr-1" /> Exportar Excel
+                      </Button>
+                    )}
+                  </div>
+                  {sinContacto.total === 0 ? (
+                    <p className="text-sm text-green-600">Todos los clientes tienen al menos un dato de contacto.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="text-left p-2 font-medium text-gray-600">Cliente</th>
+                            <th className="text-left p-2 font-medium text-gray-600">Canal</th>
+                            <th className="text-right p-2 font-medium text-gray-600">Completar</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {sinContacto.clientes.map((c, i) => (
+                            <tr key={i} className="hover:bg-gray-50 transition-colors">
+                              <td className="p-2 font-medium">
+                                <a href={`/clientes/${c.id}`} className="hover:text-orange-600 hover:underline">{c.nombre || '—'}</a>
+                              </td>
+                              <td className="p-2">
+                                {c.procedencia ? <Badge variant="secondary" className="text-xs">{c.procedencia}</Badge> : <span className="text-gray-300 text-xs">—</span>}
+                              </td>
+                              <td className="p-2 text-right">
+                                <a href={`/clientes/${c.id}`} className="text-xs text-orange-600 hover:underline">Abrir ficha</a>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
