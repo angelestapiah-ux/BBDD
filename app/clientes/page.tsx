@@ -13,7 +13,7 @@ import { usePerfil } from '@/components/shared/usePerfil'
 import { toast } from 'sonner'
 import { exportarClientesExcel, exportarClientesPDF, exportarTodoExcel } from '@/lib/export'
 
-type ClienteEnriquecido = Cliente & { ultimo_seguimiento: string | null; oportunidades?: { actividad_nombre: string; etapa: EtapaFunnel }[] }
+type ClienteEnriquecido = Cliente & { ultimo_seguimiento: string | null; oportunidades?: { id: string; actividad_nombre: string; etapa: EtapaFunnel }[] }
 
 // ─── Colores por etapa ────────────────────────────────────────────────────
 const ETAPA_BADGE: Record<EtapaFunnel, { bg: string; text: string; label: string }> = {
@@ -88,33 +88,39 @@ function CeldaEditable({ valor, placeholder, onSave }: {
   )
 }
 
-// ─── Kanban view ──────────────────────────────────────────────────────────
+// ─── Kanban view (por oportunidad / actividad) ────────────────────────────
 function KanbanView({
   clientes,
-  onEtapaChange,
+  onOportunidadEtapa,
 }: {
   clientes: ClienteEnriquecido[]
-  onEtapaChange: (id: string, etapa: EtapaFunnel) => void
+  onOportunidadEtapa: (opId: string, etapa: EtapaFunnel) => void
 }) {
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [overEtapa, setOverEtapa] = useState<EtapaFunnel | null>(null)
 
-  const porEtapa = ETAPAS_FUNNEL.reduce<Record<EtapaFunnel, ClienteEnriquecido[]>>((acc, e) => {
-    acc[e.value] = clientes.filter(c => (c.etapa || 'nuevo') === e.value)
+  type Card = { opId: string; clienteId: string; nombre: string; actividad: string; etapa: EtapaFunnel; telefono: string | null }
+  const cards: Card[] = []
+  for (const c of clientes) {
+    for (const o of c.oportunidades ?? []) {
+      cards.push({ opId: o.id, clienteId: c.id, nombre: c.nombre, actividad: o.actividad_nombre, etapa: o.etapa, telefono: c.telefono })
+    }
+  }
+  const porEtapa = ETAPAS_FUNNEL.reduce<Record<EtapaFunnel, Card[]>>((acc, e) => {
+    acc[e.value] = cards.filter(k => k.etapa === e.value)
     return acc
-  }, {} as Record<EtapaFunnel, ClienteEnriquecido[]>)
+  }, {} as Record<EtapaFunnel, Card[]>)
 
   return (
     <div className="flex gap-3 overflow-x-auto pb-4 mt-2">
       {ETAPAS_FUNNEL.map(etapa => {
         const cfg = ETAPA_BADGE[etapa.value]
-        const cards = porEtapa[etapa.value]
+        const columna = porEtapa[etapa.value]
         const isOver = overEtapa === etapa.value
-
         return (
           <div
             key={etapa.value}
-            className={`flex-shrink-0 w-52 rounded-xl border transition-colors ${
+            className={`flex-shrink-0 w-56 rounded-xl border transition-colors ${
               isOver ? 'border-orange-400 bg-orange-50' : 'border-gray-200 bg-gray-50'
             }`}
             onDragOver={e => { e.preventDefault(); setOverEtapa(etapa.value) }}
@@ -122,56 +128,43 @@ function KanbanView({
             onDrop={e => {
               e.preventDefault()
               setOverEtapa(null)
-              if (draggingId) onEtapaChange(draggingId, etapa.value)
+              if (draggingId) onOportunidadEtapa(draggingId, etapa.value)
               setDraggingId(null)
             }}
           >
-            {/* Column header */}
             <div className="px-3 py-2.5 flex items-center justify-between border-b border-gray-200">
               <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.text}`}>
                 {etapa.label}
               </span>
-              <span className="text-xs text-gray-400 font-medium">{cards.length}</span>
+              <span className="text-xs text-gray-400 font-medium">{columna.length}</span>
             </div>
-
-            {/* Cards */}
             <div className="p-2 space-y-2 min-h-[80px]">
-              {cards.map(c => {
-                const sem = calcSemaforo(c)
-                return (
-                  <div
-                    key={c.id}
-                    draggable
-                    onDragStart={() => setDraggingId(c.id)}
-                    onDragEnd={() => setDraggingId(null)}
-                    className={`bg-white rounded-lg border border-gray-100 p-2.5 shadow-sm cursor-grab active:cursor-grabbing hover:border-orange-200 transition-all ${
-                      draggingId === c.id ? 'opacity-50 scale-95' : ''
-                    }`}
-                  >
-                    <div className="flex items-start gap-1.5">
-                      <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${SEMAFORO_DOT[sem]}`} title={SEMAFORO_TITLE[sem]} />
-                      <div className="min-w-0">
-                        <Link href={`/clientes/${c.id}`} className="text-xs font-semibold text-gray-800 hover:text-orange-600 leading-tight block truncate">
-                          {c.nombre}
-                        </Link>
-                        {c.procedencia && (
-                          <p className="text-xs text-gray-400 truncate">{c.procedencia}</p>
-                        )}
-                        {c.telefono && (
-                          <a
-                            href={`https://wa.me/${c.telefono.replace(/\D/g, '')}`}
-                            target="_blank" rel="noopener noreferrer"
-                            className="text-xs text-green-600 hover:underline mt-0.5 block"
-                            onClick={e => e.stopPropagation()}
-                          >
-                            WhatsApp
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
+              {columna.map(k => (
+                <div
+                  key={k.opId}
+                  draggable
+                  onDragStart={() => setDraggingId(k.opId)}
+                  onDragEnd={() => setDraggingId(null)}
+                  className={`bg-white rounded-lg border border-gray-100 p-2.5 shadow-sm cursor-grab active:cursor-grabbing hover:border-orange-200 transition-all ${
+                    draggingId === k.opId ? 'opacity-50 scale-95' : ''
+                  }`}
+                >
+                  <Link href={`/clientes/${k.clienteId}`} className="text-xs font-semibold text-gray-800 hover:text-orange-600 leading-tight block truncate">
+                    {k.nombre}
+                  </Link>
+                  <p className="text-xs text-orange-600 truncate" title={k.actividad}>{k.actividad}</p>
+                  {k.telefono && (
+                    <a
+                      href={`https://wa.me/${k.telefono.replace(/\D/g, '')}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="text-xs text-green-600 hover:underline mt-0.5 block"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      WhatsApp
+                    </a>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         )
@@ -344,18 +337,19 @@ export default function ClientesPage() {
     }
   }
 
-  async function handleEtapaChange(id: string, etapa: EtapaFunnel) {
-    const res = await fetch(`/api/clientes/${id}`, {
+  async function handleOportunidadEtapa(opId: string, etapa: EtapaFunnel) {
+    // Optimista: actualizar la oportunidad en la lista cargada
+    setClientes(prev => prev.map(c => ({
+      ...c,
+      oportunidades: c.oportunidades?.map(o => o.id === opId ? { ...o, etapa } : o),
+    })))
+    const res = await fetch('/api/oportunidades', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ etapa }),
+      body: JSON.stringify({ id: opId, etapa }),
     })
-    if (res.ok) {
-      setClientes(prev => prev.map(c => c.id === id ? { ...c, etapa } : c))
-      toast.success('Etapa actualizada')
-    } else {
-      toast.error('Error al actualizar etapa')
-    }
+    if (res.ok) toast.success('Etapa actualizada')
+    else { toast.error('Error al actualizar etapa'); fetchClientes() }
   }
 
   // Edición inline de un campo (teléfono/correo) directo en la tabla
@@ -473,7 +467,7 @@ export default function ClientesPage() {
 
       {/* ─── VISTA KANBAN ─── */}
       {vista === 'kanban' && !loading && (
-        <KanbanView clientes={clientes} onEtapaChange={handleEtapaChange} />
+        <KanbanView clientes={clientes} onOportunidadEtapa={handleOportunidadEtapa} />
       )}
 
       {/* ─── VISTA LISTA ─── */}

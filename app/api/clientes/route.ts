@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
     const clientIds = data.map((c) => c.id as string)
     const [segsRes, opsRes] = await Promise.all([
       supabase.from('seguimientos').select('cliente_id, created_at').in('cliente_id', clientIds).order('created_at', { ascending: false }),
-      supabase.from('oportunidades').select('cliente_id, actividad_nombre, etapa').in('cliente_id', clientIds),
+      supabase.from('oportunidades').select('id, cliente_id, actividad_nombre, etapa').in('cliente_id', clientIds),
     ])
 
     const ultimoSeg: Record<string, string> = {}
@@ -54,9 +54,9 @@ export async function GET(req: NextRequest) {
       if (!ultimoSeg[s.cliente_id]) ultimoSeg[s.cliente_id] = s.created_at
     }
 
-    const opsPorCliente: Record<string, { actividad_nombre: string; etapa: string }[]> = {}
+    const opsPorCliente: Record<string, { id: string; actividad_nombre: string; etapa: string }[]> = {}
     for (const o of opsRes.data ?? []) {
-      ;(opsPorCliente[o.cliente_id] ??= []).push({ actividad_nombre: o.actividad_nombre, etapa: o.etapa })
+      ;(opsPorCliente[o.cliente_id] ??= []).push({ id: o.id, actividad_nombre: o.actividad_nombre, etapa: o.etapa })
     }
 
     const dataEnriquecida = data.map((c) => ({
