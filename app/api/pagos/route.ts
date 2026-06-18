@@ -1,6 +1,7 @@
 // ARCHIVO CORREGIDO: app/api/pagos/route.ts
 // CAMBIO: reemplazado 'supabase' (anon key) por createSupabaseAdminClient()
 // MOTIVO: el cliente anon sin sesión auth queda bloqueado cuando RLS está activo
+// SUB-BLOQUE 1 (cobranza): el POST genera el plan de cuotas si viene 'tiene_plan_cuotas'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
@@ -12,13 +13,34 @@ export async function POST(req: NextRequest) {
     if (bloqueo) return bloqueo
     const supabase = createSupabaseAdminClient()
     const body = await req.json()
+    // Plan de cuotas: se separa del cuerpo del pago (no es columna de 'pagos')
+    const cuotasPlan: Array<{ numero_cuota: number; monto: number; fecha_vencimiento: string }> =
+        Array.isArray(body.cuotas) ? body.cuotas : []
+    delete body.cuotas
     // Campos opcionales vacíos ("") → null (Postgres rechaza "" en fechas)
-    for (const campo of ['fecha_pago', 'fecha_actividad', 'numero_factura', 'factura_interna', 'notas', 'monto']) {
+    for (const campo of ['fecha_pago', 'fecha_actividad', 'numero_factura', 'factura_interna', 'notas', 'monto', 'monto_total']) {
         if (campo in body && body[campo] === '') body[campo] = null
     }
     const { data, error } = await supabase.from('pagos').insert(body).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     auditar('crear', 'pagos', data.id, `${data.actividad_nombre} · $${data.monto ?? 0} · ${data.estado}`)
+
+    // Si el pago trae plan de cuotas, se generan las filas en 'cuotas'
+    if (body.tiene_plan_cuotas && cuotasPlan.length > 0) {
+        const filasCuotas = cuotasPlan.map((c) => ({
+            pago_id: data.id,
+            cliente_id: data.cliente_id,
+            actividad_nombre: data.actividad_nombre,
+            numero_cuota: c.numero_cuota,
+            total_cuotas: cuotasPlan.length,
+            monto: c.monto,
+            fecha_vencimiento: c.fecha_vencimiento,
+            estado: 'pendiente',
+        }))
+        const { error: errCuotas } = await supabase.from('cuotas').insert(filasCuotas)
+        if (errCuotas) return NextResponse.json({ error: errCuotas.message }, { status: 500 })
+        auditar('crear', 'cuotas', data.id, `Plan de ${cuotasPlan.length} cuotas · ${data.actividad_nombre}`)
+    }
 
     // Consistencia actividad↔pago: si el cliente no tiene la asistencia
     // de esta actividad, se registra automáticamente.

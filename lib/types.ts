@@ -26,6 +26,11 @@ export type Database = {
         Insert: SeguimientoInsert
         Update: Partial<SeguimientoInsert>
       }
+      cuotas: {
+        Row: Cuota
+        Insert: CuotaInsert
+        Update: Partial<CuotaInsert>
+      }
     }
   }
 }
@@ -107,10 +112,57 @@ export interface Pago {
   requiere_factura: boolean
   numero_factura: string | null
   factura_interna: string | null
+  monto_total: number | null
+  tiene_plan_cuotas: boolean
   created_at: string
 }
 
 export type PagoInsert = Omit<Pago, 'id' | 'created_at'>
+
+// ─── Cobranza por cuotas ────────────────────────────────────
+export interface Cuota {
+  id: string
+  pago_id: string | null
+  cliente_id: string
+  actividad_nombre: string | null
+  numero_cuota: number
+  total_cuotas: number
+  monto: number
+  fecha_vencimiento: string
+  estado: 'pendiente' | 'pagada' | 'vencida'
+  fecha_pago: string | null
+  metodo_pago: string | null
+  recordatorio_enviado: boolean
+  notas: string | null
+  created_at: string
+  updated_at: string
+}
+
+export type CuotaInsert = Omit<Cuota, 'id' | 'created_at' | 'updated_at'>
+
+// Una cuota tal como la arma el formulario de pago (antes de existir en BD)
+export interface CuotaInput {
+  numero_cuota: number
+  monto: number
+  fecha_vencimiento: string
+}
+
+// Payload que envía el formulario de pago al crear (incluye plan de cuotas)
+export interface PagoFormPayload {
+  actividad_nombre: string
+  monto: string
+  fecha_pago: string
+  fecha_actividad: string
+  metodo_pago: string
+  estado: string
+  notas: string
+  requiere_factura: boolean
+  numero_factura: string
+  factura_interna: string
+  tiene_plan_cuotas: boolean
+  monto_total: string
+  cuotas: CuotaInput[]
+}
 
 export interface Seguimiento {
   id: string
@@ -222,4 +274,5 @@ export interface ClienteConDetalle extends Cliente {
   boletas_prestador?: BoletaHonorario[]
   oportunidades?: Oportunidad[]
   oportunidad_historial?: OportunidadHistorial[]
+  cuotas?: Cuota[]
 }

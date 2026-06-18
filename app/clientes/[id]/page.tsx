@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ClienteConDetalle, Asistencia, Pago, Seguimiento, Actividad, Oportunidad, ETAPAS_FUNNEL, EtapaFunnel } from '@/lib/types'
+import { ClienteConDetalle, Asistencia, Pago, Seguimiento, Actividad, Oportunidad, ETAPAS_FUNNEL, EtapaFunnel, Cuota, PagoFormPayload } from '@/lib/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Pencil, Trash2, Plus, FileSpreadsheet, FileText, Receipt, MessageSquare, Phone, Mail, MoreHorizontal, AlertTriangle, Target } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2, Plus, FileSpreadsheet, FileText, Receipt, MessageSquare, Phone, Mail, MoreHorizontal, AlertTriangle, Target, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { ClienteFormDialog } from '@/components/clientes/ClienteFormDialog'
@@ -29,6 +29,17 @@ function fmt(d: string | null) {
   if (!d) return null
   try { return format(new Date(d + 'T12:00:00'), 'dd/MM/yyyy', { locale: es }) }
   catch { return d }
+}
+
+// Semáforo de una cuota: verde = al día / pagada, ámbar = vence pronto, rojo = vencida
+function semaforoCuota(c: Cuota): { dot: string; label: string } {
+  if (c.estado === 'pagada') return { dot: 'bg-green-500', label: 'Pagada' }
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0)
+  const venc = new Date(c.fecha_vencimiento + 'T12:00:00')
+  const dias = Math.ceil((venc.getTime() - hoy.getTime()) / 86400000)
+  if (c.estado === 'vencida' || dias < 0) return { dot: 'bg-red-500', label: 'Vencida' }
+  if (dias <= 3) return { dot: 'bg-amber-500', label: dias === 0 ? 'Vence hoy' : `Vence en ${dias}d` }
+  return { dot: 'bg-green-400', label: 'Al día' }
 }
 
 // ─── Etapa badge config ─────────────────────────────────────────────────
@@ -88,6 +99,7 @@ export default function ClienteDetailPage() {
   const [loading, setLoading] = useState(true)
   const [showAllFields, setShowAllFields] = useState(false)
   const [tab, setTab] = useState('actividades')
+  const [cuotas, setCuotas] = useState<Cuota[]>([])
 
   // P3: usuario logueado para pre-llenar responsable
   const [currentUserEmail, setCurrentUserEmail] = useState('')
@@ -120,6 +132,13 @@ export default function ClienteDetailPage() {
   }, [id, router])
 
   useEffect(() => { fetchCliente() }, [fetchCliente])
+
+  const fetchCuotas = useCallback(async () => {
+    const res = await fetch(`/api/cuotas?cliente_id=${id}`)
+    if (res.ok) setCuotas(await res.json())
+  }, [id])
+
+  useEffect(() => { fetchCuotas() }, [fetchCuotas])
 
   // Catálogo de actividades para el selector de nueva oportunidad
   useEffect(() => {
@@ -228,7 +247,7 @@ export default function ClienteDetailPage() {
     else toast.error('Error al guardar')
   }
 
-  async function addPago(data: Record<string, string | boolean>) {
+  async function addPago(data: PagoFormPayload) {
     const res = await fetch('/api/pagos', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...data, cliente_id: id }),
@@ -243,6 +262,7 @@ export default function ClienteDetailPage() {
         if (!op || op.etapa !== 'inscrito') setInscribirPrompt({ actividad, opId: op?.id })
       }
       fetchCliente()
+      fetchCuotas()
     } else {
       toast.error('Error al guardar')
     }
@@ -306,6 +326,24 @@ export default function ClienteDetailPage() {
     const res = await fetch(`/api/pagos/${p.id}`, { method: 'DELETE' })
     if (res.ok) { toast.success('Eliminado'); fetchCliente() }
     else toast.error('Error al eliminar')
+  }
+
+  async function marcarCuotaPagada(c: Cuota) {
+    const res = await fetch(`/api/cuotas/${c.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado: 'pagada', fecha_pago: new Date().toISOString().slice(0, 10) }),
+    })
+    if (res.ok) { toast.success('Cuota marcada como pagada'); fetchCuotas(); fetchCliente() }
+    else toast.error('Inténtalo nuevamente')
+  }
+
+  async function revertirCuota(c: Cuota) {
+    const res = await fetch(`/api/cuotas/${c.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado: 'pendiente', fecha_pago: '' }),
+    })
+    if (res.ok) { toast.success('Cuota vuelta a pendiente'); fetchCuotas(); fetchCliente() }
+    else toast.error('Inténtalo nuevamente')
   }
 
   async function saveEditAsistencia(data: Partial<Asistencia>) {
@@ -702,6 +740,7 @@ export default function ClienteDetailPage() {
                       const op = oportunidades.find(o => o.actividad_nombre === nombre)
                       const totalPagado = pgs.filter(p => p.estado === 'pagado').reduce((s, p) => s + (p.monto || 0), 0)
                       const cfg = op ? ETAPA_BADGE[op.etapa] : null
+                      const cuotasAct = cuotas.filter(c => c.actividad_nombre === nombre)
 
                       return (
                         <div key={nombre} className="border border-gray-100 rounded-xl overflow-hidden">
@@ -779,6 +818,9 @@ export default function ClienteDetailPage() {
                                     <span className="font-semibold text-orange-600 shrink-0">
                                       {p.metodo_pago === 'sin_cobro' ? 'Sin cobro' : p.monto ? `$${p.monto.toLocaleString('es-CL')}` : '—'}
                                     </span>
+                                    {p.tiene_plan_cuotas && (
+                                      <span className="text-xs font-medium text-orange-700 bg-orange-100 rounded-full px-2 py-0.5 shrink-0">Plan de cuotas</span>
+                                    )}
                                     {p.requiere_factura && (
                                       <span title={p.numero_factura ? `Factura N° ${p.numero_factura}` : 'Requiere factura (sin número aún)'}>
                                         <Receipt className={`h-3.5 w-3.5 ${p.numero_factura ? 'text-green-600' : 'text-orange-500'}`} />
@@ -803,6 +845,38 @@ export default function ClienteDetailPage() {
                             </ul>
                           ) : (
                             <p className="px-3 py-2 text-xs text-gray-300">Sin pagos para esta actividad</p>
+                          )}
+
+                          {/* Plan de cuotas de la actividad (semáforo + marcar pagada) */}
+                          {cuotasAct.length > 0 && (
+                            <div className="border-t border-gray-100 bg-orange-50/40">
+                              <p className="px-3 pt-2 pb-1 text-xs font-medium text-gray-500">Plan de cuotas</p>
+                              <ul className="divide-y divide-gray-50">
+                                {cuotasAct.map(c => {
+                                  const sem = semaforoCuota(c)
+                                  return (
+                                    <li key={c.id} className="flex items-center justify-between gap-2 px-3 py-2 text-sm">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${sem.dot}`} />
+                                        <span className="text-gray-500 shrink-0">Cuota {c.numero_cuota}/{c.total_cuotas}</span>
+                                        <span className="font-semibold text-gray-800 shrink-0">${(c.monto || 0).toLocaleString('es-CL')}</span>
+                                        <span className="text-xs text-gray-400 shrink-0">vence {fmt(c.fecha_vencimiento)}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        <span className={`text-xs font-medium ${c.estado === 'pagada' ? 'text-green-700' : c.estado === 'vencida' ? 'text-red-600' : 'text-gray-500'}`}>{sem.label}</span>
+                                        {c.estado === 'pagada' ? (
+                                          <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-400" onClick={() => revertirCuota(c)}>Deshacer</Button>
+                                        ) : (
+                                          <Button size="sm" variant="outline" className="h-7 text-xs border-green-600 text-green-700 hover:bg-green-50" onClick={() => marcarCuotaPagada(c)}>
+                                            <CheckCircle2 className="h-3 w-3 mr-1" /> Marcar pagada
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </li>
+                                  )
+                                })}
+                              </ul>
+                            </div>
                           )}
                         </div>
                       )
