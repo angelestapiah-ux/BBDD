@@ -172,7 +172,7 @@ export function VistaClientes() {
               : 'bg-white text-red-600 border-red-200 hover:bg-red-50'
           )}
         >
-          âš  Sin contacto ({sinContacto})
+          ⚠ Sin contacto ({sinContacto})
         </button>
         {(q || actividadFilter || etapaFilter || soloSinContacto) && (
           <button
@@ -195,8 +195,8 @@ export function VistaClientes() {
               <Header col="nombre">Cliente</Header>
               <Header col="etapa">Etapa</Header>
               <Header col="actividades" className="hidden lg:table-cell">Actividades</Header>
-              <Header col="ultimo">Ãšltimo contacto</Header>
-              <Header col="proximo" className="hidden md:table-cell">PrÃ³ximo</Header>
+              <Header col="ultimo">Último contacto</Header>
+              <Header col="proximo" className="hidden md:table-cell">Próximo</Header>
               <Header col="canal" className="hidden xl:table-cell">Canal</Header>
               <th className="px-3 py-3" />
             </tr>
@@ -223,16 +223,16 @@ export function VistaClientes() {
                         <span className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${etapaCfg}`}>
                           {ETAPAS_FUNNEL.find(e => e.value === c.etapa)?.label}
                         </span>
-                      ) : <span className="text-xs text-gray-300">â€”</span>}
+                      ) : <span className="text-xs text-gray-300">—</span>}
                     </td>
                     <td className="px-3 py-2.5 hidden lg:table-cell max-w-[220px]">
                       <span className="text-xs text-gray-500 truncate block" title={c.actividades.join(', ')}>
-                        {c.actividades.length > 0 ? c.actividades.join(', ') : 'â€”'}
+                        {c.actividades.length > 0 ? c.actividades.join(', ') : '—'}
                       </span>
                     </td>
                     <td className="px-3 py-2.5 whitespace-nowrap">
                       {nunca ? (
-                        <span className="text-xs font-semibold text-red-600 bg-red-100 px-2 py-0.5 rounded">âš  Nunca contactado</span>
+                        <span className="text-xs font-semibold text-red-600 bg-red-100 px-2 py-0.5 rounded">⚠ Nunca contactado</span>
                       ) : (
                         <span className="text-xs text-gray-500">
                           {fmt(c.ultimo_seguimiento)}
@@ -242,11 +242,11 @@ export function VistaClientes() {
                     </td>
                     <td className="px-3 py-2.5 hidden md:table-cell">
                       <span className={cn('text-xs', c.proximo_contacto && c.proximo_contacto <= new Date().toISOString().slice(0, 10) ? 'text-red-500 font-medium' : 'text-gray-400')}>
-                        {fmt(c.proximo_contacto) || 'â€”'}
+                        {fmt(c.proximo_contacto) || '—'}
                       </span>
                     </td>
                     <td className="px-3 py-2.5 hidden xl:table-cell">
-                      <span className="text-xs text-gray-400">{c.procedencia || 'â€”'}</span>
+                      <span className="text-xs text-gray-400">{c.procedencia || '—'}</span>
                     </td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1 justify-end">

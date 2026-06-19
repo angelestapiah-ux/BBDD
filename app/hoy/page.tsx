@@ -32,7 +32,7 @@ function renderPlantilla(cuerpo: string, c: ClienteHoy) {
     .replaceAll('{actividad}', c.ultima_actividad || 'nuestros programas')
 }
 
-// â”€â”€â”€ Selector de plantilla WhatsApp â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Selector de plantilla WhatsApp ──────────────────────────────────────
 function WhatsappMenu({ cliente, plantillas, onEnviado, pos }: {
   cliente: ClienteHoy
   plantillas: PlantillaWhatsapp[]
@@ -46,14 +46,14 @@ function WhatsappMenu({ cliente, plantillas, onEnviado, pos }: {
     window.open(url, '_blank', 'noopener,noreferrer')
 
     if (plantilla) {
-      // Registrar el envÃ­o como seguimiento automÃ¡ticamente
+      // Registrar el envío como seguimiento automáticamente
       const res = await fetch('/api/seguimientos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cliente_id: cliente.id,
           tipo: 'whatsapp',
-          notas: `WhatsApp enviado Â· plantilla "${plantilla.nombre}"`,
+          notas: `WhatsApp enviado · plantilla "${plantilla.nombre}"`,
           fecha: new Date().toISOString().slice(0, 10),
         }),
       })
@@ -90,7 +90,7 @@ function WhatsappMenu({ cliente, plantillas, onEnviado, pos }: {
   )
 }
 
-// â”€â”€â”€ Fila de cliente â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Fila de cliente ─────────────────────────────────────────────────────
 function FilaCliente({ c, plantillas, onActualizar, vencido }: {
   c: ClienteHoy
   plantillas: PlantillaWhatsapp[]
@@ -138,9 +138,9 @@ function FilaCliente({ c, plantillas, onActualizar, vencido }: {
               Agendado: {c.proximo_contacto}
             </span>
           )}
-          {c.proximo_contacto && dias !== null && ' Â· '}
-          {dias !== null && `${dias} dÃ­a${dias === 1 ? '' : 's'} sin contacto`}
-          {c.ultima_actividad && ` Â· ${c.ultima_actividad}`}
+          {c.proximo_contacto && dias !== null && ' · '}
+          {dias !== null && `${dias} día${dias === 1 ? '' : 's'} sin contacto`}
+          {c.ultima_actividad && ` · ${c.ultima_actividad}`}
         </p>
       </div>
 
@@ -201,7 +201,7 @@ function FilaCliente({ c, plantillas, onActualizar, vencido }: {
   )
 }
 
-// â”€â”€â”€ PÃ¡gina â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Página ──────────────────────────────────────────────────────────────
 export default function HoyPage() {
   const [agendados, setAgendados] = useState<ClienteHoy[]>([])
   const [enfriandose, setEnfriandose] = useState<ClienteHoy[]>([])
@@ -239,7 +239,7 @@ export default function HoyPage() {
       </div>
       <p className="text-sm text-gray-500 mb-6">
         {loading ? 'Cargando...' : total === 0
-          ? 'ðŸŽ‰ Â¡Todo al dÃ­a! No hay contactos pendientes.'
+          ? '🎉 ¡Todo al día! No hay contactos pendientes.'
           : `${total} cliente${total === 1 ? '' : 's'} por contactar`}
       </p>
 
@@ -272,7 +272,7 @@ export default function HoyPage() {
       {!loading && enfriandose.length > 0 && (
         <section className="mb-6">
           <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-600 mb-2">
-            <Flame size={15} /> EnfriÃ¡ndose â€” 7+ dÃ­as sin contacto en etapa activa ({enfriandose.length})
+            <Flame size={15} /> Enfriándose — 7+ días sin contacto en etapa activa ({enfriandose.length})
           </h3>
           <div className="rounded-lg border border-amber-200 overflow-hidden">
             {enfriandose.map(c => (
