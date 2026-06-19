@@ -27,6 +27,33 @@ export const MANUAL: EntradaManual[] = [
     tip: 'No te detengas a llenar todos los campos: con nombre y teléfono basta para empezar. Si el cliente es paciente, asigna su Terapeuta — así cada pago genera la boleta de honorarios automáticamente.',
   },
   {
+    id: 'kpi-comercial',
+    titulo: 'Ver el KPI Comercial por campaña',
+    categoria: 'Reportes',
+    keywords: 'kpi comercial embudo funnel tasas conversion campaña actividad leads contactados cotizados inscritos asesores reporte indicadores',
+    pasos: [
+      'Ve a "Reportes" en el menú lateral.',
+      'Abre la pestaña "📊 KPI Comercial" y haz click en "Cargar".',
+      'Verás una fila por campaña (actividad) con el embudo: Leads → Contactados → Seguimiento activo → Interesados → En pausa → Cotizados → Inscritos.',
+      'A la derecha están las tasas: contacto, cotización, cierre y conversión global. La fila TOTAL consolida todas las campañas.',
+      'Con "Exportar Excel" generas la planilla lista para enviar a los asesores.',
+    ],
+    tip: 'Los números salen en vivo del funnel y de los seguimientos: mientras más completo el registro diario, más fiel el KPI.',
+  },
+  {
+    id: 'etapa-en-pausa',
+    titulo: 'Marcar un lead "En pausa"',
+    categoria: 'Seguimiento',
+    keywords: 'en pausa pospuesto precio tiempo reactivar etapa funnel kanban lateral mas adelante despues no ahora',
+    pasos: [
+      'En el Kanban del funnel (o en la ficha del cliente), mueve la oportunidad a la columna "En pausa".',
+      'Úsala cuando la persona indica que por ahora, por precio o tiempo, posterga su avance — sin un cierre definitivo.',
+      'El lead queda separado de los que siguen avanzando y suma a la "tasa de continuidad" del KPI.',
+      'Más adelante puedes reactivarlo moviéndolo de vuelta a la etapa que corresponda.',
+    ],
+    tip: 'Revisa "En pausa" cada cierto tiempo: es tu lista de personas a reactivar con un mensaje cálido y una pregunta abierta.',
+  },
+  {
     id: 'vista-hoy',
     titulo: 'Saber a quién contactar hoy',
     categoria: 'Seguimiento',

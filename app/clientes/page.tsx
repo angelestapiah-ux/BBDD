@@ -23,6 +23,7 @@ const ETAPA_BADGE: Record<EtapaFunnel, { bg: string; text: string; label: string
   cotizacion_enviada:  { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'Cotización' },
   negociando:          { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Negociando' },
   inscrito:            { bg: 'bg-green-100',  text: 'text-green-700',  label: 'Inscrito' },
+  en_pausa:            { bg: 'bg-rose-100',   text: 'text-rose-700',   label: 'En pausa' },
 }
 
 // ─── Semáforo por horas sin contacto ─────────────────────────────────────
