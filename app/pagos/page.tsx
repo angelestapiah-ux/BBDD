@@ -9,7 +9,7 @@ import { PagoForm } from '@/components/clientes/PagoForm'
 import Link from 'next/link'
 import { Plus, Search, Receipt, ChevronDown, X, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { Asistencia, Cliente } from '@/lib/types'
+import { Asistencia, Cliente, PagoFormPayload } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { usePerfil } from '@/components/shared/usePerfil'
 
@@ -23,6 +23,7 @@ interface PagoConCliente {
   estado: string
   notas: string | null
   requiere_factura: boolean
+  tiene_plan_cuotas?: boolean
   cliente_id: string
   clientes: { nombre: string } | null
 }
@@ -154,7 +155,7 @@ export default function PagosPage() {
     setPagoFormOpen(true)
   }
 
-  async function guardarPago(data: Record<string, string | boolean>) {
+  async function guardarPago(data: PagoFormPayload) {
     if (!clienteSeleccionado) return
     const res = await fetch('/api/pagos', {
       method: 'POST',
@@ -314,8 +315,12 @@ export default function PagosPage() {
                     <td className="px-4 py-3 text-gray-400 hidden md:table-cell">{p.fecha_pago || '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-2">
-                        {/* PA3: Marcar pagado inline */}
-                        {esPendienteOParcial && (
+                        {/* Plan de cuotas: se gestiona cuota a cuota desde la ficha */}
+                        {p.tiene_plan_cuotas ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                            Plan de cuotas
+                          </span>
+                        ) : esPendienteOParcial && (
                           <button
                             onClick={() => marcarPagado(p)}
                             disabled={marcandoId === p.id}

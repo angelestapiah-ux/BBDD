@@ -17,23 +17,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   auditar('editar', 'cuotas', id, `Cuota ${data.numero_cuota}/${data.total_cuotas} · ${data.estado} · ${data.actividad_nombre ?? ''}`)
 
-  // Sincroniza el pago padre con el avance de sus cuotas
+  // Reconocimiento de ingresos CUOTA A CUOTA:
+  // el ingreso vive en cada cuota pagada (cuotas.fecha_pago). El pago padre del
+  // plan NUNCA se marca 'pagado' — solo refleja el avance (pendiente / parcial),
+  // así nunca se cuenta dos veces al sumar ingresos por cuotas en el dashboard.
   if (data.pago_id) {
     const { data: hermanasRaw } = await supabase
       .from('cuotas')
-      .select('estado, monto, fecha_pago')
+      .select('estado, monto')
       .eq('pago_id', data.pago_id)
-    const hermanas = (hermanasRaw ?? []) as Array<{ estado: string; monto: number | null; fecha_pago: string | null }>
+    const hermanas = (hermanasRaw ?? []) as Array<{ estado: string; monto: number | null }>
     if (hermanas.length > 0) {
-      const todasPagadas = hermanas.every(h => h.estado === 'pagada')
-      if (todasPagadas) {
-        const total = hermanas.reduce((s, h) => s + (h.monto || 0), 0)
-        const fechas = hermanas.map(h => h.fecha_pago).filter((f): f is string => !!f).sort()
-        const ultimaFecha = fechas.length > 0 ? fechas[fechas.length - 1] : new Date().toISOString().slice(0, 10)
-        await supabase.from('pagos').update({ estado: 'pagado', monto: total, fecha_pago: ultimaFecha }).eq('id', data.pago_id)
-      } else {
-        await supabase.from('pagos').update({ estado: 'pendiente', monto: null }).eq('id', data.pago_id)
-      }
+      const pagadas = hermanas.filter(h => h.estado === 'pagada')
+      const totalPagado = pagadas.reduce((s, h) => s + (h.monto || 0), 0)
+      const nuevoEstado = pagadas.length === 0 ? 'pendiente' : 'parcial'
+      await supabase.from('pagos').update({ estado: nuevoEstado, monto: totalPagado || null }).eq('id', data.pago_id)
     }
   }
 

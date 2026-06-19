@@ -112,8 +112,8 @@ export interface Pago {
   requiere_factura: boolean
   numero_factura: string | null
   factura_interna: string | null
-  monto_total: number | null
-  tiene_plan_cuotas: boolean
+  monto_total?: number | null
+  tiene_plan_cuotas?: boolean
   created_at: string
 }
 
