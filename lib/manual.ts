@@ -110,6 +110,21 @@ export const MANUAL: EntradaManual[] = [
     tip: 'Cada cuota pagada cuenta como ingreso en su propia fecha. En la página Pagos, los pagos con plan muestran la etiqueta "Plan de cuotas" — se gestionan cuota a cuota desde la ficha.',
   },
   {
+    id: 'cobranza',
+    titulo: 'Ver la cobranza: cuotas por cobrar de todos',
+    categoria: 'Pagos',
+    keywords: 'cobranza cuotas por cobrar vencidas semaforo morosos pendiente vencimiento recordar whatsapp por cliente prioridad',
+    pasos: [
+      'Ve a "Cobranza" en el menú lateral (ícono de calendario con reloj).',
+      'Arriba ves los totales: total por cobrar, vencido, por vencer (≤3 días) y cuántos clientes tienen cuotas.',
+      'Pestaña "Por cuota": cada cuota con su semáforo (rojo vencida, ámbar por vencer, verde al día). Filtra por Vencidas o Por vencer.',
+      'Usa los botones de WhatsApp (mensaje en tono PNL ya listo), llamada o correo para contactar al instante.',
+      'Pestaña "Por cliente": el resumen ordenado por prioridad, con el total por cobrar y el próximo vencimiento de cada persona.',
+      'Botón "Exportar Excel" para bajar la lista filtrada.',
+    ],
+    tip: 'Las cuotas vencidas se marcan solas cada día. Revisa Cobranza cada mañana junto con la vista "Hoy".',
+  },
+  {
     id: 'marcar-pagado',
     titulo: 'Marcar un pago pendiente como pagado',
     categoria: 'Pagos',
@@ -266,7 +281,7 @@ export const MANUAL: EntradaManual[] = [
     categoria: 'Configuración',
     keywords: 'tutorial capacitacion aprender nuevo usuario empezar partir induccion entrenamiento',
     pasos: [
-      'Ve a "Tutorial" en el menú lateral (ícono de birrete 🎓).',
+      'Ve a "Tutorial" en el menú lateral (ícono de birrete).',
       'Avanza por los 5 capítulos en orden: rutina diaria, contactos, clientes y funnel, pagos, y atajos.',
       'Marca cada capítulo como entendido — tu progreso se guarda automáticamente.',
       'Toma unos 15 minutos. Al terminar, abre la vista "Hoy" y trabaja tu primera lista real.',
