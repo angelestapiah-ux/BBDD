@@ -46,6 +46,12 @@ export default async function DashboardPage() {
   const totalActivos = etapasLineales.reduce((s, e) => s + (conteo[e.value] || 0), 0)
   const enPausa = conteo['en_pausa'] || 0
 
+  // Bloque 3 — Actividad por canal: clientes por procedencia
+  const { data: canalData } = await supabase.rpc('dashboard_canales')
+  const canales = (Array.isArray(canalData) ? canalData : []) as { procedencia: string; total: number }[]
+  const totalClientes = canales.reduce((s, c) => s + c.total, 0)
+  const maxCanal = Math.max(1, ...canales.map(c => c.total))
+
   const delta = k.ingresos_mes - k.ingresos_mes_anterior
   const deltaPct = k.ingresos_mes_anterior > 0 ? delta / k.ingresos_mes_anterior : 0
   const subio = delta >= 0
@@ -174,8 +180,40 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Bloque 3 — Actividad por canal */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">Actividad por canal</CardTitle>
+          <p className="text-xs text-gray-400">{totalClientes} clientes por procedencia (canal de origen)</p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2.5">
+            {canales.slice(0, 12).map(c => {
+              const w = Math.round((c.total / maxCanal) * 100)
+              const sinProc = c.procedencia === 'Sin procedencia'
+              const pctTotal = totalClientes > 0 ? Math.round((c.total / totalClientes) * 100) : 0
+              return (
+                <div key={c.procedencia} className="flex items-center gap-3">
+                  <span className={`w-40 shrink-0 truncate text-sm ${sinProc ? 'italic text-gray-400' : 'text-gray-600'}`}>{c.procedencia}</span>
+                  <div className="flex-1 h-6 rounded bg-gray-100 overflow-hidden">
+                    <div className={`h-full rounded ${sinProc ? 'bg-gray-300' : 'bg-orange-500'}`} style={{ width: `${w}%` }} />
+                  </div>
+                  <span className="w-20 text-right shrink-0 text-sm">
+                    <span className="font-semibold text-gray-800">{c.total}</span>
+                    <span className="text-xs text-gray-400"> · {pctTotal}%</span>
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+          {canales.length > 12 && (
+            <p className="text-xs text-gray-400 mt-2">y {canales.length - 12} canal{canales.length - 12 === 1 ? '' : 'es'} más</p>
+          )}
+        </CardContent>
+      </Card>
+
       <p className="text-xs text-gray-400 mt-6">
-        Bloques 1-2 de 6 · próximos: actividad por canal, ingresos por programa, seguimientos urgentes y actividad reciente.
+        Bloques 1-3 de 6 · próximos: ingresos por programa, seguimientos urgentes y actividad reciente.
       </p>
     </div>
   )

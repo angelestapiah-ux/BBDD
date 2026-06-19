@@ -1,6 +1,7 @@
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { UserPlus, TrendingUp, AlertCircle, MessageSquare, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { ETAPAS_FUNNEL, EtapaFunnel } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,12 +18,33 @@ const META_SEGUIMIENTOS = 20
 
 const clp = (n: number) => `$${Math.round(n).toLocaleString('es-CL')}`
 
+const ETAPA_COLOR: Record<EtapaFunnel, string> = {
+  nuevo:              'bg-gray-400',
+  contactado:         'bg-blue-500',
+  con_interes:        'bg-violet-500',
+  cotizacion_enviada: 'bg-yellow-500',
+  negociando:         'bg-orange-500',
+  inscrito:           'bg-green-500',
+  en_pausa:           'bg-rose-400',
+}
+
 export default async function DashboardPage() {
   const supabase = createSupabaseAdminClient()
   const { data } = await supabase.rpc('dashboard_kpis')
   const k: DashboardKpis = (Array.isArray(data) && data[0]) || {
     nuevos_mes: 0, ingresos_mes: 0, ingresos_mes_anterior: 0, por_cobrar: 0, seguimientos_semana: 0,
   }
+
+  // Bloque 2 — Funnel de avance: oportunidades por etapa
+  const { data: funnelData } = await supabase.rpc('dashboard_funnel')
+  const conteo: Record<string, number> = {}
+  if (Array.isArray(funnelData)) {
+    for (const f of funnelData as { etapa: string; total: number }[]) conteo[f.etapa] = f.total
+  }
+  const etapasLineales = ETAPAS_FUNNEL.filter(e => e.value !== 'en_pausa')
+  const maxEtapa = Math.max(1, ...etapasLineales.map(e => conteo[e.value] || 0))
+  const totalActivos = etapasLineales.reduce((s, e) => s + (conteo[e.value] || 0), 0)
+  const enPausa = conteo['en_pausa'] || 0
 
   const delta = k.ingresos_mes - k.ingresos_mes_anterior
   const deltaPct = k.ingresos_mes_anterior > 0 ? delta / k.ingresos_mes_anterior : 0
@@ -116,8 +138,44 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
+      {/* Bloque 2 — Funnel de avance */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">Funnel de avance</CardTitle>
+          <p className="text-xs text-gray-400">
+            {totalActivos} oportunidad{totalActivos === 1 ? '' : 'es'} en el funnel{enPausa > 0 ? ` · ${enPausa} en pausa` : ''}
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2.5">
+            {etapasLineales.map(e => {
+              const n = conteo[e.value] || 0
+              const w = Math.round((n / maxEtapa) * 100)
+              return (
+                <div key={e.value} className="flex items-center gap-3">
+                  <span className="w-36 text-sm text-gray-600 shrink-0">{e.label}</span>
+                  <div className="flex-1 h-6 rounded bg-gray-100 overflow-hidden">
+                    <div className={`h-full ${ETAPA_COLOR[e.value]} rounded`} style={{ width: `${w}%` }} />
+                  </div>
+                  <span className="w-10 text-right text-sm font-semibold text-gray-800 shrink-0">{n}</span>
+                </div>
+              )
+            })}
+          </div>
+          {enPausa > 0 && (
+            <div className="flex items-center gap-3 mt-3 pt-3 border-t border-gray-100">
+              <span className="w-36 text-sm text-rose-600 shrink-0">En pausa</span>
+              <div className="flex-1 h-6 rounded bg-gray-100 overflow-hidden">
+                <div className={`h-full ${ETAPA_COLOR['en_pausa']} rounded`} style={{ width: `${Math.round((enPausa / maxEtapa) * 100)}%` }} />
+              </div>
+              <span className="w-10 text-right text-sm font-semibold text-rose-600 shrink-0">{enPausa}</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <p className="text-xs text-gray-400 mt-6">
-        Bloque 1 de 6 · próximos: funnel de avance, actividad por canal, ingresos por programa, seguimientos urgentes y actividad reciente.
+        Bloques 1-2 de 6 · próximos: actividad por canal, ingresos por programa, seguimientos urgentes y actividad reciente.
       </p>
     </div>
   )
