@@ -14,6 +14,24 @@ import { Actividad } from '@/lib/types'
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
+type KpiRow = {
+  actividad: string
+  leads: number
+  contactados: number
+  seguimiento_activo: number
+  interesados: number
+  en_pausa: number
+  cotizados: number
+  inscritos: number
+  correo: number
+  whatsapp: number
+  llamada: number
+  total_touches: number
+}
+
+const pct = (num: number, den: number) => (den > 0 ? num / den : 0)
+const fmtPct = (v: number) => `${(v * 100).toFixed(1)}%`
+
 export default function ReportesPage() {
   const [actividadQ, setActividadQ] = useState('')
   const [mesQ, setMesQ] = useState(String(new Date().getMonth() + 1))
@@ -26,6 +44,7 @@ export default function ReportesPage() {
   const [sinContacto, setSinContacto] = useState<{ clientes: Record<string, string>[]; total: number } | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
   const [actividades, setActividades] = useState<Actividad[]>([])
+  const [kpi, setKpi] = useState<KpiRow[]>([])
 
   useEffect(() => {
     fetch('/api/actividades').then(r => r.json()).then(d => setActividades(Array.isArray(d) ? d : []))
@@ -116,6 +135,52 @@ export default function ReportesPage() {
     setLoading(null)
   }
 
+  async function cargarKpi() {
+    setLoading('kpi')
+    const res = await fetch('/api/reportes/kpi')
+    const data = await res.json()
+    setKpi(Array.isArray(data) ? data : [])
+    setLoading(null)
+  }
+
+  // Totales del consolidado (suma de todas las campañas)
+  function kpiTotal(rows: KpiRow[]): KpiRow {
+    const acc: KpiRow = { actividad: 'TOTAL', leads: 0, contactados: 0, seguimiento_activo: 0, interesados: 0, en_pausa: 0, cotizados: 0, inscritos: 0, correo: 0, whatsapp: 0, llamada: 0, total_touches: 0 }
+    for (const r of rows) {
+      acc.leads += r.leads; acc.contactados += r.contactados; acc.seguimiento_activo += r.seguimiento_activo
+      acc.interesados += r.interesados; acc.en_pausa += r.en_pausa; acc.cotizados += r.cotizados; acc.inscritos += r.inscritos
+      acc.correo += r.correo; acc.whatsapp += r.whatsapp; acc.llamada += r.llamada; acc.total_touches += r.total_touches
+    }
+    return acc
+  }
+
+  function exportarKpi(rows: KpiRow[]) {
+    const filas = [...rows, kpiTotal(rows)].map(r => ({
+      'Campaña': r.actividad,
+      'Leads en base': r.leads,
+      'Contactados': r.contactados,
+      'En seguimiento activo (3+)': r.seguimiento_activo,
+      'Interesados': r.interesados,
+      'En pausa': r.en_pausa,
+      'Cotizados': r.cotizados,
+      'Inscritos': r.inscritos,
+      'Momentos · Correo': r.correo,
+      'Momentos · WhatsApp': r.whatsapp,
+      'Momentos · Llamada': r.llamada,
+      'Total momentos': r.total_touches,
+      'Promedio toques/lead': Number(pct(r.total_touches, r.contactados).toFixed(1)),
+      'Tasa de contacto': fmtPct(pct(r.contactados, r.leads)),
+      'Tasa de continuidad': fmtPct(pct(r.contactados - r.en_pausa, r.contactados)),
+      'Tasa de cotización': fmtPct(pct(r.cotizados, r.contactados)),
+      'Tasa de cierre': fmtPct(pct(r.inscritos, r.cotizados)),
+      'Conversión global': fmtPct(pct(r.inscritos, r.leads)),
+    }))
+    const ws = XLSX.utils.json_to_sheet(filas)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'KPI Comercial')
+    XLSX.writeFile(wb, `kpi_comercial_${new Date().toISOString().slice(0, 10)}.xlsx`)
+  }
+
   function exportarSinContacto(data: Record<string, string>[]) {
     const filas = data.map(c => ({ 'Cliente': c.nombre || '—', 'Procedencia': c.procedencia || '' }))
     const ws = XLSX.utils.json_to_sheet(filas)
@@ -204,6 +269,7 @@ export default function ReportesPage() {
       <Tabs defaultValue="pendientes">
         <TabsList className="mb-4 flex-wrap h-auto gap-1">
           <TabsTrigger value="pendientes" className="text-orange-700 data-[state=active]:bg-orange-600 data-[state=active]:text-white">💰 Por cobrar</TabsTrigger>
+          <TabsTrigger value="kpi" className="text-orange-700 data-[state=active]:bg-orange-600 data-[state=active]:text-white">📊 KPI Comercial</TabsTrigger>
           <TabsTrigger value="asistentes">Asistentes por actividad</TabsTrigger>
           <TabsTrigger value="pagos">Pagos por actividad</TabsTrigger>
           <TabsTrigger value="cumpleanos">Cumpleaños del mes</TabsTrigger>
@@ -211,6 +277,101 @@ export default function ReportesPage() {
           <TabsTrigger value="facturacion">🧾 Facturación</TabsTrigger>
           <TabsTrigger value="sin_contacto">📇 Sin contacto</TabsTrigger>
         </TabsList>
+
+        {/* ─── KPI Comercial (embudo por campaña) ─────────────────────── */}
+        <TabsContent value="kpi">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base">KPI Comercial por campaña</CardTitle>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Embudo, actividad por canal y tasas de conversión — calculado en vivo desde el funnel y los seguimientos
+                </p>
+              </div>
+              <Button onClick={cargarKpi} size="sm" disabled={loading === 'kpi'}>
+                <Search className="h-4 w-4 mr-2" /> {loading === 'kpi' ? 'Cargando...' : 'Cargar'}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {kpi.length === 0 && loading !== 'kpi' && (
+                <p className="text-sm text-gray-400">Haz clic en Cargar para ver el KPI por campaña</p>
+              )}
+              {loading === 'kpi' && <p className="text-sm text-gray-400 animate-pulse">Cargando...</p>}
+              {kpi.length > 0 && (() => {
+                const total = kpiTotal(kpi)
+                const filas = [...kpi, total]
+                return (
+                  <>
+                    <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <Badge variant="secondary">{kpi.length} campaña{kpi.length === 1 ? '' : 's'}</Badge>
+                        <span className="text-sm font-semibold text-orange-700">{total.leads} leads</span>
+                        <span className="text-sm text-gray-500">{total.total_touches.toLocaleString('es-CL')} momentos de contacto</span>
+                        <span className="text-sm text-green-700">{total.inscritos} inscritos</span>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={() => exportarKpi(kpi)}>
+                        <Download className="h-3 w-3 mr-1" /> Exportar Excel
+                      </Button>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs whitespace-nowrap">
+                        <thead className="bg-orange-50">
+                          <tr>
+                            <th className="text-left p-2 font-medium text-gray-600 sticky left-0 bg-orange-50">Campaña</th>
+                            <th className="text-right p-2 font-medium text-gray-600">Leads</th>
+                            <th className="text-right p-2 font-medium text-gray-600">Contactados</th>
+                            <th className="text-right p-2 font-medium text-gray-600">Activo 3+</th>
+                            <th className="text-right p-2 font-medium text-gray-600">Interesados</th>
+                            <th className="text-right p-2 font-medium text-gray-600">En pausa</th>
+                            <th className="text-right p-2 font-medium text-gray-600">Cotizados</th>
+                            <th className="text-right p-2 font-medium text-gray-600">Inscritos</th>
+                            <th className="text-right p-2 font-medium text-gray-600">Correo</th>
+                            <th className="text-right p-2 font-medium text-gray-600">WhatsApp</th>
+                            <th className="text-right p-2 font-medium text-gray-600">Llamada</th>
+                            <th className="text-right p-2 font-medium text-gray-600">Toques</th>
+                            <th className="text-right p-2 font-medium text-gray-600">T. contacto</th>
+                            <th className="text-right p-2 font-medium text-gray-600">Cotización</th>
+                            <th className="text-right p-2 font-medium text-gray-600">Cierre</th>
+                            <th className="text-right p-2 font-medium text-gray-600">Conversión</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {filas.map((r, i) => {
+                            const esTotal = r.actividad === 'TOTAL'
+                            return (
+                              <tr key={i} className={esTotal ? 'bg-orange-50/60 font-semibold' : 'hover:bg-orange-50/40 transition-colors'}>
+                                <td className={`p-2 font-medium max-w-[180px] truncate sticky left-0 ${esTotal ? 'bg-orange-50/60' : 'bg-white'}`}>{r.actividad}</td>
+                                <td className="p-2 text-right">{r.leads}</td>
+                                <td className="p-2 text-right">{r.contactados}</td>
+                                <td className="p-2 text-right">{r.seguimiento_activo}</td>
+                                <td className="p-2 text-right">{r.interesados}</td>
+                                <td className="p-2 text-right text-rose-600">{r.en_pausa}</td>
+                                <td className="p-2 text-right">{r.cotizados}</td>
+                                <td className="p-2 text-right text-green-700">{r.inscritos}</td>
+                                <td className="p-2 text-right text-gray-500">{r.correo}</td>
+                                <td className="p-2 text-right text-gray-500">{r.whatsapp}</td>
+                                <td className="p-2 text-right text-gray-500">{r.llamada}</td>
+                                <td className="p-2 text-right">{r.total_touches}</td>
+                                <td className="p-2 text-right">{fmtPct(pct(r.contactados, r.leads))}</td>
+                                <td className="p-2 text-right">{fmtPct(pct(r.cotizados, r.contactados))}</td>
+                                <td className="p-2 text-right">{fmtPct(pct(r.inscritos, r.cotizados))}</td>
+                                <td className="p-2 text-right font-medium text-orange-700">{fmtPct(pct(r.inscritos, r.leads))}</td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="text-[11px] text-gray-400 mt-3">
+                      Leads = oportunidades del funnel · Contactados = con ≥1 seguimiento · Interesados = etapa Con interés o superior ·
+                      Cotizados = Cotización enviada o superior · Inscritos = etapa Inscrito · En pausa = leads pospuestos (precio/tiempo).
+                    </p>
+                  </>
+                )
+              })()}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* ─── Facturación (SII) ──────────────────────────────────────── */}
         <TabsContent value="facturacion">
