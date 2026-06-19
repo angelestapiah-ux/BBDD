@@ -1,10 +1,12 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
+import * as XLSX from 'xlsx'
+import { toast } from 'sonner'
 import { EtapaFunnel, ETAPAS_FUNNEL } from '@/lib/types'
 import { ContactadoPanel } from '@/components/clientes/ContactadoPanel'
-import { MessageSquare, Phone, Mail, CheckCircle2, ChevronDown, ChevronUp, Search, X } from 'lucide-react'
+import { MessageSquare, Phone, Mail, CheckCircle2, ChevronDown, ChevronUp, Search, X, Download, Upload } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 
@@ -55,6 +57,8 @@ export function VistaClientes() {
   const [sort, setSort] = useState<{ col: Columna; asc: boolean }>({ col: 'ultimo', asc: true })
   const [contactadoId, setContactadoId] = useState<string | null>(null)
   const [contactadoPos, setContactadoPos] = useState<{ top: number; right: number } | null>(null)
+  const [importando, setImportando] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   async function cargar() {
     const res = await fetch('/api/seguimiento-clientes')
@@ -116,6 +120,51 @@ export function VistaClientes() {
   }, [clientes, q, actividadFilter, etapaFilter, soloSinContacto, sort])
 
   const sinContacto = clientes.filter(c => c.total_seguimientos === 0).length
+
+  // Descargar plantilla de acciones masivas para la actividad filtrada
+  function exportarPlantilla() {
+    const filas = filtrados.map(c => ({
+      cliente_id: c.id,
+      Nombre: c.nombre,
+      Correo: c.correo || '',
+      'Teléfono': c.telefono || '',
+      Actividad: actividadFilter,
+      'Correo enviado (fecha)': '',
+      'WhatsApp enviado (fecha)': '',
+      'Llamada (fecha)': '',
+      Nota: '',
+    }))
+    const ws = XLSX.utils.json_to_sheet(filas)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Acciones')
+    const nombre = (actividadFilter || 'actividad').replace(/[^\w]+/g, '_').slice(0, 40)
+    XLSX.writeFile(wb, `acciones_${nombre}.xlsx`)
+  }
+
+  // Importar la plantilla llena: registra los seguimientos etiquetados con la actividad
+  async function importarAcciones(file: File) {
+    setImportando(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('actividad', actividadFilter)
+      const res = await fetch('/api/importar/acciones', { method: 'POST', body: fd })
+      const r = await res.json()
+      if (res.ok) {
+        toast.success(
+          `${r.registrados} seguimiento${r.registrados === 1 ? '' : 's'} registrado${r.registrados === 1 ? '' : 's'}` +
+          (r.noEncontrados ? ` · ${r.noEncontrados} sin coincidencia` : '')
+        )
+        cargar()
+      } else {
+        toast.error(r.error || 'No se pudo importar la planilla')
+      }
+    } catch {
+      toast.error('No se pudo importar la planilla')
+    } finally {
+      setImportando(false)
+    }
+  }
 
   function Header({ col, children, className }: { col: Columna; children: React.ReactNode; className?: string }) {
     const activo = sort.col === col
@@ -181,6 +230,32 @@ export function VistaClientes() {
           >
             <X className="h-3.5 w-3.5" /> Limpiar
           </button>
+        )}
+        {actividadFilter && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={exportarPlantilla}
+              title="Descargar plantilla de acciones para esta actividad"
+              className="h-10 px-3 rounded-lg border border-orange-200 bg-white text-sm font-medium text-orange-700 hover:bg-orange-50 flex items-center gap-1.5"
+            >
+              <Download className="h-3.5 w-3.5" /> Plantilla
+            </button>
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={importando}
+              title="Importar la plantilla con las acciones realizadas"
+              className="h-10 px-3 rounded-lg bg-orange-600 text-white text-sm font-medium hover:bg-orange-700 disabled:opacity-60 flex items-center gap-1.5"
+            >
+              <Upload className="h-3.5 w-3.5" /> {importando ? 'Importando...' : 'Importar acciones'}
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={e => { const f = e.target.files?.[0]; if (f) importarAcciones(f); e.target.value = '' }}
+            />
+          </div>
         )}
         <span className="ml-auto text-sm text-gray-400">
           {loading ? 'Cargando...' : `${filtrados.length} de ${clientes.length} clientes`}

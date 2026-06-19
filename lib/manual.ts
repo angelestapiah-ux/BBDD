@@ -54,6 +54,20 @@ export const MANUAL: EntradaManual[] = [
     tip: 'Revisa "En pausa" cada cierto tiempo: es tu lista de personas a reactivar con un mensaje cálido y una pregunta abierta.',
   },
   {
+    id: 'acciones-masivas',
+    titulo: 'Registrar acciones de seguimiento masivas (correo/WhatsApp por actividad)',
+    categoria: 'Seguimiento',
+    keywords: 'masivo masiva importar exportar plantilla excel correo whatsapp llamada actividad campaña envio masivo seguimientos varios clientes a la vez',
+    pasos: [
+      'En "Seguimientos" (vista Por cliente), filtra por la actividad que vas a trabajar.',
+      'Haz click en "Plantilla" para descargar el Excel con esos clientes (nombre y contacto) y columnas "Correo enviado / WhatsApp enviado / Llamada (fecha)" y "Nota".',
+      'Llena la fecha en la columna del canal que usaste (puedes llenar varias) y, si quieres, una nota. Deja en blanco lo que no aplique.',
+      'Vuelve a "Seguimientos", con la misma actividad filtrada, y haz click en "Importar acciones" para subir el Excel lleno.',
+      'El sistema registra un seguimiento por cada acción marcada, etiquetado con la actividad, para todos los clientes de la planilla a la vez.',
+    ],
+    tip: 'Ideal para envíos masivos: mandas el correo y el WhatsApp a tu lista, anotas las fechas en la plantilla y con un click quedan registrados todos los seguimientos.',
+  },
+  {
     id: 'vista-hoy',
     titulo: 'Saber a quién contactar hoy',
     categoria: 'Seguimiento',
