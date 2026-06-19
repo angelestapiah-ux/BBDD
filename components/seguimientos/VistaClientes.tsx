@@ -129,13 +129,25 @@ export function VistaClientes() {
       Correo: c.correo || '',
       'Teléfono': c.telefono || '',
       Actividad: actividadFilter,
-      'Correo enviado (fecha)': '',
-      'WhatsApp enviado (fecha)': '',
-      'Llamada (fecha)': '',
+      'Correo enviado (fecha dd/mm/aaaa)': '',
+      'WhatsApp enviado (fecha dd/mm/aaaa)': '',
+      'Llamada (fecha dd/mm/aaaa)': '',
       Nota: '',
     }))
-    const ws = XLSX.utils.json_to_sheet(filas)
     const wb = XLSX.utils.book_new()
+    const instr = XLSX.utils.aoa_to_sheet([
+      ['INSTRUCCIONES — Acción masiva de seguimientos'],
+      [''],
+      ['1) En cada fila, escribe la FECHA en la columna del canal que usaste (Correo / WhatsApp / Llamada).'],
+      ['2) Formato de fecha: dd/mm/aaaa  (ejemplo: 19/06/2026). También sirve 19-06-2026 o 2026-06-19.'],
+      ['3) Puedes marcar varios canales en la misma fila (se registra un seguimiento por cada uno).'],
+      ['4) Si dejas una "x" en lugar de fecha, queda registrado con la fecha de hoy.'],
+      ['5) Deja en blanco lo que no aplique. No borres la columna "cliente_id".'],
+      ['6) Vuelve a Seguimientos (con la misma actividad filtrada) y usa "Importar acciones".'],
+    ])
+    instr['!cols'] = [{ wch: 95 }]
+    XLSX.utils.book_append_sheet(wb, instr, 'Instrucciones')
+    const ws = XLSX.utils.json_to_sheet(filas)
     XLSX.utils.book_append_sheet(wb, ws, 'Acciones')
     const nombre = (actividadFilter || 'actividad').replace(/[^\w]+/g, '_').slice(0, 40)
     XLSX.writeFile(wb, `acciones_${nombre}.xlsx`)
