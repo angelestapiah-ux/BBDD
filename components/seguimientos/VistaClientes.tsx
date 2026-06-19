@@ -24,6 +24,19 @@ interface ClienteSeguimiento {
   actividades: string[]
 }
 
+type PreviewData = {
+  resumen: {
+    filas: number
+    encontrados: number
+    noEncontrados: number
+    seguimientos: number
+    porCanal: { correo: number; whatsapp: number; llamada: number }
+    fechaHoy: number
+  }
+  problemas: string[]
+  noEncontradosLista: string[]
+}
+
 const ETAPA_BADGE: Record<EtapaFunnel, string> = {
   nuevo:              'bg-gray-100 text-gray-600',
   contactado:         'bg-blue-100 text-blue-700',
@@ -58,6 +71,9 @@ export function VistaClientes() {
   const [contactadoId, setContactadoId] = useState<string | null>(null)
   const [contactadoPos, setContactadoPos] = useState<{ top: number; right: number } | null>(null)
   const [importando, setImportando] = useState(false)
+  const [confirmando, setConfirmando] = useState(false)
+  const [preview, setPreview] = useState<PreviewData | null>(null)
+  const [archivoPendiente, setArchivoPendiente] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   async function cargar() {
@@ -153,8 +169,8 @@ export function VistaClientes() {
     XLSX.writeFile(wb, `acciones_${nombre}.xlsx`)
   }
 
-  // Importar la plantilla llena: registra los seguimientos etiquetados con la actividad
-  async function importarAcciones(file: File) {
+  // Paso 1: analizar la planilla (NO guarda) y mostrar la vista previa
+  async function analizarArchivo(file: File) {
     setImportando(true)
     try {
       const fd = new FormData()
@@ -163,19 +179,47 @@ export function VistaClientes() {
       const res = await fetch('/api/importar/acciones', { method: 'POST', body: fd })
       const r = await res.json()
       if (res.ok) {
-        toast.success(
-          `${r.registrados} seguimiento${r.registrados === 1 ? '' : 's'} registrado${r.registrados === 1 ? '' : 's'}` +
-          (r.noEncontrados ? ` · ${r.noEncontrados} sin coincidencia` : '')
-        )
-        cargar()
+        setArchivoPendiente(file)
+        setPreview(r as PreviewData)
       } else {
-        toast.error(r.error || 'No se pudo importar la planilla')
+        toast.error(r.error || 'No se pudo leer la planilla')
       }
     } catch {
-      toast.error('No se pudo importar la planilla')
+      toast.error('No se pudo leer la planilla')
     } finally {
       setImportando(false)
     }
+  }
+
+  // Paso 2: confirmar e insertar los seguimientos
+  async function confirmarImportacion() {
+    if (!archivoPendiente) return
+    setConfirmando(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', archivoPendiente)
+      fd.append('actividad', actividadFilter)
+      fd.append('confirmar', 'true')
+      const res = await fetch('/api/importar/acciones', { method: 'POST', body: fd })
+      const r = await res.json()
+      if (res.ok) {
+        toast.success(`${r.registrados} seguimiento${r.registrados === 1 ? '' : 's'} registrado${r.registrados === 1 ? '' : 's'}`)
+        setPreview(null)
+        setArchivoPendiente(null)
+        cargar()
+      } else {
+        toast.error(r.error || 'No se pudo registrar')
+      }
+    } catch {
+      toast.error('No se pudo registrar')
+    } finally {
+      setConfirmando(false)
+    }
+  }
+
+  function cancelarPreview() {
+    setPreview(null)
+    setArchivoPendiente(null)
   }
 
   function Header({ col, children, className }: { col: Columna; children: React.ReactNode; className?: string }) {
@@ -258,14 +302,14 @@ export function VistaClientes() {
               title="Importar la plantilla con las acciones realizadas"
               className="h-10 px-3 rounded-lg bg-orange-600 text-white text-sm font-medium hover:bg-orange-700 disabled:opacity-60 flex items-center gap-1.5"
             >
-              <Upload className="h-3.5 w-3.5" /> {importando ? 'Importando...' : 'Importar acciones'}
+              <Upload className="h-3.5 w-3.5" /> {importando ? 'Analizando...' : 'Importar acciones'}
             </button>
             <input
               ref={fileRef}
               type="file"
               accept=".xlsx,.xls"
               className="hidden"
-              onChange={e => { const f = e.target.files?.[0]; if (f) importarAcciones(f); e.target.value = '' }}
+              onChange={e => { const f = e.target.files?.[0]; if (f) analizarArchivo(f); e.target.value = '' }}
             />
           </div>
         )}
@@ -394,6 +438,66 @@ export function VistaClientes() {
           </tbody>
         </table>
       </div>
+
+      {/* Vista previa de la importación */}
+      {preview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={cancelarPreview}>
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-5 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-gray-900">Vista previa de la importación</h3>
+            <p className="text-xs text-gray-400 mb-4">Revisa antes de confirmar — nada se guarda hasta que confirmes.</p>
+
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              <div className="rounded-lg bg-orange-50 p-3">
+                <div className="text-2xl font-bold text-orange-700">{preview.resumen.seguimientos}</div>
+                <div className="text-xs text-gray-500">seguimientos a registrar</div>
+              </div>
+              <div className="rounded-lg bg-gray-50 p-3">
+                <div className="text-2xl font-bold text-gray-900">{preview.resumen.encontrados}<span className="text-sm font-normal text-gray-400"> / {preview.resumen.filas}</span></div>
+                <div className="text-xs text-gray-500">filas con cliente encontrado</div>
+              </div>
+            </div>
+
+            <div className="text-sm text-gray-600 mb-3">
+              Por canal — Correo <b>{preview.resumen.porCanal.correo}</b> · WhatsApp <b>{preview.resumen.porCanal.whatsapp}</b> · Llamada <b>{preview.resumen.porCanal.llamada}</b>
+            </div>
+
+            {preview.resumen.noEncontrados > 0 && (
+              <div className="rounded-lg bg-red-50 border border-red-100 p-3 mb-3">
+                <div className="text-sm font-medium text-red-700 mb-1">{preview.resumen.noEncontrados} sin coincidencia (no se registrarán)</div>
+                <div className="text-xs text-red-600 max-h-24 overflow-y-auto">{preview.noEncontradosLista.join(' · ')}</div>
+              </div>
+            )}
+
+            {preview.resumen.fechaHoy > 0 && (
+              <div className="rounded-lg bg-amber-50 border border-amber-100 p-3 mb-3 text-xs text-amber-700">
+                {preview.resumen.fechaHoy} fecha{preview.resumen.fechaHoy === 1 ? '' : 's'} no reconocida{preview.resumen.fechaHoy === 1 ? '' : 's'} → se usará la fecha de hoy. Revisa el formato dd/mm/aaaa.
+              </div>
+            )}
+
+            {preview.problemas.length > 0 && (
+              <details className="mb-3">
+                <summary className="text-xs text-gray-500 cursor-pointer">Ver detalle de avisos ({preview.problemas.length})</summary>
+                <div className="text-xs text-gray-500 max-h-32 overflow-y-auto mt-1 space-y-0.5">
+                  {preview.problemas.map((p, i) => <div key={i}>{p}</div>)}
+                </div>
+              </details>
+            )}
+
+            <div className="flex justify-end gap-2 mt-4">
+              <button onClick={cancelarPreview} className="h-9 px-4 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50">
+                Cancelar
+              </button>
+              <button
+                onClick={confirmarImportacion}
+                disabled={confirmando || preview.resumen.seguimientos === 0}
+                className="h-9 px-4 rounded-lg bg-orange-600 text-white text-sm font-medium hover:bg-orange-700 disabled:opacity-60"
+              >
+                {confirmando ? 'Registrando...' : `Confirmar e importar ${preview.resumen.seguimientos}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
