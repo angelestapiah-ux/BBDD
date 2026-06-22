@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { getPerfilActual } from '@/lib/permisos-server'
+import { normalizarActividad } from '@/lib/normalizar-actividad'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Vista "Seguimiento por cliente": TODOS los clientes con su último contacto
@@ -92,10 +93,11 @@ export async function GET() {
 
     const actividades: Record<string, string[]> = {}
     for (const a of asis) {
-      if (!a.actividad_nombre) continue
+      const canon = normalizarActividad(a.actividad_nombre)
+      if (!canon) continue
       if (!actividades[a.cliente_id]) actividades[a.cliente_id] = []
-      if (!actividades[a.cliente_id].includes(a.actividad_nombre)) {
-        actividades[a.cliente_id].push(a.actividad_nombre)
+      if (!actividades[a.cliente_id].includes(canon)) {
+        actividades[a.cliente_id].push(canon)
       }
     }
 
