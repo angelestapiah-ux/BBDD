@@ -70,6 +70,18 @@ export default async function DashboardPage() {
   const tiempoDesde = (horas: number) =>
     horas >= 48 ? `${Math.floor(horas / 24)} d` : `${horas} h`
 
+  // Bloque 6 — Actividad reciente: feed de últimos movimientos (7 días)
+  const { data: feedData } = await supabase.rpc('dashboard_actividad_reciente')
+  const feed = (Array.isArray(feedData) ? feedData : []) as {
+    tipo: string; cliente_id: string; cliente_nombre: string
+    titulo: string; detalle: string | null; monto: number | null; fecha: string
+  }[]
+  const FEED_COLOR: Record<string, string> = {
+    seguimiento: 'bg-blue-500', pago: 'bg-green-500', cuota: 'bg-emerald-500', etapa: 'bg-orange-500',
+  }
+  const fechaCorta = (s: string) =>
+    new Date(s).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+
   const delta = k.ingresos_mes - k.ingresos_mes_anterior
   const deltaPct = k.ingresos_mes_anterior > 0 ? delta / k.ingresos_mes_anterior : 0
   const subio = delta >= 0
@@ -335,8 +347,40 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Bloque 6 — Actividad reciente */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">Actividad reciente</CardTitle>
+          <p className="text-xs text-gray-400">Últimos movimientos del CRM (7 días)</p>
+        </CardHeader>
+        <CardContent>
+          {feed.length === 0 ? (
+            <p className="text-sm text-gray-400">Sin movimientos en los últimos 7 días.</p>
+          ) : (
+            <div className="max-h-96 overflow-y-auto divide-y divide-gray-100 -mt-1">
+              {feed.map((ev, i) => (
+                <div key={i} className="flex items-center gap-3 py-2">
+                  <span className={`h-2 w-2 rounded-full shrink-0 ${FEED_COLOR[ev.tipo] || 'bg-gray-400'}`} />
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm text-gray-800 truncate">
+                      {ev.titulo}
+                      {ev.monto != null ? <span className="font-semibold"> · {clp(Number(ev.monto))}</span> : null}
+                    </span>
+                    <span className="block text-xs text-gray-400 truncate">
+                      <a href={`/clientes/${ev.cliente_id}`} className="hover:underline">{ev.cliente_nombre}</a>
+                      {ev.detalle ? ` · ${ev.detalle}` : ''}
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-xs text-gray-400">{fechaCorta(ev.fecha)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <p className="text-xs text-gray-400 mt-6">
-        Bloques 1-5 de 6 · próximo: actividad reciente.
+        Dashboard completo · 6 bloques.
       </p>
     </div>
   )
