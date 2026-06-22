@@ -52,12 +52,22 @@ export default async function DashboardPage() {
   const totalClientes = canales.reduce((s, c) => s + c.total, 0)
   const maxCanal = Math.max(1, ...canales.map(c => c.total))
 
+  // Bloque 4 — Ingresos por programa (mes actual vs anterior, normalizado, cuota a cuota)
+  const { data: ingProgData } = await supabase.rpc('dashboard_ingresos_programa')
+  const ingProg = (Array.isArray(ingProgData) ? ingProgData : []) as
+    { programa: string; mes_actual: number; mes_anterior: number }[]
+  const totalIngActual = ingProg.reduce((s, p) => s + Number(p.mes_actual), 0)
+  const totalIngAnterior = ingProg.reduce((s, p) => s + Number(p.mes_anterior), 0)
+  const maxIng = Math.max(1, ...ingProg.map(p => Number(p.mes_actual)))
+
   const delta = k.ingresos_mes - k.ingresos_mes_anterior
   const deltaPct = k.ingresos_mes_anterior > 0 ? delta / k.ingresos_mes_anterior : 0
   const subio = delta >= 0
 
   const hoy = new Date()
   const mesNombre = hoy.toLocaleDateString('es-CL', { month: 'long' })
+  const mesAntNombre = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1)
+    .toLocaleDateString('es-CL', { month: 'long' })
 
   return (
     <div className="p-6 max-w-5xl">
@@ -212,8 +222,61 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Bloque 4 — Ingresos por programa */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="text-base">Ingresos por programa</CardTitle>
+          <p className="text-xs text-gray-400 capitalize">
+            {mesNombre} {clp(totalIngActual)} · <span className="lowercase">vs</span> {mesAntNombre} {clp(totalIngAnterior)}
+          </p>
+        </CardHeader>
+        <CardContent>
+          {ingProg.length === 0 ? (
+            <p className="text-sm text-gray-400">Sin ingresos registrados en estos dos meses.</p>
+          ) : (
+            <div className="space-y-3">
+              {ingProg.map(p => {
+                const actual = Number(p.mes_actual)
+                const anterior = Number(p.mes_anterior)
+                const w = Math.round((actual / maxIng) * 100)
+                const d = actual - anterior
+                const subePrg = d >= 0
+                return (
+                  <div key={p.programa}>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-sm text-gray-700 truncate">{p.programa}</span>
+                      <span className="text-sm font-semibold text-gray-900 shrink-0">{clp(actual)}</span>
+                    </div>
+                    <div className="flex items-center gap-3 mt-1">
+                      <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+                        <div className="h-full rounded-full bg-orange-500" style={{ width: `${w}%` }} />
+                      </div>
+                      <span className="w-44 text-right text-xs shrink-0 flex items-center justify-end gap-1">
+                        {anterior > 0 || actual > 0 ? (
+                          subePrg
+                            ? <ArrowUpRight className="h-3 w-3 text-green-600" />
+                            : <ArrowDownRight className="h-3 w-3 text-rose-500" />
+                        ) : null}
+                        <span className={subePrg ? 'text-green-700' : 'text-rose-600'}>
+                          {subePrg ? '+' : ''}{clp(d)}
+                        </span>
+                        <span className="text-gray-400">· antes {clp(anterior)}</span>
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+              <div className="flex items-center justify-between gap-3 pt-3 mt-1 border-t border-gray-100">
+                <span className="text-sm font-medium text-gray-700">Total</span>
+                <span className="text-sm font-bold text-gray-900">{clp(totalIngActual)}</span>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <p className="text-xs text-gray-400 mt-6">
-        Bloques 1-3 de 6 · próximos: ingresos por programa, seguimientos urgentes y actividad reciente.
+        Bloques 1-4 de 6 · próximos: seguimientos urgentes y actividad reciente.
       </p>
     </div>
   )
