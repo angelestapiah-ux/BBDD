@@ -101,6 +101,9 @@ export default function ClienteDetailPage() {
   const [showAllFields, setShowAllFields] = useState(false)
   const [tab, setTab] = useState('actividades')
   const [cuotas, setCuotas] = useState<Cuota[]>([])
+  // Detalle A: registrar la fecha real al marcar una cuota pagada (default = vencimiento)
+  const [cuotaPagando, setCuotaPagando] = useState<string | null>(null)
+  const [fechaPagoTmp, setFechaPagoTmp] = useState('')
 
   // P3: usuario logueado para pre-llenar responsable
   const [currentUserEmail, setCurrentUserEmail] = useState('')
@@ -329,12 +332,13 @@ export default function ClienteDetailPage() {
     else toast.error('Error al eliminar')
   }
 
-  async function marcarCuotaPagada(c: Cuota) {
+  async function marcarCuotaPagada(c: Cuota, fechaPago: string) {
+    const fp = fechaPago || c.fecha_vencimiento || new Date().toISOString().slice(0, 10)
     const res = await fetch(`/api/cuotas/${c.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estado: 'pagada', fecha_pago: new Date().toISOString().slice(0, 10) }),
+      body: JSON.stringify({ estado: 'pagada', fecha_pago: fp }),
     })
-    if (res.ok) { toast.success('Cuota marcada como pagada'); fetchCuotas(); fetchCliente() }
+    if (res.ok) { toast.success('Cuota marcada como pagada'); setCuotaPagando(null); fetchCuotas(); fetchCliente() }
     else toast.error('Inténtalo nuevamente')
   }
 
@@ -867,8 +871,26 @@ export default function ClienteDetailPage() {
                                         <span className={`text-xs font-medium ${c.estado === 'pagada' ? 'text-green-700' : c.estado === 'vencida' ? 'text-red-600' : 'text-gray-500'}`}>{sem.label}</span>
                                         {c.estado === 'pagada' ? (
                                           <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-400" onClick={() => revertirCuota(c)}>Deshacer</Button>
+                                        ) : cuotaPagando === c.id ? (
+                                          <div className="flex items-center gap-1">
+                                            <input
+                                              type="date"
+                                              value={fechaPagoTmp}
+                                              onChange={e => setFechaPagoTmp(e.target.value)}
+                                              className="h-7 rounded border border-gray-300 px-1 text-xs"
+                                              title="Fecha real del pago (por defecto, la del vencimiento)"
+                                            />
+                                            <Button size="sm" variant="outline" className="h-7 text-xs border-green-600 text-green-700 hover:bg-green-50" onClick={() => marcarCuotaPagada(c, fechaPagoTmp)}>
+                                              <CheckCircle2 className="h-3 w-3 mr-1" /> Confirmar
+                                            </Button>
+                                            <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-400" onClick={() => setCuotaPagando(null)}>Cancelar</Button>
+                                          </div>
                                         ) : (
-                                          <Button size="sm" variant="outline" className="h-7 text-xs border-green-600 text-green-700 hover:bg-green-50" onClick={() => marcarCuotaPagada(c)}>
+                                          <Button
+                                            size="sm" variant="outline"
+                                            className="h-7 text-xs border-green-600 text-green-700 hover:bg-green-50"
+                                            onClick={() => { setCuotaPagando(c.id); setFechaPagoTmp(c.fecha_vencimiento || new Date().toISOString().slice(0, 10)) }}
+                                          >
                                             <CheckCircle2 className="h-3 w-3 mr-1" /> Marcar pagada
                                           </Button>
                                         )}
