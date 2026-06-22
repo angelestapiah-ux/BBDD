@@ -1,6 +1,6 @@
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { UserPlus, TrendingUp, AlertCircle, MessageSquare, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { UserPlus, TrendingUp, AlertCircle, MessageSquare, ArrowUpRight, ArrowDownRight, Clock } from 'lucide-react'
 import { ETAPAS_FUNNEL, EtapaFunnel } from '@/lib/types'
 
 export const dynamic = 'force-dynamic'
@@ -59,6 +59,16 @@ export default async function DashboardPage() {
   const totalIngActual = ingProg.reduce((s, p) => s + Number(p.mes_actual), 0)
   const totalIngAnterior = ingProg.reduce((s, p) => s + Number(p.mes_anterior), 0)
   const maxIng = Math.max(1, ...ingProg.map(p => Number(p.mes_actual)))
+
+  // Bloque 5 — Seguimientos urgentes: leads nuevos (7 días) sin contacto +72h (rojos)
+  const { data: urgData } = await supabase.rpc('dashboard_seguimientos_urgentes')
+  const urgentes = (Array.isArray(urgData) ? urgData : []) as {
+    cliente_id: string; nombre: string; correo: string | null; telefono: string | null
+    procedencia: string | null; etapa: string | null; ultimo_contacto: string; horas: number
+    nunca_contactado: boolean
+  }[]
+  const tiempoDesde = (horas: number) =>
+    horas >= 48 ? `${Math.floor(horas / 24)} d` : `${horas} h`
 
   const delta = k.ingresos_mes - k.ingresos_mes_anterior
   const deltaPct = k.ingresos_mes_anterior > 0 ? delta / k.ingresos_mes_anterior : 0
@@ -275,8 +285,58 @@ export default async function DashboardPage() {
         </CardContent>
       </Card>
 
+      {/* Bloque 5 — Seguimientos urgentes */}
+      <Card className="mt-6">
+        <CardHeader>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Clock className="h-4 w-4 text-rose-500" /> Seguimientos urgentes
+              </CardTitle>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Prospectos nuevos (últimos 7 días) sin contacto hace +72h
+              </p>
+            </div>
+            <span className="shrink-0 rounded-full bg-rose-100 text-rose-700 text-sm font-bold px-3 py-1">
+              {urgentes.length}
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {urgentes.length === 0 ? (
+            <p className="text-sm text-green-700">Al día: ningún prospecto nuevo sin contacto +72h. 🎉</p>
+          ) : (
+            <>
+              <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 -mt-1">
+                {urgentes.map(u => (
+                  <a
+                    key={u.cliente_id}
+                    href={`/clientes/${u.cliente_id}`}
+                    className="flex items-center gap-3 py-2 hover:bg-gray-50 rounded px-1"
+                  >
+                    <span className="h-2 w-2 rounded-full bg-rose-500 shrink-0" />
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm text-gray-800 truncate">{u.nombre}</span>
+                      <span className="block text-xs text-gray-400 truncate">
+                        {u.procedencia || 'Sin procedencia'}
+                        {u.nunca_contactado ? ' · sin primer contacto' : ''}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-xs font-medium text-rose-600">{tiempoDesde(u.horas)}</span>
+                  </a>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400 mt-3">
+                Siguiente paso sugerido: abrir cada ficha y registrar el primer contacto ·{' '}
+                <a href="/seguimientos" className="text-orange-600 hover:underline">ir a Seguimientos</a>
+              </p>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
       <p className="text-xs text-gray-400 mt-6">
-        Bloques 1-4 de 6 · próximos: seguimientos urgentes y actividad reciente.
+        Bloques 1-5 de 6 · próximo: actividad reciente.
       </p>
     </div>
   )
