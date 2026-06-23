@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { getSupabase } from '@/lib/supabase'
 import { usePerfil } from './usePerfil'
 import { Permiso } from '@/lib/permisos'
+import { RecordatorioBell } from '@/components/recordatorios/RecordatorioBell'
 
 const navItems: { href: string; label: string; icon: typeof Sun; permiso?: Permiso }[] = [
   { href: '/hoy', label: 'Hoy', icon: Sun },
@@ -42,6 +43,8 @@ export function Sidebar() {
 
   return (
     <aside className="w-56 bg-white border-r border-gray-200 flex flex-col">
+      {/* Campana de recordatorios: se posiciona fija arriba a la derecha en todas las pantallas */}
+      <RecordatorioBell />
       <div className="p-5 border-b border-gray-200">
         <h1 className="text-xl font-bold text-orange-700">Renovapp</h1>
         <p className="text-xs text-gray-500 mt-0.5">— CRM</p>

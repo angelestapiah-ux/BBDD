@@ -268,6 +268,31 @@ export interface PlantillaWhatsapp {
   created_at: string
 }
 
+export type RecordatorioCategoria = 'pago' | 'llamada' | 'reunion' | 'personal' | 'otro'
+export type RecordatorioPrioridad = 'normal' | 'alta'
+export type RecordatorioRecurrencia = 'ninguna' | 'diaria' | 'semanal' | 'mensual'
+export type RecordatorioEstado = 'pendiente' | 'hecho'
+
+export interface Recordatorio {
+  id: string
+  titulo: string
+  fecha_hora: string
+  cliente_id: string | null
+  notas: string | null
+  categoria: RecordatorioCategoria | null
+  prioridad: RecordatorioPrioridad
+  estado: RecordatorioEstado
+  completado_at: string | null
+  recurrencia: RecordatorioRecurrencia
+  creado_por: string | null
+  created_at: string
+  updated_at: string
+  // join opcional
+  clientes?: { nombre: string; telefono: string | null } | null
+}
+
+export type RecordatorioInsert = Omit<Recordatorio, 'id' | 'created_at' | 'updated_at' | 'clientes'>
+
 // Con joins
 export interface ClienteConDetalle extends Cliente {
   asistencias?: Asistencia[]
