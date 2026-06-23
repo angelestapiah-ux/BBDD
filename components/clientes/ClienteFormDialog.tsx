@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { TiposClienteSelect } from './TiposClienteSelect'
+import { TIPOS_CLIENTE } from '@/lib/clasificar-tipo'
 import { ETAPAS_FUNNEL, EtapaFunnel } from '@/lib/types'
 import { ChevronDown, ChevronUp, Zap, AlertTriangle } from 'lucide-react'
 import Link from 'next/link'
@@ -29,10 +29,21 @@ const CANALES_COMUNES = [
   'Instagram', 'WhatsApp', 'Referido', 'Facebook', 'Web', 'Llamada', 'Correo', 'TikTok', 'Histórico', 'Otro'
 ]
 
+const chipCls = (sel: boolean) =>
+  `px-3 py-1 rounded-full text-xs border transition-colors ${
+    sel
+      ? 'bg-orange-600 text-white border-orange-600'
+      : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+  }`
+
+function toggleEn(arr: string[], val: string): string[] {
+  return arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val]
+}
+
 interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (data: Partial<Cliente>) => Promise<void>
+  onSubmit: (data: Partial<Cliente> & { actividades?: string[] }) => Promise<void>
   title: string
   initial?: Partial<Cliente>
 }
@@ -45,13 +56,20 @@ export function ClienteFormDialog({ open, onOpenChange, onSubmit, title, initial
 
   const [duplicados, setDuplicados] = useState<Duplicado[]>([])
   const [terapeutas, setTerapeutas] = useState<{ id: string; nombre: string }[]>([])
+  // Actividades a asignar (catálogo) → crean asistencias (pestaña Actividades)
+  const [catalogo, setCatalogo] = useState<string[]>([])
+  const [actividades, setActividades] = useState<string[]>([])
 
-  // Terapeutas registrados (clientes marcados como terapeuta) para el selector
+  // Terapeutas y catálogo de actividades para los selectores
   useEffect(() => {
     if (open) {
       fetch('/api/prestadores')
         .then(r => r.ok ? r.json() : null)
         .then(d => setTerapeutas(d?.terapeutas || []))
+        .catch(() => {})
+      fetch('/api/actividades')
+        .then(r => r.ok ? r.json() : null)
+        .then(d => setCatalogo(Array.isArray(d) ? d.map((a: { nombre: string }) => a.nombre).filter(Boolean) : []))
         .catch(() => {})
     }
   }, [open])
@@ -63,6 +81,7 @@ export function ClienteFormDialog({ open, onOpenChange, onSubmit, title, initial
     setModoRapido(!initial)
     setDuplicados([])
     setConfirmarDuplicado(false)
+    setActividades([])
   }, [initial, open])
 
   async function buscarDuplicados(): Promise<Duplicado[]> {
@@ -120,7 +139,7 @@ export function ClienteFormDialog({ open, onOpenChange, onSubmit, title, initial
 
     // In quick mode, default etapa to 'nuevo' if not set
     const dataToSave = modoRapido ? { etapa: 'nuevo' as EtapaFunnel, ...form } : form
-    await onSubmit(dataToSave)
+    await onSubmit({ ...dataToSave, actividades })
     setSaving(false)
   }
 
@@ -340,13 +359,50 @@ export function ClienteFormDialog({ open, onOpenChange, onSubmit, title, initial
                 </Select>
               </div>
 
-              {/* Tipo de cliente y campos condicionales */}
+              {/* Tipo de cliente (taxonomía) */}
               <div className="col-span-2">
                 <Label>Tipo de cliente</Label>
-                <TiposClienteSelect
-                  value={form.tipos_cliente || []}
-                  onChange={v => setForm(prev => ({ ...prev, tipos_cliente: v }))}
-                />
+                <div className="flex gap-2 flex-wrap mt-1.5">
+                  {TIPOS_CLIENTE.map(t => {
+                    const sel = (form.tipos_cliente || []).includes(t)
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setForm(prev => ({ ...prev, tipos_cliente: toggleEn(prev.tipos_cliente || [], t) }))}
+                        className={chipCls(sel)}
+                      >
+                        {t}
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Qué es la persona para Renova (no es la actividad).</p>
+              </div>
+
+              {/* Actividades a asignar → crean asistencias (pestaña Actividades) */}
+              <div className="col-span-2">
+                <Label>Actividades</Label>
+                {catalogo.length === 0 ? (
+                  <p className="text-xs text-gray-400 mt-1">Sin actividades en el catálogo.</p>
+                ) : (
+                  <div className="flex gap-2 flex-wrap mt-1.5 max-h-32 overflow-y-auto">
+                    {catalogo.map(a => {
+                      const sel = actividades.includes(a)
+                      return (
+                        <button
+                          key={a}
+                          type="button"
+                          onClick={() => setActividades(prev => toggleEn(prev, a))}
+                          className={chipCls(sel)}
+                        >
+                          {a}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-1">Se registran en la pestaña Actividades del cliente para gestionarlas.</p>
               </div>
 
               {/* Prestador: docente / terapeuta (entra al flujo de Honorarios) */}

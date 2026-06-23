@@ -76,9 +76,12 @@ export async function POST(req: NextRequest) {
   if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const body = await req.json()
-  const { data, error } = await supabase.from('clientes').insert(body).select().single()
+  // 'actividades' es un campo del formulario (no columna de clientes): se usa
+  // para registrar asistencias, no para insertar en clientes.
+  const { actividades, ...clienteBody } = body
+  const { data, error } = await supabase.from('clientes').insert(clienteBody).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   auditar('crear', 'clientes', data.id, `Cliente: ${data.nombre}`)
-  await sincronizarAsistencias(supabase, data.id, data.tipos_cliente)
+  await sincronizarAsistencias(supabase, data.id, Array.isArray(actividades) ? actividades : [])
   return NextResponse.json(data, { status: 201 })
 }

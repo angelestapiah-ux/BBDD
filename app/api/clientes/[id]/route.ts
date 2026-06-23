@@ -93,7 +93,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const { data, error } = await supabase.from('clientes').update(campos).eq('id', id).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   auditar('editar', 'clientes', id, `Cliente: ${data.nombre}`)
-  await sincronizarAsistencias(supabase, id, data.tipos_cliente)
+  // La automatización de asistencias se dispara desde el campo 'actividades'
+  // del formulario (separado del tipo de cliente).
+  await sincronizarAsistencias(supabase, id, Array.isArray(body.actividades) ? body.actividades : [])
   return NextResponse.json(data)
 }
 
