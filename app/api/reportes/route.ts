@@ -1,6 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { requirePermiso } from '@/lib/permisos-server'
+import { normalizarActividad } from '@/lib/normalizar-actividad'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+// Trae TODAS las filas de una tabla paginando (PostgREST corta en 1.000).
+async function traerTodo(
+  supabase: SupabaseClient, tabla: string, select: string, ordenCol?: string,
+): Promise<Record<string, unknown>[]> {
+  const PAGE = 1000
+  const out: Record<string, unknown>[] = []
+  for (let from = 0; ; from += PAGE) {
+    let q = supabase.from(tabla).select(select).range(from, from + PAGE - 1)
+    if (ordenCol) q = q.order(ordenCol, { ascending: false })
+    const { data, error } = await q
+    if (error) throw new Error(error.message)
+    const rows = (data ?? []) as Record<string, unknown>[]
+    out.push(...rows)
+    if (rows.length < PAGE) break
+  }
+  return out
+}
 
 export async function GET(req: NextRequest) {
   const bloqueo = await requirePermiso('reportes')
@@ -28,30 +48,35 @@ export async function GET(req: NextRequest) {
   }
 
   if (tipo === 'asistentes_actividad') {
+    // Filtra por PROGRAMA CANÓNICO: agrupa todas las variantes que normalizan igual.
     const actividad = searchParams.get('actividad') || ''
-    const { data, error } = await supabase
-      .from('asistencias')
-      .select('*, clientes(nombre, correo, telefono)')
-      .ilike('actividad_nombre', `%${actividad}%`)
-      .order('fecha_asistencia', { ascending: false })
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json(data)
+    const todas = !actividad || actividad === '__todas__'
+    const objetivo = normalizarActividad(actividad)
+    try {
+      const rows = await traerTodo(supabase, 'asistencias', '*, clientes(nombre, correo, telefono)', 'fecha_asistencia')
+      const filtrados = todas
+        ? rows
+        : rows.filter(a => normalizarActividad(a.actividad_nombre as string) === objetivo)
+      return NextResponse.json(filtrados)
+    } catch (e) {
+      return NextResponse.json({ error: (e as Error).message }, { status: 500 })
+    }
   }
 
   if (tipo === 'pagos_actividad') {
     const actividad = searchParams.get('actividad') || ''
-    const { data, error } = await supabase
-      .from('pagos')
-      .select('*, clientes(nombre, correo, telefono)')
-      .ilike('actividad_nombre', `%${actividad}%`)
-      .order('fecha_pago', { ascending: false })
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const total = (data || []).reduce((sum: number, p: any) => sum + (p.monto || 0), 0)
-    return NextResponse.json({ pagos: data, total })
+    const todas = !actividad || actividad === '__todas__'
+    const objetivo = normalizarActividad(actividad)
+    try {
+      const rows = await traerTodo(supabase, 'pagos', '*, clientes(nombre, correo, telefono)', 'fecha_pago')
+      const pagos = todas
+        ? rows
+        : rows.filter(p => normalizarActividad(p.actividad_nombre as string) === objetivo)
+      const total = pagos.reduce((sum: number, p) => sum + ((p.monto as number) || 0), 0)
+      return NextResponse.json({ pagos, total })
+    } catch (e) {
+      return NextResponse.json({ error: (e as Error).message }, { status: 500 })
+    }
   }
 
   if (tipo === 'procedencias') {
