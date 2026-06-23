@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CheckCircle2, ChevronRight, GraduationCap, Sun, Users, Receipt, Keyboard, MessageSquare, RotateCcw, Lightbulb } from 'lucide-react'
+import { CheckCircle2, ChevronRight, GraduationCap, Sun, Users, Receipt, Keyboard, MessageSquare, RotateCcw, Lightbulb, LayoutDashboard } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -42,10 +42,10 @@ const CAPITULOS = [
     pasos: [
       { t: 'Crear un cliente toma 10 segundos', d: 'Botón "Nuevo cliente" → nombre, teléfono y canal de origen. Nada más. Los demás datos se completan después, cuando los tengas.' },
       { t: 'Si ya existe, el sistema te avisa', d: 'Al escribir el teléfono o correo de alguien registrado aparece una alerta amarilla con link a su perfil. Mejor actualizar que duplicar.' },
-      { t: 'El "tipo de cliente" son las actividades', d: 'Al asignarle una actividad como tipo, su asistencia se registra sola en el perfil. ¿Falta un tipo? Créalo en la sección Actividades.' },
+      { t: 'Tipo de cliente: quién es la persona', d: 'En el modo completo eliges su tipo con chips: Paciente, Alumni, Asistente a talleres, Prospecto o Empresa/B2B. Es su relación con Renova — no la actividad.' },
+      { t: 'Actividades: en qué programa participa', d: 'Justo debajo del tipo, el campo "Actividades" te deja asignar programas del catálogo (diplomados, terapias, talleres...). Al guardar, se registran solos en la pestaña Actividades del cliente para gestionarlos.' },
       { t: 'Docentes, terapeutas y pacientes', d: 'En el perfil, los botones 🎓 Docente y 🩺 Terapeuta marcan a quienes boletean a Renova. A los pacientes se les asigna su terapeuta (campo "Terapeuta") y quedan con la etiqueta "Paciente de NN".' },
-      { t: 'El funnel ahora es POR actividad', d: 'Una misma persona puede estar en distinta etapa según la actividad: inscrita en la clase y en "Con interés" para el taller, al mismo tiempo. Las etapas son Nuevo → Contactado → Con interés → Cotización enviada → Negociando → Inscrito, más una etapa lateral, En pausa, para quien posterga.' },
-      { t: 'Marca "En pausa" a quien posterga', d: 'Si la persona dice que por ahora, por precio o tiempo, deja su decisión para más adelante (sin un no definitivo), mueve su oportunidad a la columna "En pausa" del Kanban. No se pierde: queda en tu lista para reactivar con un mensaje cálido más adelante, y suma a la tasa de continuidad del KPI.' },
+      { t: 'El funnel ahora es POR actividad', d: 'Una misma persona puede estar en distinta etapa según la actividad: inscrita en la clase y en "Con interés" para el taller, al mismo tiempo. Las etapas son Nuevo → Contactado → Con interés → Cotización enviada → Negociando → Inscrito.' },
       { t: 'Dónde avanzas la etapa', d: 'En la ficha del cliente, pestaña "Actividades y pagos": cada actividad tiene su propio menú de etapa, lo cambias con un click. Si la persona aún no tiene esa actividad, usa "Sumar una actividad al funnel".' },
       { t: 'Edita directo en la tabla', d: 'Click sobre el correo o teléfono de cualquier fila y lo corriges ahí mismo. Enter guarda.' },
       { t: 'La columna "Funnel" muestra sus oportunidades', d: 'En la lista de Clientes, cada persona muestra chips de "Actividad: Etapa" — su funnel de un vistazo. Para cambiarlos, abre su ficha.' },
@@ -57,19 +57,32 @@ const CAPITULOS = [
     id: 'pagos',
     icono: Receipt,
     titulo: 'Pagos y cobranza',
-    resumen: 'Registrar pagos, cobrar en cuotas y no perder ningún vencimiento.',
+    resumen: 'Registrar pagos, marcar pendientes y no perder ninguna cuota.',
     pasos: [
       { t: 'Registrar un pago', d: 'Desde el perfil (botón verde "Pago"). Eliges la actividad — si es nueva para el cliente, se agrega sola a su perfil. Tiene fecha de pago y fecha de actividad separadas, y botón "Sin cobro" para becas o cortesías.' },
-      { t: 'Cobrar en cuotas (plan de pago)', d: 'Al registrar un pago elige "Plan de cuotas": indicas cuántas cuotas, el monto total y la fecha de la 1ª; el sistema reparte parejo y calcula los vencimientos mensuales. Puedes ajustar a mano cualquier monto o fecha antes de guardar.' },
-      { t: 'Seguir las cuotas con semáforo', d: 'En la ficha del cliente, bajo cada actividad ves sus cuotas con semáforo: verde al día, ámbar si vence en 3 días o menos, rojo si está vencida. Con "Marcar pagada" confirmas cada cuota cuando llega su abono (y "Deshacer" la revierte).' },
-      { t: 'Ver toda la cobranza junta', d: 'La sección "Cobranza" del menú lista todas las cuotas por cobrar de todos los clientes, con su semáforo y botones de WhatsApp/llamada/correo. Filtra por "Vencidas" o "Por vencer" y revisa el resumen por cliente. El mensaje de WhatsApp viene listo en tono PNL.' },
-      { t: 'Estados: Pagado, Pendiente, Parcial', d: 'Usa "Pendiente" para cuotas comprometidas y "Parcial" para abonos. Un pago "Pagado" siempre exige el monto (salvo "Sin cobro"). Un plan de cuotas avanza a "Parcial" a medida que pagas cada cuota.' },
-      { t: 'Cobrar pendientes en un click', d: 'En la página Pagos, los pendientes tienen el botón verde "Pagado" para confirmarlos al instante. Los pagos con plan muestran la etiqueta "Plan de cuotas" — esos se gestionan cuota a cuota desde la ficha.' },
+      { t: 'Estados: Pagado, Pendiente, Parcial', d: 'Usa "Pendiente" para cuotas comprometidas y "Parcial" para abonos. Un pago "Pagado" siempre exige el monto (salvo "Sin cobro").' },
+      { t: 'Cobrar pendientes en un click', d: 'En la página Pagos, los pendientes tienen el botón verde "Pagado" para confirmarlos al instante. Los totales de arriba se actualizan solos.' },
+      { t: 'Plan de cuotas: marca pagada con la fecha real', d: 'En la ficha, cada cuota tiene "Marcar pagada". Al hacerlo aparece un mini calendario con la fecha de vencimiento por defecto, que puedes editar si la persona pagó adelantado o atrasado — así queda registrado su comportamiento de pago real.' },
       { t: 'Facturación', d: 'Marca "requiere factura" y anota el N° al emitirla; el campo "Facturación interna" lleva el folio para el SII. Todo se consolida en Reportes → pestaña Facturación.' },
       { t: 'Honorarios automáticos', d: 'Si el paciente tiene terapeuta asignado (marcado con 🩺 en su perfil), cada pago genera sola la boleta pendiente del terapeuta en Honorarios, con el pago como referencia. Las de docentes se ingresan manualmente ahí mismo: pones el líquido y el sistema calcula el bruto a boletear.' },
       { t: 'Gastos de la empresa', d: 'En "Gastos empresa" se registran los gastos varios del día a día y el arriendo de sala, con totales por boleta/factura como en la antigua planilla.' },
     ],
-    tip: 'Revisa cada lunes: la sección Cobranza (cuotas vencidas y por vencer), Pagos con filtro "Pendiente" y Honorarios con filtro "Pendiente".',
+    tip: 'Revisa cada lunes: Pagos con filtro "Pendiente" (tu cobranza) y Honorarios con filtro "Pendiente" (boletas por emitir).',
+  },
+  {
+    id: 'dashboard',
+    icono: LayoutDashboard,
+    titulo: 'El Dashboard comercial',
+    resumen: 'Una sola pantalla con el pulso del mes: contactos, ingresos, funnel y urgencias.',
+    pasos: [
+      { t: 'Entra a "Dashboard" en el menú', d: 'Está arriba del todo. Muestra el resumen comercial del mes en curso.' },
+      { t: 'Los 4 indicadores de arriba', d: 'Nuevos contactos del mes, ingresos del mes vs el anterior, total por cobrar y seguimientos de la semana — cada uno con su meta.' },
+      { t: 'Funnel y canales', d: 'El embudo de oportunidades por etapa, y de qué canal (Instagram, referido...) llegan tus clientes.' },
+      { t: 'Ingresos por programa', d: 'Cuánto entró por cada programa este mes vs el anterior, agrupado por nombre canónico (un solo "Diplomado Practitioner", sin variantes).' },
+      { t: 'Seguimientos urgentes — acciona ahí mismo', d: 'Prospectos nuevos sin contacto hace +72h. Cada uno trae botones de WhatsApp, llamada, correo y "registrar seguimiento": al registrarlo, sale de la lista. Sin cambiar de pantalla.' },
+      { t: 'Actividad reciente', d: 'El feed de los últimos movimientos: seguimientos, pagos, cuotas pagadas y cambios de etapa.' },
+    ],
+    tip: 'Empieza el día por el Dashboard: te dice en 30 segundos dónde está el dinero y a quién contactar ya.',
   },
   {
     id: 'atajos',
@@ -82,7 +95,6 @@ const CAPITULOS = [
       { t: 'Botón de ayuda "?"', d: 'Abajo a la derecha, en todas las pantallas. Escribe tu duda en lenguaje normal ("cómo registro un pago") y te muestra el paso a paso.' },
       { t: 'Importar y exportar Excel', d: '"Importar Excel" carga clientes masivamente (detecta las columnas solo). El botón "Exportar" en Clientes descarga la base.' },
       { t: 'Reporte de perfiles incompletos', d: 'En Reportes → pestaña "Sin contacto" ves los clientes sin teléfono ni correo, para completarlos. Se exporta a Excel.' },
-      { t: 'KPI Comercial por campaña', d: 'En Reportes → pestaña "📊 KPI Comercial" obtienes el embudo de cada actividad (leads, contactados, interesados, cotizados, inscritos), la actividad por canal y las tasas de conversión, con una fila TOTAL que consolida todo. El botón "Exportar Excel" arma la planilla lista para enviar a los asesores.' },
       { t: 'Tema Dorado ✨', d: 'Botón en la barra superior derecha, por si prefieres el modo oscuro elegante.' },
     ],
     tip: 'Si olvidas cualquier cosa de este tutorial, el botón "?" siempre está ahí — pregúntale como le preguntarías a un compañero.',
@@ -131,7 +143,7 @@ export default function TutorialPage() {
         <h2 className="text-2xl font-bold text-gray-900">Tutorial del CRM</h2>
       </div>
       <p className="text-sm text-gray-500 mb-5">
-        5 capítulos · ~15 minutos. Al terminar sabrás operar el CRM completo.
+        6 capítulos · ~15 minutos. Al terminar sabrás operar el CRM completo.
       </p>
 
       {/* Barra de progreso */}
