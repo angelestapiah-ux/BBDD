@@ -94,7 +94,7 @@ export const MANUAL: EntradaManual[] = [
       'Elige cuándo recontactar: Mañana, 3 días, 1 semana o Sin fecha.',
       'Haz click en "✓ Guardar contacto". Listo: seguimiento registrado y próximo contacto agendado.',
     ],
-    tip: 'Si necesitas registrar un seguimiento más detallado (con fecha pasada o actividad asociada), usa "Seguimientos" → "Nuevo seguimiento".',
+    tip: 'Si necesitas registrar un seguimiento más detallado (con fecha pasada o actividad asociada), usa "Seguimientos" → "Nuevo seguimiento". Y un avance: si eliges una actividad que el cliente todavía no tenía, queda registrada sola en su pestaña "Actividades y pagos" — un paso menos.',
   },
   {
     id: 'whatsapp-plantilla',

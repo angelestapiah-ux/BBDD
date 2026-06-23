@@ -31,6 +31,7 @@ const CAPITULOS = [
       { t: 'Elige el tipo y anota lo esencial', d: 'WhatsApp, llamada, correo u otro. Una nota corta basta: "le interesa, pidió valores", "no contesta, reintentar".' },
       { t: 'Elige cuándo recontactar — el paso MÁS importante', d: 'Mañana / 3 días / 1 semana. Esto hace que el cliente vuelva a aparecer en "Hoy" en la fecha correcta. Sin próximo paso, el lead muere.' },
       { t: 'Para WhatsApp usa las plantillas', d: 'En "Hoy", el botón verde WhatsApp despliega mensajes pre-escritos con técnicas de PNL, ya personalizados con el nombre de la persona. Un click: se abre WhatsApp con el texto listo Y el seguimiento se registra solo.' },
+      { t: 'La actividad se registra sola', d: 'Si al guardar un seguimiento le asocias una actividad que la persona todavía no tenía, queda registrada automáticamente en su pestaña "Actividades y pagos". Un paso menos.' },
     ],
     tip: 'Nunca cierres una conversación sin agendar el siguiente contacto. Esa única costumbre es la diferencia entre un CRM que vende y una libreta de teléfonos.',
   },
