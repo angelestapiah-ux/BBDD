@@ -56,8 +56,9 @@ export function AsignacionMasivaDialog({ open, onOpenChange, actividad }: Props)
   }
 
   // Al cambiar un filtro, invalida la vista previa anterior.
+  // shadcn Select entrega string | null en onValueChange.
   function onFiltro(setter: (v: string) => void) {
-    return (v: string) => { if (v) { setter(v); setPreview(null); setErr('') } }
+    return (v: string | null) => { if (v) { setter(v); setPreview(null); setErr('') } }
   }
 
   async function previsualizar() {
