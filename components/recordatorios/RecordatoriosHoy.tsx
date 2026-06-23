@@ -26,6 +26,14 @@ function fmtCuando(iso: string): string {
   return `${d.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })} ${hora}`
 }
 
+// Semáforo por cercanía: rojo = atrasado, ámbar = hoy / próximas 48h, verde = más adelante.
+function sem(iso: string): { bar: string; text: string; soft: string } {
+  const t = new Date(iso).getTime(); const now = Date.now()
+  if (t < now) return { bar: 'border-red-400', text: 'text-red-600', soft: 'bg-red-50/50' }
+  if (t <= now + 48 * 3600 * 1000) return { bar: 'border-amber-400', text: 'text-amber-600', soft: 'bg-amber-50/50' }
+  return { bar: 'border-green-400', text: 'text-gray-500', soft: '' }
+}
+
 export function RecordatoriosHoy() {
   const [items, setItems] = useState<Recordatorio[]>([])
   const [loading, setLoading] = useState(true)
@@ -73,8 +81,6 @@ export function RecordatoriosHoy() {
     cargar()
   }
 
-  const ahora = Date.now()
-
   return (
     <section className="mb-6">
       <div className="flex items-center justify-between mb-2">
@@ -98,15 +104,15 @@ export function RecordatoriosHoy() {
       {delDia.length > 0 && (
         <div className="rounded-lg border border-gray-200 overflow-hidden">
           {delDia.map(r => {
-            const vencido = new Date(r.fecha_hora).getTime() < ahora
+            const s = sem(r.fecha_hora)
             const tel = r.clientes?.telefono?.replace(/\D/g, '')
             return (
-              <div key={r.id} className={cn('px-4 py-3 border-b border-gray-100 last:border-0', vencido && 'bg-red-50/40')}>
+              <div key={r.id} className={cn('px-4 py-3 border-b border-gray-100 last:border-0 border-l-4', s.bar, s.soft)}>
                 <div className="flex items-start gap-2">
                   {r.prioridad === 'alta' && <AlertCircle size={15} className="text-red-500 mt-0.5 shrink-0" />}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 break-words">{r.titulo}</p>
-                    <p className={cn('text-xs mt-0.5', vencido ? 'text-red-600 font-medium' : 'text-gray-500')}>
+                    <p className={cn('text-xs mt-0.5 font-medium', s.text)}>
                       {fmtCuando(r.fecha_hora)}
                       {r.categoria && CAT_LABEL[r.categoria] ? ` · ${CAT_LABEL[r.categoria]}` : ''}
                       {r.recurrencia && r.recurrencia !== 'ninguna' ? ' · 🔁' : ''}

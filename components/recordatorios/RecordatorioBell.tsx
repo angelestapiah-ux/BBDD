@@ -26,6 +26,14 @@ function fmtCuando(iso: string): string {
   return `${d.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })} ${hora}`
 }
 
+// Semáforo por cercanía: rojo = atrasado, ámbar = hoy / próximas 48h, verde = más adelante.
+function sem(iso: string): { bar: string; text: string; soft: string } {
+  const t = new Date(iso).getTime(); const now = Date.now()
+  if (t < now) return { bar: 'border-red-400', text: 'text-red-600', soft: 'bg-red-50/60' }
+  if (t <= now + 48 * 3600 * 1000) return { bar: 'border-amber-400', text: 'text-amber-600', soft: 'bg-amber-50/60' }
+  return { bar: 'border-green-400', text: 'text-gray-500', soft: '' }
+}
+
 export function RecordatorioBell({ defaultUsuario }: { defaultUsuario?: string }) {
   const [items, setItems] = useState<Recordatorio[]>([])
   const [abierto, setAbierto] = useState(false)
@@ -95,15 +103,16 @@ export function RecordatorioBell({ defaultUsuario }: { defaultUsuario?: string }
     setEditando(null); setFormOpen(true); setAbierto(false)
   }
 
-  function Fila({ r, vencido }: { r: Recordatorio; vencido?: boolean }) {
+  function Fila({ r }: { r: Recordatorio }) {
     const tel = r.clientes?.telefono?.replace(/\D/g, '')
+    const s = sem(r.fecha_hora)
     return (
-      <div className={cn('px-3 py-2.5 border-b border-gray-100 last:border-0', vencido && 'bg-red-50/50')}>
+      <div className={cn('px-3 py-2.5 border-b border-gray-100 last:border-0 border-l-4', s.bar, s.soft)}>
         <div className="flex items-start gap-2">
           {r.prioridad === 'alta' && <AlertCircle size={14} className="text-red-500 mt-0.5 shrink-0" />}
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-900 break-words">{r.titulo}</p>
-            <p className={cn('text-xs mt-0.5', vencido ? 'text-red-600 font-medium' : 'text-gray-500')}>
+            <p className={cn('text-xs mt-0.5 font-medium', s.text)}>
               {fmtCuando(r.fecha_hora)}
               {r.categoria && CAT_LABEL[r.categoria] ? ` · ${CAT_LABEL[r.categoria]}` : ''}
               {r.recurrencia && r.recurrencia !== 'ninguna' ? ' · 🔁' : ''}
@@ -153,12 +162,13 @@ export function RecordatorioBell({ defaultUsuario }: { defaultUsuario?: string }
       <button
         data-bell-btn
         onClick={() => setAbierto(o => !o)}
-        className="fixed top-4 right-4 z-40 h-10 w-10 rounded-full bg-white border border-gray-200 shadow-md flex items-center justify-center text-gray-600 hover:text-orange-600 hover:border-orange-300 transition-colors"
-        title="Recordatorios"
+        className="fixed top-4 right-4 z-40 flex items-center gap-2 h-10 pl-3.5 pr-4 rounded-full bg-orange-600 text-white shadow-lg hover:bg-orange-700 transition-colors"
+        title="Ver y gestionar recordatorios"
       >
-        <Bell size={18} />
+        <Bell size={17} />
+        <span className="text-sm font-semibold">Recordatorios</span>
         {badge > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+          <span className="min-w-[20px] h-5 px-1 rounded-full bg-white text-orange-700 text-xs font-bold flex items-center justify-center">
             {badge}
           </span>
         )}
@@ -183,7 +193,7 @@ export function RecordatorioBell({ defaultUsuario }: { defaultUsuario?: string }
           {vencidos.length > 0 && (
             <div>
               <p className="px-3 pt-2 pb-1 text-xs font-semibold text-red-600">Atrasados ({vencidos.length})</p>
-              {vencidos.map(r => <Fila key={r.id} r={r} vencido />)}
+              {vencidos.map(r => <Fila key={r.id} r={r} />)}
             </div>
           )}
           {deHoy.length > 0 && (
