@@ -136,6 +136,7 @@ export interface Cuota {
   recordatorio_enviado: boolean
   notas: string | null
   numero_factura?: string | null
+  factura_interna?: string | null
   created_at: string
   updated_at: string
 }

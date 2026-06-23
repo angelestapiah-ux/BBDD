@@ -10,7 +10,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const supabase = createSupabaseAdminClient()
   const { id } = await params
   const body = await req.json()
-  for (const campo of ['fecha_pago', 'fecha_vencimiento', 'metodo_pago', 'notas', 'monto', 'numero_factura']) {
+  for (const campo of ['fecha_pago', 'fecha_vencimiento', 'metodo_pago', 'notas', 'monto', 'numero_factura', 'factura_interna']) {
     if (campo in body && body[campo] === '') body[campo] = null
   }
   const { data, error } = await supabase.from('cuotas').update(body).eq('id', id).select().single()

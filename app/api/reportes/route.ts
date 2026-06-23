@@ -125,7 +125,7 @@ export async function GET(req: NextRequest) {
       supabase
         .from('cuotas')
         .select('*, clientes(id, nombre, correo, telefono, documento_identidad)')
-        .not('numero_factura', 'is', null)
+        .or('numero_factura.not.is.null,factura_interna.not.is.null')
         .order('fecha_pago', { ascending: false }),
     ])
     if (pagosRes.error) return NextResponse.json({ error: pagosRes.error.message }, { status: 500 })
@@ -137,7 +137,6 @@ export async function GET(req: NextRequest) {
     const cuotasFact = ((cuotasRes.data || []) as any[]).map((c) => ({
       ...c,
       requiere_factura: true,
-      factura_interna: null,
       fecha_actividad: null,
       es_cuota: true,
       actividad_nombre: c.actividad_nombre

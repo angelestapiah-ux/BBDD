@@ -111,6 +111,7 @@ export default function ClienteDetailPage() {
   const [cuotaPagando, setCuotaPagando] = useState<string | null>(null)
   const [fechaPagoTmp, setFechaPagoTmp] = useState('')
   const [facturaTmp, setFacturaTmp] = useState('')
+  const [facturaIntTmp, setFacturaIntTmp] = useState('')
 
   // P3: usuario logueado para pre-llenar responsable
   const [currentUserEmail, setCurrentUserEmail] = useState('')
@@ -339,11 +340,11 @@ export default function ClienteDetailPage() {
     else toast.error('Error al eliminar')
   }
 
-  async function marcarCuotaPagada(c: Cuota, fechaPago: string, numeroFactura: string) {
+  async function marcarCuotaPagada(c: Cuota, fechaPago: string, numeroFactura: string, facturaInterna: string) {
     const fp = fechaPago || c.fecha_vencimiento || new Date().toISOString().slice(0, 10)
     const res = await fetch(`/api/cuotas/${c.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estado: 'pagada', fecha_pago: fp, numero_factura: numeroFactura || null }),
+      body: JSON.stringify({ estado: 'pagada', fecha_pago: fp, numero_factura: numeroFactura || null, factura_interna: facturaInterna || null }),
     })
     if (res.ok) { toast.success('Cuota marcada como pagada'); setCuotaPagando(null); fetchCuotas(); fetchCliente() }
     else toast.error('Inténtalo nuevamente')
@@ -887,7 +888,10 @@ export default function ClienteDetailPage() {
                                           )
                                         })()}
                                         {c.numero_factura && (
-                                          <span className="text-xs shrink-0 text-blue-600" title="Factura">· {c.numero_factura}</span>
+                                          <span className="text-xs shrink-0 text-blue-600" title="Factura">· F {c.numero_factura}</span>
+                                        )}
+                                        {c.factura_interna && (
+                                          <span className="text-xs shrink-0 text-gray-500" title="Factura interna (folio SII)">· int {c.factura_interna}</span>
                                         )}
                                       </div>
                                       <div className="flex items-center gap-2 shrink-0">
@@ -908,10 +912,18 @@ export default function ClienteDetailPage() {
                                               value={facturaTmp}
                                               onChange={e => setFacturaTmp(e.target.value)}
                                               placeholder="N° factura"
-                                              className="h-7 w-24 rounded border border-gray-300 px-1 text-xs"
+                                              className="h-7 w-20 rounded border border-gray-300 px-1 text-xs"
                                               title="N° de factura (opcional)"
                                             />
-                                            <Button size="sm" variant="outline" className="h-7 text-xs border-green-600 text-green-700 hover:bg-green-50" onClick={() => marcarCuotaPagada(c, fechaPagoTmp, facturaTmp)}>
+                                            <input
+                                              type="text"
+                                              value={facturaIntTmp}
+                                              onChange={e => setFacturaIntTmp(e.target.value)}
+                                              placeholder="Folio interno"
+                                              className="h-7 w-20 rounded border border-gray-300 px-1 text-xs"
+                                              title="Folio de factura interna SII (opcional)"
+                                            />
+                                            <Button size="sm" variant="outline" className="h-7 text-xs border-green-600 text-green-700 hover:bg-green-50" onClick={() => marcarCuotaPagada(c, fechaPagoTmp, facturaTmp, facturaIntTmp)}>
                                               <CheckCircle2 className="h-3 w-3 mr-1" /> Confirmar
                                             </Button>
                                             <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-400" onClick={() => setCuotaPagando(null)}>Cancelar</Button>
@@ -920,7 +932,7 @@ export default function ClienteDetailPage() {
                                           <Button
                                             size="sm" variant="outline"
                                             className="h-7 text-xs border-green-600 text-green-700 hover:bg-green-50"
-                                            onClick={() => { setCuotaPagando(c.id); setFechaPagoTmp(c.fecha_vencimiento || new Date().toISOString().slice(0, 10)); setFacturaTmp(c.numero_factura || '') }}
+                                            onClick={() => { setCuotaPagando(c.id); setFechaPagoTmp(c.fecha_vencimiento || new Date().toISOString().slice(0, 10)); setFacturaTmp(c.numero_factura || ''); setFacturaIntTmp(c.factura_interna || '') }}
                                           >
                                             <CheckCircle2 className="h-3 w-3 mr-1" /> Marcar pagada
                                           </Button>
