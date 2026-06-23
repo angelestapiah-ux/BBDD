@@ -1,5 +1,7 @@
 import * as XLSX from 'xlsx'
 import { EtapaFunnel } from './types'
+import { clasificarTipo } from './clasificar-tipo'
+import { normalizarActividad } from './normalizar-actividad'
 
 const ETAPAS_VALIDAS: EtapaFunnel[] = [
   'nuevo', 'contactado', 'con_interes', 'cotizacion_enviada', 'negociando', 'inscrito',
@@ -82,7 +84,7 @@ function mapearColumnas(headerRow: unknown[]): Record<string, number> {
     else if (key.includes('correo')) map.correo = idx
     else if (key.includes('tel') && (key.includes('2') || key.includes('two') || key.includes('segundo'))) map.telefono2 = idx
     else if (key.includes('tel')) map.telefono = idx
-    else if (key.includes('g\u00e9nero') || key === 'genero') map.genero = idx
+    else if (key.includes('género') || key === 'genero') map.genero = idx
     else if (key.includes('tipo')) map.tipos_cliente = idx
     else if (key.includes('modalidad')) map.modalidad_paciente = idx
     else if (key.includes('terapeuta')) map.terapeuta = idx
@@ -91,7 +93,7 @@ function mapearColumnas(headerRow: unknown[]): Record<string, number> {
     else if (key.includes('estado')) map.estado_civil = idx
     else if (key.includes('profesi')) map.profesion = idx
     else if (key.includes('ciudad')) map.ciudad = idx
-    else if (key.includes('pa\u00eds') || key === 'pais') map.pais = idx
+    else if (key.includes('país') || key === 'pais') map.pais = idx
     else if (key.includes('comentario') || key.includes('contacto')) map.comentario = idx
     else if (key.includes('procedencia')) map.procedencia = idx
     else if (key.includes('cumplea')) map.cumpleanos = idx
@@ -133,6 +135,23 @@ function fusionarFilas(base: FilaCliente, nueva: FilaCliente): FilaCliente {
     tipos_cliente: [...new Set([...base.tipos_cliente, ...nueva.tipos_cliente])],
     asistencias: [...new Set([...base.asistencias, ...nueva.asistencias])],
   }
+}
+
+// Separa la columna "Tipo" del Excel: lo que en realidad es una actividad se
+// manda a asistencias (canónica); en tipos_cliente solo quedan los TIPOS.
+function separarTipoActividad(fila: FilaCliente): void {
+  const tiposLimpios = new Set<string>()
+  const actsExtra: string[] = []
+  for (const valor of fila.tipos_cliente) {
+    const { tipo, actividad } = clasificarTipo(valor)
+    if (actividad) actsExtra.push(actividad)
+    if (tipo) tiposLimpios.add(tipo)
+  }
+  fila.tipos_cliente = Array.from(tiposLimpios)
+  fila.asistencias = Array.from(new Set([
+    ...fila.asistencias.map(a => normalizarActividad(a) || a),
+    ...actsExtra,
+  ]))
 }
 
 export function parseExcelFile(buffer: ArrayBuffer): {
@@ -201,6 +220,9 @@ export function parseExcelFile(buffer: ArrayBuffer): {
         })(),
         asistencias: cols.asistencias !== undefined ? parsearLista(row[cols.asistencias]) : [],
       }
+
+      // Separar tipo vs actividad (la columna "Tipo" a veces trae actividades)
+      separarTipoActividad(fila)
 
       const clave = normalizarNombre(nombre)
       if (mapaClientes.has(clave)) {
