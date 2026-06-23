@@ -50,6 +50,20 @@ const CAPITULOS = [
     tip: 'Perfecto para recordar un pago el día antes de un taller: crea el recordatorio con el cliente y la fecha del día anterior, y la campana te avisa.',
   },
   {
+    id: 'asignacion-masiva',
+    icono: Users,
+    titulo: 'Asignar una actividad a muchos clientes',
+    resumen: 'Suscribe una actividad a un grupo entero por sus características — ideal para campañas como el Ciclo de la Mujer.',
+    pasos: [
+      { t: 'Entra a Actividades y pulsa el ícono 👥 de la actividad', d: 'En la fila de cada actividad hay un botón "Asignar a clientes".' },
+      { t: 'Filtra a tu audiencia', d: 'Combina género, tipo de cliente, etapa y canal. Ejemplo: género = femenino para el Ciclo Anual Mujer Renova.' },
+      { t: 'Previsualiza antes de aplicar', d: 'Verás cuántos cumplen, cuántos ya la tienen (se omiten) y a cuántos se asignará, con ejemplos. Nada se guarda hasta que confirmas.' },
+      { t: 'Asigna y, si quieres, deshaz', d: 'Un click asigna a todos (sin duplicar). Si te equivocas, "Deshacer esta carga" revierte la asignación completa.' },
+      { t: 'Encadena con el seguimiento masivo', d: 'Al terminar, un botón te lleva a Seguimientos con esa actividad ya filtrada para mandar el correo/WhatsApp masivo.' },
+    ],
+    tip: 'Los filtros valen lo que valen tus datos: género está muy completo; ciudad y edad casi vacíos, por eso aún no son filtros. Mientras más completos los perfiles, más rinde esta herramienta.',
+  },
+  {
     id: 'clientes',
     icono: Users,
     titulo: 'Clientes y el funnel de venta',

@@ -137,6 +137,20 @@ export const MANUAL: EntradaManual[] = [
     tip: 'Ejemplo: para recordar un pago el día antes de un taller, crea el recordatorio con el cliente y la fecha del día anterior. Los atrasados se quedan visibles en rojo hasta que los cierres.',
   },
   {
+    id: 'asignacion-masiva',
+    titulo: 'Asignar una actividad a muchos clientes a la vez',
+    categoria: 'Seguimiento',
+    keywords: 'masivo masiva asignar actividad ciclo mujer femenino genero filtro suscribir varios clientes campaña deshacer lote',
+    pasos: [
+      'Ve a "Actividades" y en la fila de la actividad (ej. Ciclo Anual Mujer Renova) haz click en el ícono de personas 👥 "Asignar a clientes".',
+      'Define a quiénes: combina los filtros que quieras — género, tipo de cliente, etapa del funnel y canal (se aplican juntos).',
+      'Haz click en "Previsualizar": verás cuántos cumplen, cuántos ya la tienen (se omiten) y a cuántos se asignará, con una muestra de nombres. Nada se guarda todavía.',
+      'Si está bien, pulsa "Asignar a N". La actividad queda registrada en todos esos perfiles (no se duplica si ya la tenían).',
+      'Si te equivocaste, "Deshacer esta carga" revierte toda la asignación de una. Y "Registrar seguimiento masivo" te lleva directo a Seguimientos con esa actividad ya filtrada.',
+    ],
+    tip: 'Ojo: el filtro vale lo que valen tus datos. Género está bien poblado (sirve perfecto para el Ciclo de la Mujer); ciudad, edad y profesión casi no tienen datos aún, por eso no están como filtro todavía.',
+  },
+  {
     id: 'registrar-pago',
     titulo: 'Registrar un pago',
     categoria: 'Pagos',

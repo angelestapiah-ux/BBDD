@@ -84,6 +84,13 @@ export function VistaClientes() {
 
   useEffect(() => { cargar() }, [])
 
+  // Preselecciona la actividad si llega por la URL (?actividad=...), p.ej. desde
+  // la asignación masiva → "registrar seguimiento masivo".
+  useEffect(() => {
+    const a = new URLSearchParams(window.location.search).get('actividad')
+    if (a) setActividadFilter(a)
+  }, [])
+
   // Cerrar panel contactado con click afuera
   useEffect(() => {
     function handler(e: MouseEvent) {

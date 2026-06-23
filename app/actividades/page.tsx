@@ -9,10 +9,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Users } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { AsignacionMasivaDialog } from '@/components/actividades/AsignacionMasivaDialog'
 
 const TIPOS: Record<string, string> = {
   diplomado_presencial: 'Diplomado Presencial',
@@ -47,6 +48,7 @@ export default function ActividadesPage() {
   const [editing, setEditing] = useState<Actividad | null>(null)
   const [form, setForm] = useState<Partial<Actividad>>(EMPTY)
   const [saving, setSaving] = useState(false)
+  const [asignar, setAsignar] = useState<Actividad | null>(null)
 
   const fetch_ = useCallback(async () => {
     const res = await fetch('/api/actividades')
@@ -139,11 +141,19 @@ export default function ActividadesPage() {
                     <td className="px-4 py-3 text-gray-500">{fmt(a.fecha_fin)}</td>
                   )}
                   <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(a)}>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        size="sm" variant="ghost"
+                        className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                        onClick={() => setAsignar(a)}
+                        title="Asignar esta actividad a clientes en masa"
+                      >
+                        <Users className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => openEdit(a)} title="Editar">
                         <Pencil className="h-3 w-3" />
                       </Button>
-                      <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-700" onClick={() => handleDelete(a)}>
+                      <Button size="sm" variant="ghost" className="text-red-500 hover:text-red-700" onClick={() => handleDelete(a)} title="Eliminar">
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
@@ -211,6 +221,14 @@ export default function ActividadesPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {asignar && (
+        <AsignacionMasivaDialog
+          open={!!asignar}
+          onOpenChange={(v) => { if (!v) setAsignar(null) }}
+          actividad={asignar.nombre}
+        />
+      )}
     </div>
   )
 }
