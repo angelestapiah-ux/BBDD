@@ -110,6 +110,7 @@ export default function ClienteDetailPage() {
   // Detalle A: registrar la fecha real al marcar una cuota pagada (default = vencimiento)
   const [cuotaPagando, setCuotaPagando] = useState<string | null>(null)
   const [fechaPagoTmp, setFechaPagoTmp] = useState('')
+  const [facturaTmp, setFacturaTmp] = useState('')
 
   // P3: usuario logueado para pre-llenar responsable
   const [currentUserEmail, setCurrentUserEmail] = useState('')
@@ -338,11 +339,11 @@ export default function ClienteDetailPage() {
     else toast.error('Error al eliminar')
   }
 
-  async function marcarCuotaPagada(c: Cuota, fechaPago: string) {
+  async function marcarCuotaPagada(c: Cuota, fechaPago: string, numeroFactura: string) {
     const fp = fechaPago || c.fecha_vencimiento || new Date().toISOString().slice(0, 10)
     const res = await fetch(`/api/cuotas/${c.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estado: 'pagada', fecha_pago: fp }),
+      body: JSON.stringify({ estado: 'pagada', fecha_pago: fp, numero_factura: numeroFactura || null }),
     })
     if (res.ok) { toast.success('Cuota marcada como pagada'); setCuotaPagando(null); fetchCuotas(); fetchCliente() }
     else toast.error('Inténtalo nuevamente')
@@ -885,6 +886,9 @@ export default function ClienteDetailPage() {
                                             </span>
                                           )
                                         })()}
+                                        {c.numero_factura && (
+                                          <span className="text-xs shrink-0 text-blue-600" title="Factura">· {c.numero_factura}</span>
+                                        )}
                                       </div>
                                       <div className="flex items-center gap-2 shrink-0">
                                         <span className={`text-xs font-medium ${c.estado === 'pagada' ? 'text-green-700' : c.estado === 'vencida' ? 'text-red-600' : 'text-gray-500'}`}>{sem.label}</span>
@@ -899,7 +903,15 @@ export default function ClienteDetailPage() {
                                               className="h-7 rounded border border-gray-300 px-1 text-xs"
                                               title="Fecha real del pago (por defecto, la del vencimiento)"
                                             />
-                                            <Button size="sm" variant="outline" className="h-7 text-xs border-green-600 text-green-700 hover:bg-green-50" onClick={() => marcarCuotaPagada(c, fechaPagoTmp)}>
+                                            <input
+                                              type="text"
+                                              value={facturaTmp}
+                                              onChange={e => setFacturaTmp(e.target.value)}
+                                              placeholder="N° factura"
+                                              className="h-7 w-24 rounded border border-gray-300 px-1 text-xs"
+                                              title="N° de factura (opcional)"
+                                            />
+                                            <Button size="sm" variant="outline" className="h-7 text-xs border-green-600 text-green-700 hover:bg-green-50" onClick={() => marcarCuotaPagada(c, fechaPagoTmp, facturaTmp)}>
                                               <CheckCircle2 className="h-3 w-3 mr-1" /> Confirmar
                                             </Button>
                                             <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-400" onClick={() => setCuotaPagando(null)}>Cancelar</Button>
@@ -908,7 +920,7 @@ export default function ClienteDetailPage() {
                                           <Button
                                             size="sm" variant="outline"
                                             className="h-7 text-xs border-green-600 text-green-700 hover:bg-green-50"
-                                            onClick={() => { setCuotaPagando(c.id); setFechaPagoTmp(c.fecha_vencimiento || new Date().toISOString().slice(0, 10)) }}
+                                            onClick={() => { setCuotaPagando(c.id); setFechaPagoTmp(c.fecha_vencimiento || new Date().toISOString().slice(0, 10)); setFacturaTmp(c.numero_factura || '') }}
                                           >
                                             <CheckCircle2 className="h-3 w-3 mr-1" /> Marcar pagada
                                           </Button>

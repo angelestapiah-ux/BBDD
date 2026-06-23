@@ -114,20 +114,42 @@ export async function GET(req: NextRequest) {
   }
 
   if (tipo === 'facturacion') {
-    // Pagos con factura solicitada, factura emitida o folio interno (registro SII)
-    const { data, error } = await supabase
-      .from('pagos')
-      .select('*, clientes(id, nombre, correo, telefono, documento_identidad)')
-      .or('requiere_factura.eq.true,numero_factura.not.is.null,factura_interna.not.is.null')
-      .order('fecha_pago', { ascending: false })
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    // Comprobantes con factura: PAGOS (factura solicitada/emitida/folio) +
+    // CUOTAS de plan que tengan número de factura (registro SII unificado).
+    const [pagosRes, cuotasRes] = await Promise.all([
+      supabase
+        .from('pagos')
+        .select('*, clientes(id, nombre, correo, telefono, documento_identidad)')
+        .or('requiere_factura.eq.true,numero_factura.not.is.null,factura_interna.not.is.null')
+        .order('fecha_pago', { ascending: false }),
+      supabase
+        .from('cuotas')
+        .select('*, clientes(id, nombre, correo, telefono, documento_identidad)')
+        .not('numero_factura', 'is', null)
+        .order('fecha_pago', { ascending: false }),
+    ])
+    if (pagosRes.error) return NextResponse.json({ error: pagosRes.error.message }, { status: 500 })
+    if (cuotasRes.error) return NextResponse.json({ error: cuotasRes.error.message }, { status: 500 })
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pendientes = (data || []).filter((p: any) => p.requiere_factura && !p.numero_factura)
+    const pagos = (pagosRes.data || []) as any[]
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const total = (data || []).reduce((sum: number, p: any) => sum + (p.monto || 0), 0)
-    return NextResponse.json({ pagos: data ?? [], total, pendientes: pendientes.length })
+    const cuotasFact = ((cuotasRes.data || []) as any[]).map((c) => ({
+      ...c,
+      requiere_factura: true,
+      factura_interna: null,
+      fecha_actividad: null,
+      es_cuota: true,
+      actividad_nombre: c.actividad_nombre
+        ? `${c.actividad_nombre} (cuota ${c.numero_cuota}/${c.total_cuotas})`
+        : `Cuota ${c.numero_cuota}/${c.total_cuotas}`,
+    }))
+    const todos = [...pagos, ...cuotasFact].sort(
+      (a, b) => String(b.fecha_pago || '').localeCompare(String(a.fecha_pago || '')),
+    )
+    const pendientes = todos.filter((p) => p.requiere_factura && !p.numero_factura)
+    const total = todos.reduce((sum: number, p) => sum + (p.monto || 0), 0)
+    return NextResponse.json({ pagos: todos, total, pendientes: pendientes.length })
   }
 
   return NextResponse.json({ error: 'Tipo de reporte no válido' }, { status: 400 })
