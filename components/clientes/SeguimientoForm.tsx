@@ -33,6 +33,7 @@ export function SeguimientoForm({ open, onOpenChange, onSubmit, defaultUsuario }
   const [actividades, setActividades] = useState<Actividad[]>([])
   const [responsables, setResponsables] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
 
   // Sincronizar defaultUsuario cuando cambie (o cuando abra el dialog)
   useEffect(() => {
@@ -46,6 +47,13 @@ export function SeguimientoForm({ open, onOpenChange, onSubmit, defaultUsuario }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    // La actividad relacionada ahora es obligatoria (para que el seguimiento
+    // quede siempre ligado a un programa y se registre solo en el perfil).
+    if (!actividadNombre) {
+      setErr('Elige la actividad relacionada para guardar el seguimiento.')
+      return
+    }
+    setErr('')
     setSaving(true)
     // Enviar el instante exacto con zona horaria, para que se guarde tal cual lo ve el usuario.
     const fechaISO = fecha ? new Date(fecha).toISOString() : new Date().toISOString()
@@ -80,16 +88,16 @@ export function SeguimientoForm({ open, onOpenChange, onSubmit, defaultUsuario }
             </div>
           </div>
           <div>
-            <Label>Actividad relacionada</Label>
-            <Select value={actividadNombre || '__ninguna__'} onValueChange={v => setActividadNombre(v === '__ninguna__' ? '' : (v ?? ''))}>
-              <SelectTrigger><SelectValue placeholder="Sin actividad específica" /></SelectTrigger>
+            <Label>Actividad relacionada *</Label>
+            <Select value={actividadNombre} onValueChange={v => { setActividadNombre(v ?? ''); if (v) setErr('') }}>
+              <SelectTrigger><SelectValue placeholder="Selecciona una actividad" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="__ninguna__">— Sin actividad específica —</SelectItem>
                 {actividades.map(a => (
                   <SelectItem key={a.id} value={a.nombre}>{a.nombre}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {err && <p className="mt-1 text-sm text-red-600">{err}</p>}
           </div>
           <div>
             <Label>Responsable</Label>
@@ -104,8 +112,8 @@ export function SeguimientoForm({ open, onOpenChange, onSubmit, defaultUsuario }
             </datalist>
           </div>
           <div>
-            <Label>Notas *</Label>
-            <Textarea rows={3} required value={notas} onChange={e => setNotas(e.target.value)} placeholder="Describe el contacto..." />
+            <Label>Notas (opcional)</Label>
+            <Textarea rows={3} value={notas} onChange={e => setNotas(e.target.value)} placeholder="Describe el contacto..." />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
