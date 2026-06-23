@@ -42,6 +42,12 @@ function semaforoCuota(c: Cuota): { dot: string; label: string } {
   return { dot: 'bg-green-400', label: 'Al día' }
 }
 
+// Días entre el pago real y el vencimiento (negativo = adelantado, positivo = atrasado)
+function diasPagoVsVenc(venc: string, pago: string): number {
+  const v = new Date(venc + 'T12:00:00'); const p = new Date(pago + 'T12:00:00')
+  return Math.round((p.getTime() - v.getTime()) / 86400000)
+}
+
 // ─── Etapa badge config ─────────────────────────────────────────────────
 const ETAPA_BADGE: Record<EtapaFunnel, { bg: string; text: string }> = {
   nuevo:               { bg: 'bg-gray-100',   text: 'text-gray-600' },
@@ -866,6 +872,19 @@ export default function ClienteDetailPage() {
                                         <span className="text-gray-500 shrink-0">Cuota {c.numero_cuota}/{c.total_cuotas}</span>
                                         <span className="font-semibold text-gray-800 shrink-0">${(c.monto || 0).toLocaleString('es-CL')}</span>
                                         <span className="text-xs text-gray-400 shrink-0">vence {fmt(c.fecha_vencimiento)}</span>
+                                        {c.estado === 'pagada' && c.fecha_pago && (() => {
+                                          const d = diasPagoVsVenc(c.fecha_vencimiento, c.fecha_pago)
+                                          return (
+                                            <span className="text-xs shrink-0 truncate">
+                                              <span className="text-green-700">· pagada {fmt(c.fecha_pago)}</span>
+                                              {d > 0
+                                                ? <span className="text-rose-600"> ({d}d atrasada)</span>
+                                                : d < 0
+                                                  ? <span className="text-emerald-600"> ({-d}d adelantada)</span>
+                                                  : <span className="text-gray-400"> (al día)</span>}
+                                            </span>
+                                          )
+                                        })()}
                                       </div>
                                       <div className="flex items-center gap-2 shrink-0">
                                         <span className={`text-xs font-medium ${c.estado === 'pagada' ? 'text-green-700' : c.estado === 'vencida' ? 'text-red-600' : 'text-gray-500'}`}>{sem.label}</span>
