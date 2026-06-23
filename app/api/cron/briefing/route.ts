@@ -170,6 +170,36 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // ── Recordatorios del día (pendientes con fecha <= hoy, incluye atrasados) ──
+  // Comparamos por día-calendario en Chile (robusto a zona horaria/DST).
+  const diaChile = (d: Date) =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Santiago' }).format(d)
+  const hoyCL = diaChile(ahora)
+  const { data: recsRaw } = await supabase
+    .from('recordatorios')
+    .select('titulo, fecha_hora, prioridad, estado, clientes(nombre)')
+    .eq('estado', 'pendiente')
+    .order('fecha_hora', { ascending: true })
+
+  type RecRow = {
+    titulo: string
+    fecha_hora: string
+    prioridad?: string | null
+    clientes?: { nombre?: string | null } | null
+  }
+  const recordatoriosHoy = ((recsRaw ?? []) as unknown as RecRow[])
+    .filter(r => diaChile(new Date(r.fecha_hora)) <= hoyCL)
+    .map(r => ({
+      titulo: r.titulo,
+      cuando: new Date(r.fecha_hora).toLocaleString('es-CL', {
+        timeZone: 'America/Santiago', day: '2-digit', month: 'short',
+        hour: '2-digit', minute: '2-digit',
+      }),
+      cliente: r.clientes?.nombre ?? null,
+      prioridad: (r.prioridad as 'normal' | 'alta') ?? 'normal',
+      vencido: new Date(r.fecha_hora).getTime() < ahora.getTime(),
+    }))
+
   const prospectosSinContacto = (prospectosSinContactoRes.data ?? [])
     .filter((c: ProspectoRow) => !idsConSeguimiento.has(c.id))
     .map((c: ProspectoRow) => {
@@ -201,6 +231,7 @@ export async function GET(req: NextRequest) {
     prospectosSinContacto,
     funnel,
     ingresosPorPrograma,
+    recordatoriosHoy,
   }
 
   // ── Generar HTML y enviar correo ──────────────────────────────────────────

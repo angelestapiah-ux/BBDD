@@ -15,6 +15,14 @@ export interface EtapaFunnelItem {
   porcentaje: number
 }
 
+export interface RecordatorioBriefing {
+  titulo: string
+  cuando: string
+  cliente: string | null
+  prioridad: 'normal' | 'alta'
+  vencido: boolean
+}
+
 export interface BriefingData {
   fecha: Date
   nuevosContactosMes: number
@@ -28,6 +36,7 @@ export interface BriefingData {
   prospectosSinContacto: ProspectoSinContacto[]
   funnel: EtapaFunnelItem[]
   ingresosPorPrograma: { programa: string; total: number }[]
+  recordatoriosHoy?: RecordatorioBriefing[]
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -135,6 +144,22 @@ export function generarEmailBriefing(data: BriefingData): string {
     `<li style="margin-bottom:8px;font-size:14px;color:#374151;line-height:1.5">${a}</li>`
   ).join('')
 
+  // Recordatorios del día (pendientes con fecha de hoy o atrasados)
+  const recordatorios = data.recordatoriosHoy ?? []
+  const filasRecordatorios = recordatorios.length === 0
+    ? `<tr><td colspan="3" style="padding:12px;text-align:center;color:#16a34a;font-size:14px">
+        ✅ Sin recordatorios para hoy
+       </td></tr>`
+    : recordatorios.slice(0, 12).map(r => {
+        const color = r.vencido ? '#dc2626' : '#374151'
+        const flag = r.prioridad === 'alta' ? '🔺 ' : ''
+        return `<tr style="border-bottom:1px solid #f3f4f6">
+          <td style="padding:10px 12px;font-size:13px;font-weight:600;color:#111827">${flag}${r.titulo}</td>
+          <td style="padding:10px 12px;font-size:12px;color:${color};font-weight:${r.vencido ? '700' : '400'}">${r.cuando}${r.vencido ? ' · atrasado' : ''}</td>
+          <td style="padding:10px 12px;font-size:12px;color:#6b7280">${r.cliente ?? '—'}</td>
+        </tr>`
+      }).join('')
+
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -219,6 +244,22 @@ export function generarEmailBriefing(data: BriefingData): string {
             <ul style="margin:0;padding-left:20px">
               ${filasAcciones}
             </ul>
+          </td>
+        </tr>
+
+        <!-- Recordatorios de hoy -->
+        <tr>
+          <td style="background:#fff;padding:20px 32px;border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;border-top:2px solid #f3f4f6">
+            <div style="font-size:14px;font-weight:700;color:#111827;margin-bottom:4px">🔔 Recordatorios de hoy</div>
+            <div style="font-size:12px;color:#9ca3af;margin-bottom:14px">Pendientes con fecha de hoy o atrasados</div>
+            <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden">
+              <tr style="background:#f9fafb">
+                <th style="padding:8px 12px;font-size:11px;color:#6b7280;text-align:left;font-weight:600">Recordatorio</th>
+                <th style="padding:8px 12px;font-size:11px;color:#6b7280;text-align:left;font-weight:600">Cuándo</th>
+                <th style="padding:8px 12px;font-size:11px;color:#6b7280;text-align:left;font-weight:600">Cliente</th>
+              </tr>
+              ${filasRecordatorios}
+            </table>
           </td>
         </tr>
 

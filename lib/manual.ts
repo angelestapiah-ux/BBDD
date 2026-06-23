@@ -123,6 +123,20 @@ export const MANUAL: EntradaManual[] = [
     ],
   },
   {
+    id: 'recordatorios',
+    titulo: 'Crear y gestionar recordatorios',
+    categoria: 'Seguimiento',
+    keywords: 'recordatorio recordar campana aviso pendiente tarea fecha hora repetir recurrente posponer nota alerta',
+    pasos: [
+      'Haz click en la 🔔 campana de arriba a la derecha (está en todas las pantallas). El número rojo indica cuántos tienes para hoy o atrasados.',
+      'Pulsa "Nuevo" y completa: título y fecha/hora (obligatorios), y si quieres, un cliente (búscalo por nombre; déjalo vacío para un recordatorio general), categoría, prioridad y notas.',
+      'Para que se repita, elige "Cada día / semana / mes": al marcarlo como hecho, el siguiente se crea solo.',
+      'Tus recordatorios aparecen también en la página "Hoy" y en el correo del briefing de las 08:30.',
+      'En cada recordatorio: "Hecho" lo cierra, "Mañana" o "+1 sem" lo posponen, y si tiene cliente puedes ir a su ficha o abrir WhatsApp. El lápiz edita y el basurero elimina.',
+    ],
+    tip: 'Ejemplo: para recordar un pago el día antes de un taller, crea el recordatorio con el cliente y la fecha del día anterior. Los atrasados se quedan visibles en rojo hasta que los cierres.',
+  },
+  {
     id: 'registrar-pago',
     titulo: 'Registrar un pago',
     categoria: 'Pagos',

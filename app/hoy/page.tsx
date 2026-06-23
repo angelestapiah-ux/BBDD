@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { Cliente, PlantillaWhatsapp, ETAPAS_FUNNEL, EtapaFunnel } from '@/lib/types'
 import { ContactadoPanel } from '@/components/clientes/ContactadoPanel'
+import { RecordatoriosHoy } from '@/components/recordatorios/RecordatoriosHoy'
 import { Phone, MessageSquare, CheckCircle2, Flame, CalendarClock, ChevronDown, Sun } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -242,6 +243,8 @@ export default function HoyPage() {
           ? '🎉 ¡Todo al día! No hay contactos pendientes.'
           : `${total} cliente${total === 1 ? '' : 's'} por contactar`}
       </p>
+
+      <RecordatoriosHoy />
 
       {!loading && vencidos.length > 0 && (
         <section className="mb-6">

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CheckCircle2, ChevronRight, GraduationCap, Sun, Users, Receipt, Keyboard, MessageSquare, RotateCcw, Lightbulb, LayoutDashboard } from 'lucide-react'
+import { CheckCircle2, ChevronRight, GraduationCap, Sun, Users, Receipt, Keyboard, MessageSquare, RotateCcw, Lightbulb, LayoutDashboard, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -34,6 +34,20 @@ const CAPITULOS = [
       { t: 'La actividad se registra sola', d: 'Si al guardar un seguimiento le asocias una actividad que la persona todavía no tenía, queda registrada automáticamente en su pestaña "Actividades y pagos". Un paso menos.' },
     ],
     tip: 'Nunca cierres una conversación sin agendar el siguiente contacto. Esa única costumbre es la diferencia entre un CRM que vende y una libreta de teléfonos.',
+  },
+  {
+    id: 'recordatorios',
+    icono: Bell,
+    titulo: 'Recordatorios: nada se te olvida',
+    resumen: 'Una campana 🔔 siempre a mano para anotar lo que tienes que hacer, con o sin cliente.',
+    pasos: [
+      { t: 'La campana está arriba a la derecha', d: 'En todas las pantallas. El número rojo te dice cuántos recordatorios tienes para hoy o atrasados.' },
+      { t: 'Crea uno con "Nuevo"', d: 'Título y fecha/hora son lo único obligatorio. Puedes asociar un cliente (búscalo por nombre) o dejarlo general. Agrega categoría, prioridad y notas si quieres.' },
+      { t: 'Hazlos recurrentes', d: 'Elige repetir cada día, semana o mes. Al marcar "Hecho", el siguiente se crea solo.' },
+      { t: 'Gestiónalos en "Hoy" o en la campana', d: '"Hecho" lo cierra, "Mañana" o "+1 sem" lo posponen. Si tiene cliente, saltas a su ficha o le escribes por WhatsApp al instante.' },
+      { t: 'Te llegan también en el briefing', d: 'Los recordatorios del día aparecen en el correo de las 08:30, junto con tus indicadores.' },
+    ],
+    tip: 'Perfecto para recordar un pago el día antes de un taller: crea el recordatorio con el cliente y la fecha del día anterior, y la campana te avisa.',
   },
   {
     id: 'clientes',
