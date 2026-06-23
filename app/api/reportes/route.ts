@@ -15,7 +15,7 @@ async function traerTodo(
     if (ordenCol) q = q.order(ordenCol, { ascending: false })
     const { data, error } = await q
     if (error) throw new Error(error.message)
-    const rows = (data ?? []) as Record<string, unknown>[]
+    const rows = (data ?? []) as unknown as Record<string, unknown>[]
     out.push(...rows)
     if (rows.length < PAGE) break
   }
