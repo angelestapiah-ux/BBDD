@@ -925,6 +925,7 @@ export default function ClienteDetailPage() {
                                               className="h-7 w-20 rounded border border-gray-300 px-1 text-xs"
                                               title="Folio de factura interna SII (opcional)"
                                             />
+                                            {/* Metodo de pago real de esta cuota: default = metodo del plan, ajustable al confirmar */}
                                             <select
                                               value={metodoTmp}
                                               onChange={e => setMetodoTmp(e.target.value)}
