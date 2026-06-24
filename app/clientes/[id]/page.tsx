@@ -112,6 +112,8 @@ export default function ClienteDetailPage() {
   const [fechaPagoTmp, setFechaPagoTmp] = useState('')
   const [facturaTmp, setFacturaTmp] = useState('')
   const [facturaIntTmp, setFacturaIntTmp] = useState('')
+  // Confirmar el metodo de pago real al marcar una cuota pagada (default = metodo del plan)
+  const [metodoTmp, setMetodoTmp] = useState('')
 
   // P3: usuario logueado para pre-llenar responsable
   const [currentUserEmail, setCurrentUserEmail] = useState('')
@@ -340,11 +342,11 @@ export default function ClienteDetailPage() {
     else toast.error('Error al eliminar')
   }
 
-  async function marcarCuotaPagada(c: Cuota, fechaPago: string, numeroFactura: string, facturaInterna: string) {
+  async function marcarCuotaPagada(c: Cuota, fechaPago: string, numeroFactura: string, facturaInterna: string, metodoPago: string) {
     const fp = fechaPago || c.fecha_vencimiento || new Date().toISOString().slice(0, 10)
     const res = await fetch(`/api/cuotas/${c.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estado: 'pagada', fecha_pago: fp, numero_factura: numeroFactura || null, factura_interna: facturaInterna || null }),
+      body: JSON.stringify({ estado: 'pagada', fecha_pago: fp, metodo_pago: metodoPago || null, numero_factura: numeroFactura || null, factura_interna: facturaInterna || null }),
     })
     if (res.ok) { toast.success('Cuota marcada como pagada'); setCuotaPagando(null); fetchCuotas(); fetchCliente() }
     else toast.error('Inténtalo nuevamente')
@@ -923,7 +925,19 @@ export default function ClienteDetailPage() {
                                               className="h-7 w-20 rounded border border-gray-300 px-1 text-xs"
                                               title="Folio de factura interna SII (opcional)"
                                             />
-                                            <Button size="sm" variant="outline" className="h-7 text-xs border-green-600 text-green-700 hover:bg-green-50" onClick={() => marcarCuotaPagada(c, fechaPagoTmp, facturaTmp, facturaIntTmp)}>
+                                            <select
+                                              value={metodoTmp}
+                                              onChange={e => setMetodoTmp(e.target.value)}
+                                              className="h-7 rounded border border-gray-300 px-1 text-xs"
+                                              title="Confirma el metodo de pago real de esta cuota"
+                                            >
+                                              <option value="transferencia">Transferencia</option>
+                                              <option value="efectivo">Efectivo</option>
+                                              <option value="tarjeta">Tarjeta</option>
+                                              <option value="webpay">Link Webpay</option>
+                                              <option value="otro">Otro</option>
+                                            </select>
+                                            <Button size="sm" variant="outline" className="h-7 text-xs border-green-600 text-green-700 hover:bg-green-50" onClick={() => marcarCuotaPagada(c, fechaPagoTmp, facturaTmp, facturaIntTmp, metodoTmp)}>
                                               <CheckCircle2 className="h-3 w-3 mr-1" /> Confirmar
                                             </Button>
                                             <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-400" onClick={() => setCuotaPagando(null)}>Cancelar</Button>
@@ -932,7 +946,7 @@ export default function ClienteDetailPage() {
                                           <Button
                                             size="sm" variant="outline"
                                             className="h-7 text-xs border-green-600 text-green-700 hover:bg-green-50"
-                                            onClick={() => { setCuotaPagando(c.id); setFechaPagoTmp(c.fecha_vencimiento || new Date().toISOString().slice(0, 10)); setFacturaTmp(c.numero_factura || ''); setFacturaIntTmp(c.factura_interna || '') }}
+                                            onClick={() => { setCuotaPagando(c.id); setFechaPagoTmp(c.fecha_vencimiento || new Date().toISOString().slice(0, 10)); setFacturaTmp(c.numero_factura || ''); setFacturaIntTmp(c.factura_interna || ''); setMetodoTmp(c.metodo_pago || pgs.find(p => p.tiene_plan_cuotas)?.metodo_pago || 'transferencia') }}
                                           >
                                             <CheckCircle2 className="h-3 w-3 mr-1" /> Marcar pagada
                                           </Button>
