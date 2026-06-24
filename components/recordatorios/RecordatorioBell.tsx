@@ -162,13 +162,13 @@ export function RecordatorioBell({ defaultUsuario }: { defaultUsuario?: string }
       <button
         data-bell-btn
         onClick={() => setAbierto(o => !o)}
-        className="fixed top-4 right-4 z-40 flex items-center gap-2 h-10 pl-3.5 pr-4 rounded-full bg-orange-600 text-white shadow-lg hover:bg-orange-700 transition-colors"
+        className="flex items-center gap-1.5 h-8 pl-2.5 pr-3 rounded-full bg-orange-600 text-white shadow-sm hover:bg-orange-700 transition-colors"
         title="Ver y gestionar recordatorios"
       >
-        <Bell size={17} />
+        <Bell size={15} />
         <span className="text-sm font-semibold">Recordatorios</span>
         {badge > 0 && (
-          <span className="min-w-[20px] h-5 px-1 rounded-full bg-white text-orange-700 text-xs font-bold flex items-center justify-center">
+          <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-white text-orange-700 text-[11px] font-bold flex items-center justify-center">
             {badge}
           </span>
         )}
@@ -177,7 +177,7 @@ export function RecordatorioBell({ defaultUsuario }: { defaultUsuario?: string }
       {abierto && (
         <div
           ref={panelRef}
-          className="fixed top-16 right-4 z-40 w-80 max-h-[75vh] overflow-y-auto rounded-xl bg-white border border-gray-200 shadow-xl"
+          className="fixed top-12 right-4 z-50 w-80 max-h-[75vh] overflow-y-auto rounded-xl bg-white border border-gray-200 shadow-xl"
         >
           <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-100 sticky top-0 bg-white">
             <h3 className="text-sm font-semibold text-gray-800">Recordatorios</h3>
