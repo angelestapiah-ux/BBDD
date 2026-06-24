@@ -143,6 +143,33 @@ export interface Cuota {
 
 export type CuotaInsert = Omit<Cuota, 'id' | 'created_at' | 'updated_at'>
 
+// Sesión de terapia agendada (Fase 1A). El cobro vive en pago_id/cuota_id.
+export interface Sesion {
+  id: string
+  cliente_id: string
+  terapeuta_nombre: string | null
+  terapeuta_correo: string | null
+  fecha_hora: string
+  duracion_min: number | null
+  valor: number | null
+  estado: 'agendada' | 'realizada' | 'cancelada'
+  pago_id: string | null
+  cuota_id: string | null
+  google_event_id: string | null
+  notas: string | null
+  created_at: string
+  updated_at: string
+}
+
+// Terapeuta preguardado (autocompletar correo + tarifa al agendar)
+export interface Terapeuta {
+  correo: string
+  nombre: string | null
+  tarifa_default: number | null
+  created_at: string
+  updated_at: string
+}
+
 // Una cuota tal como la arma el formulario de pago (antes de existir en BD)
 export interface CuotaInput {
   numero_cuota: number
