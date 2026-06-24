@@ -61,9 +61,13 @@ function parseFecha(v: unknown): string {
   return isNaN(d.getTime()) ? '' : d.toISOString()
 }
 
-type ClienteRow = { id: string; nombre: string | null; correo: string | null; telefono: string | null; documento_identidad: string | null }
+type ClienteRow = {
+  id: string; nombre: string | null; correo: string | null; correo2: string | null
+  telefono: string | null; telefono2: string | null; documento_identidad: string | null
+}
 
 type IndiceClientes = {
+  idsValidos: Set<string>
   porCorreo: Map<string, string>
   porTel: Map<string, string>
   porDoc: Map<string, string>
@@ -73,19 +77,23 @@ type IndiceClientes = {
 // Carga TODOS los clientes una sola vez (paginado) y arma índices en memoria.
 async function cargarIndice(supabase: SupabaseClient): Promise<IndiceClientes> {
   const idx: IndiceClientes = {
+    idsValidos: new Set(),
     porCorreo: new Map(), porTel: new Map(), porDoc: new Map(), porNombre: new Map(),
   }
   const PAGE = 1000
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await supabase
       .from('clientes')
-      .select('id, nombre, correo, telefono, documento_identidad')
+      .select('id, nombre, correo, correo2, telefono, telefono2, documento_identidad')
       .range(from, from + PAGE - 1)
     if (error) throw new Error(`Clientes: ${error.message}`)
     const rows = (data ?? []) as ClienteRow[]
     for (const r of rows) {
+      idx.idsValidos.add(r.id)
       if (r.correo) idx.porCorreo.set(r.correo.toLowerCase().trim(), r.id)
+      if (r.correo2) idx.porCorreo.set(r.correo2.toLowerCase().trim(), r.id)
       if (r.telefono) { const t = r.telefono.replace(/\D/g, ''); if (t) idx.porTel.set(t, r.id) }
+      if (r.telefono2) { const t = r.telefono2.replace(/\D/g, ''); if (t) idx.porTel.set(t, r.id) }
       if (r.documento_identidad) idx.porDoc.set(r.documento_identidad.trim(), r.id)
       if (r.nombre) idx.porNombre.set(r.nombre.toLowerCase().trim(), r.id)
     }
@@ -148,6 +156,7 @@ export async function POST(req: NextRequest) {
     let encontrados = 0
     let noEncontrados = 0
     let fechaHoy = 0
+    let idsObsoletos = 0
     const porCanal = { correo: 0, whatsapp: 0, llamada: 0 }
     const problemas: string[] = []
     const noEncontradosLista: string[] = []
@@ -160,14 +169,23 @@ export async function POST(req: NextRequest) {
       if (!nombre && !clienteId) continue // fila vacía
       filas++
 
+      const correo = cols.correo !== undefined ? String(row[cols.correo] ?? '').trim() : ''
+      const tel = cols.telefono !== undefined ? String(row[cols.telefono] ?? '').trim() : ''
+      const doc = cols.documento !== undefined ? String(row[cols.documento] ?? '').trim() : ''
+
+      // Si el cliente_id de la planilla ya NO existe (cliente fusionado/eliminado),
+      // lo descartamos y reintentamos calzar por correo/teléfono/documento/nombre.
+      if (clienteId && !idx.idsValidos.has(clienteId)) {
+        idsObsoletos++
+        clienteId = ''
+      }
+
       if (!clienteId) {
-        const correo = cols.correo !== undefined ? String(row[cols.correo] ?? '').trim() : ''
-        const tel = cols.telefono !== undefined ? String(row[cols.telefono] ?? '').trim() : ''
-        const doc = cols.documento !== undefined ? String(row[cols.documento] ?? '').trim() : ''
         const found = resolverCliente(idx, nombre, doc, correo, tel)
         if (found) clienteId = found
       }
-      if (!clienteId) {
+      // Salvaguarda final: nunca insertar un cliente_id que no exista (evita el error de llave foránea).
+      if (!clienteId || !idx.idsValidos.has(clienteId)) {
         noEncontrados++
         noEncontradosLista.push(nombre || `(fila ${i + 1})`)
         continue
@@ -202,6 +220,10 @@ export async function POST(req: NextRequest) {
           actividad_nombre: actividad,
         })
       }
+    }
+
+    if (idsObsoletos > 0) {
+      problemas.unshift(`${idsObsoletos} fila(s) traían un cliente_id antiguo (cliente fusionado o eliminado); se recalzaron por correo/teléfono/nombre o se omitieron.`)
     }
 
     const resumen = { filas, encontrados, noEncontrados, seguimientos: inserts.length, porCanal, fechaHoy }
