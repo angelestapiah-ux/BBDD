@@ -201,6 +201,8 @@ function SesionDialog({ open, onOpenChange, onSaved, sesion, inicial }: {
   const [valor, setValor] = useState('')
   const [notas, setNotas] = useState('')
   const [estado, setEstado] = useState('agendada')
+  const [repetir, setRepetir] = useState('no')
+  const [repeticiones, setRepeticiones] = useState('4')
 
   const [terapeutas, setTerapeutas] = useState<TerapeutaLite[]>([])
   const [saving, setSaving] = useState(false)
@@ -227,9 +229,11 @@ function SesionDialog({ open, onOpenChange, onSaved, sesion, inicial }: {
       setNotas(sesion.notas ?? '')
       setEstado(sesion.estado || 'agendada')
       setDuracion(sesion.duracion_min ? String(sesion.duracion_min) : '60')
+      setRepetir('no'); setRepeticiones('4')
     } else {
       setCliente(null); setBusqueda(''); setResultados([])
       setFecha(inicial?.fecha ?? ''); setHora(inicial?.hora ?? ''); setDuracion('60'); setTerapeutaCorreo(''); setTerapeutaNombre(''); setValor(''); setNotas(''); setEstado('agendada')
+      setRepetir('no'); setRepeticiones('4')
     }
   }, [open, sesion, inicial])
 
@@ -284,13 +288,21 @@ function SesionDialog({ open, onOpenChange, onSaved, sesion, inicial }: {
       notas,
       estado,
       duracion_min: Number(duracion) || 60,
+      repetir: editMode ? 'no' : repetir,
+      repeticiones: Number(repeticiones) || 1,
     }
     const res = editMode
       ? await fetch(`/api/sesiones/${sesion!.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
       : await fetch('/api/sesiones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
     setSaving(false)
     if (res.ok) {
-      toast.success(editMode ? 'Sesión actualizada' : 'Sesión agendada · cobro generado en Cobranza')
+      if (editMode) {
+        toast.success('Sesión actualizada')
+      } else {
+        const data = await res.json().catch(() => ({} as { creadas?: number }))
+        const n = data?.creadas || 1
+        toast.success(n > 1 ? `${n} sesiones agendadas · cobros en Cobranza` : 'Sesión agendada · cobro generado en Cobranza')
+      }
       onOpenChange(false); onSaved()
     } else {
       const err = await res.json().catch(() => ({}))
@@ -439,6 +451,32 @@ function SesionDialog({ open, onOpenChange, onSaved, sesion, inicial }: {
             <Label>Notas</Label>
             <Textarea rows={2} value={notas} onChange={e => setNotas(e.target.value)} />
           </div>
+
+          {/* Repetir (solo al agendar) */}
+          {!editMode && (
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Repetir</Label>
+                <select
+                  value={repetir}
+                  onChange={e => setRepetir(e.target.value)}
+                  className="w-full h-10 rounded-md border border-gray-200 px-3 text-sm"
+                >
+                  <option value="no">No repetir</option>
+                  <option value="semanal">Cada semana</option>
+                  <option value="quincenal">Cada 2 semanas</option>
+                  <option value="mensual">Cada mes</option>
+                </select>
+              </div>
+              {repetir !== 'no' && (
+                <div>
+                  <Label>N° de sesiones</Label>
+                  <Input type="number" min={2} max={52} value={repeticiones} onChange={e => setRepeticiones(e.target.value)} />
+                  <p className="text-xs text-gray-400 mt-0.5">Cada una con su cobro</p>
+                </div>
+              )}
+            </div>
+          )}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
