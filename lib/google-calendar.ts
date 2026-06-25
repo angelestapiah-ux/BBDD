@@ -155,6 +155,9 @@ export async function eliminarEvento(eventId: string): Promise<void> {
 interface GCalEvent {
   id?: string
   summary?: string
+  description?: string
+  htmlLink?: string
+  location?: string
   start?: { dateTime?: string; date?: string }
   end?: { dateTime?: string; date?: string }
 }
@@ -162,6 +165,9 @@ interface GCalEvent {
 export interface EventoLista {
   id: string
   titulo: string
+  descripcion: string | null
+  htmlLink: string | null
+  ubicacion: string | null
   inicio: string | null
   fin: string | null
   allDay: boolean
@@ -186,6 +192,9 @@ export async function listarEventos(timeMinISO: string, timeMaxISO: string): Pro
   return items.map(ev => ({
     id: ev.id ?? '',
     titulo: ev.summary ?? '(sin título)',
+    descripcion: ev.description ?? null,
+    htmlLink: ev.htmlLink ?? null,
+    ubicacion: ev.location ?? null,
     inicio: ev.start?.dateTime ?? ev.start?.date ?? null,
     fin: ev.end?.dateTime ?? ev.end?.date ?? null,
     allDay: !ev.start?.dateTime,

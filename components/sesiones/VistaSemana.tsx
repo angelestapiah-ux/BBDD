@@ -1,11 +1,14 @@
 'use client'
 
 import { useEffect, useState, useCallback, MouseEvent as ReactMouseEvent } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 
 interface EventoLista {
   id: string
   titulo: string
+  descripcion: string | null
+  htmlLink: string | null
+  ubicacion: string | null
   inicio: string | null
   fin: string | null
   allDay: boolean
@@ -26,11 +29,21 @@ function lunesDe(d: Date): Date {
 function pad(n: number) { return String(n).padStart(2, '0') }
 function ymd(d: Date) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` }
 function fmtDiaMes(d: Date) { return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}` }
+function hhmm(iso: string | null) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+function fechaLarga(iso: string | null) {
+  if (!iso) return ''
+  return new Date(iso).toLocaleDateString('es-CL', { weekday: 'long', day: '2-digit', month: 'long' })
+}
 
 export function VistaSemana({ onAgendar, refreshKey }: { onAgendar: (fecha: string, hora: string) => void; refreshKey?: number }) {
   const [lunes, setLunes] = useState<Date>(() => lunesDe(new Date()))
   const [eventos, setEventos] = useState<EventoLista[]>([])
   const [cargando, setCargando] = useState(true)
+  const [sel, setSel] = useState<EventoLista | null>(null)
 
   const dias = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(lunes); d.setDate(lunes.getDate() + i); return d
@@ -112,7 +125,12 @@ export function VistaSemana({ onAgendar, refreshKey }: { onAgendar: (fecha: stri
                 {eventosDelDia(ymd(dia)).map(ev => {
                   const b = bloque(ev)
                   return (
-                    <div key={ev.id} className={`absolute left-0.5 right-0.5 rounded border px-1 overflow-hidden pointer-events-none ${b.color}`} style={{ top: b.top, height: b.height }}>
+                    <div
+                      key={ev.id}
+                      onClick={(ev2) => { ev2.stopPropagation(); setSel(ev) }}
+                      className={`absolute left-0.5 right-0.5 rounded border px-1 overflow-hidden cursor-pointer hover:brightness-95 ${b.color}`}
+                      style={{ top: b.top, height: b.height }}
+                    >
                       <div className="text-[10px] font-medium leading-tight truncate">{b.hora} {ev.titulo}</div>
                     </div>
                   )
@@ -123,7 +141,26 @@ export function VistaSemana({ onAgendar, refreshKey }: { onAgendar: (fecha: stri
         </div>
       </div>
       {cargando && <p className="text-xs text-gray-400 mt-2">Cargando calendario...</p>}
-      <p className="text-xs text-gray-400 mt-2">Haz clic en un horario libre para agendar ahí.</p>
+      <p className="text-xs text-gray-400 mt-2">Haz clic en una cita para ver el detalle, o en un horario libre para agendar.</p>
+
+      {sel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setSel(null)}>
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-semibold text-gray-800 leading-snug">{sel.titulo}</h3>
+              <button onClick={() => setSel(null)} className="text-gray-400 hover:text-gray-600 shrink-0"><X className="h-4 w-4" /></button>
+            </div>
+            <p className="text-sm text-gray-600 mt-1 capitalize">{fechaLarga(sel.inicio)} · {hhmm(sel.inicio)}–{hhmm(sel.fin)}</p>
+            {sel.ubicacion && <p className="text-sm text-gray-500 mt-1">📍 {sel.ubicacion}</p>}
+            {sel.descripcion && <p className="text-sm text-gray-500 mt-2 whitespace-pre-line">{sel.descripcion}</p>}
+            {sel.htmlLink && (
+              <a href={sel.htmlLink} target="_blank" rel="noopener noreferrer" className="inline-block mt-3 text-sm font-medium text-orange-600 hover:underline">
+                Ver en Google Calendar →
+              </a>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
