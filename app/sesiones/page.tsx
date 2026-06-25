@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CalendarClock, Plus, Search, X } from 'lucide-react'
-import { getSupabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 
 interface SesionRow {
@@ -122,31 +121,23 @@ function AgendarSesionDialog({ open, onOpenChange, onSaved }: { open: boolean; o
   const [notas, setNotas] = useState('')
 
   const [terapeutas, setTerapeutas] = useState<TerapeutaLite[]>([])
-  const [terapeutasClientes, setTerapeutasClientes] = useState<{ correo: string; nombre: string }[]>([])
   const [saving, setSaving] = useState(false)
 
-  // Cargar terapeutas preguardados + terapeutas registrados como clientes
+  // Cargar terapeutas (preguardados + registrados como clientes), todo server-side
   useEffect(() => {
     if (!open) return
     fetch('/api/terapeutas').then(r => r.json()).then(d => setTerapeutas(Array.isArray(d) ? d : [])).catch(() => {})
-    ;(async () => {
-      const sb = getSupabase()
-      const { data } = await sb.from('clientes').select('correo, nombre').eq('es_terapeuta', true).not('correo', 'is', null)
-      setTerapeutasClientes((data as { correo: string; nombre: string }[]) ?? [])
-    })()
   }, [open])
 
-  // Buscar pacientes/clientes por nombre
+  // Buscar pacientes/clientes por nombre (server-side, evita la RLS del navegador)
   useEffect(() => {
     if (cliente) return
     if (busqueda.trim().length < 2) { setResultados([]); return }
     let cancel = false
     const t = setTimeout(async () => {
-      const sb = getSupabase()
-      const { data } = await sb.from('clientes')
-        .select('id, nombre, correo, telefono, tipos_cliente, terapeuta, modalidad_paciente')
-        .ilike('nombre', `%${busqueda.trim()}%`).order('nombre').limit(8)
-      if (!cancel) setResultados((data as ClienteLite[]) ?? [])
+      const res = await fetch(`/api/clientes-buscar?q=${encodeURIComponent(busqueda.trim())}`)
+      const data = await res.json().catch(() => [])
+      if (!cancel) setResultados(Array.isArray(data) ? (data as ClienteLite[]) : [])
     }, 250)
     return () => { cancel = true; clearTimeout(t) }
   }, [busqueda, cliente])
@@ -165,9 +156,6 @@ function AgendarSesionDialog({ open, onOpenChange, onSaved }: { open: boolean; o
     if (pre) {
       if (pre.nombre) setTerapeutaNombre(pre.nombre)
       if (pre.tarifa_default != null && !valor) setValor(String(pre.tarifa_default))
-    } else {
-      const cl = terapeutasClientes.find(t => t.correo === correo)
-      if (cl?.nombre && !terapeutaNombre) setTerapeutaNombre(cl.nombre)
     }
   }
 
@@ -204,10 +192,7 @@ function AgendarSesionDialog({ open, onOpenChange, onSaved }: { open: boolean; o
   }
 
   // Correos sugeridos: preguardados + terapeutas registrados como clientes (sin repetir)
-  const correosSugeridos = Array.from(new Set([
-    ...terapeutas.map(t => t.correo),
-    ...terapeutasClientes.map(t => t.correo),
-  ].filter(Boolean)))
+  const correosSugeridos = Array.from(new Set(terapeutas.map(t => t.correo).filter(Boolean)))
 
   const esPaciente = cliente?.tipos_cliente?.includes('Paciente')
 
