@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { requireEscritura } from '@/lib/permisos-server'
 import { auditar } from '@/lib/auditoria'
+import { crearEvento, estaConectado } from '@/lib/google-calendar'
 
 // GET: lista de sesiones (próximas primero), con datos del cliente.
 export async function GET(req: NextRequest) {
@@ -126,6 +127,36 @@ export async function POST(req: NextRequest) {
         },
         { onConflict: 'correo' }
       )
+  }
+
+  // Crear el evento en Google Calendar e invitar al terapeuta (best-effort:
+  // si Google falla o no está conectado, la sesión igual queda agendada).
+  try {
+    const { conectado } = await estaConectado()
+    if (conectado && fechaHora) {
+      const { data: cli } = await supabase.from('clientes').select('nombre').eq('id', clienteId).single()
+      const paciente = (cli?.nombre as string) || 'Paciente'
+      const inicio = new Date(fechaHora)
+      const fin = new Date(inicio.getTime() + duracionMin * 60000)
+      const desc = [
+        `Paciente: ${paciente}`,
+        terapeutaNombre ? `Terapeuta: ${terapeutaNombre}` : '',
+        valor > 0 ? `Valor: $${valor.toLocaleString('es-CL')}` : '',
+        notas,
+        '',
+        '(Agendado desde Renovapp CRM)',
+      ].filter(Boolean).join('\n')
+      const eventId = await crearEvento({
+        titulo: `Sesión: ${paciente}`,
+        descripcion: desc,
+        inicioISO: inicio.toISOString(),
+        finISO: fin.toISOString(),
+        invitado: terapeutaCorreo || null,
+      })
+      if (eventId) await supabase.from('sesiones').update({ google_event_id: eventId }).eq('id', sesion.id)
+    }
+  } catch (e) {
+    console.error('google event create:', e)
   }
 
   auditar('crear', 'sesiones', sesion.id, `Sesión ${terapeutaNombre || 'terapia'} · ${fechaDia}`)

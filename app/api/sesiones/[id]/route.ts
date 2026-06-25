@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { requireEscritura } from '@/lib/permisos-server'
 import { auditar } from '@/lib/auditoria'
+import { crearEvento, actualizarEvento, eliminarEvento, estaConectado } from '@/lib/google-calendar'
 
 // PATCH: edita una sesión agendada y sincroniza su cobro (cuota/pago):
 //  - reprograma fecha/hora, terapeuta, valor, notas, estado
@@ -27,7 +28,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   // Sesión actual (para sus enlaces de cobro)
   const { data: actual, error: eGet } = await supabase
     .from('sesiones')
-    .select('id, cliente_id, pago_id, cuota_id')
+    .select('id, cliente_id, pago_id, cuota_id, google_event_id')
     .eq('id', id)
     .single()
   if (eGet) return NextResponse.json({ error: eGet.message }, { status: 500 })
@@ -93,6 +94,48 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       { correo: terapeutaCorreo, nombre: terapeutaNombre || null, tarifa_default: valor > 0 ? valor : null },
       { onConflict: 'correo' }
     )
+  }
+
+  // Sincronizar el evento de Google Calendar (best-effort)
+  try {
+    const { conectado } = await estaConectado()
+    if (conectado) {
+      const eventId = actual.google_event_id as string | null
+      if (estado === 'cancelada') {
+        if (eventId) {
+          await eliminarEvento(eventId)
+          await supabase.from('sesiones').update({ google_event_id: null }).eq('id', id)
+        }
+      } else if (fechaHora) {
+        const { data: cli } = await supabase.from('clientes').select('nombre').eq('id', actual.cliente_id).single()
+        const paciente = (cli?.nombre as string) || 'Paciente'
+        const inicio = new Date(fechaHora)
+        const fin = new Date(inicio.getTime() + 60 * 60000)
+        const desc = [
+          `Paciente: ${paciente}`,
+          terapeutaNombre ? `Terapeuta: ${terapeutaNombre}` : '',
+          valor > 0 ? `Valor: $${valor.toLocaleString('es-CL')}` : '',
+          notas,
+          '',
+          '(Agendado desde Renovapp CRM)',
+        ].filter(Boolean).join('\n')
+        const evt = {
+          titulo: `Sesión: ${paciente}`,
+          descripcion: desc,
+          inicioISO: inicio.toISOString(),
+          finISO: fin.toISOString(),
+          invitado: terapeutaCorreo || null,
+        }
+        if (eventId) {
+          await actualizarEvento(eventId, evt)
+        } else {
+          const newId = await crearEvento(evt)
+          if (newId) await supabase.from('sesiones').update({ google_event_id: newId }).eq('id', id)
+        }
+      }
+    }
+  } catch (e) {
+    console.error('google event patch:', e)
   }
 
   auditar('editar', 'sesiones', id, `Sesión ${terapeutaNombre || 'terapia'} · ${estado}`)
