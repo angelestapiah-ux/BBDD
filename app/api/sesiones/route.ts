@@ -134,14 +134,13 @@ export async function POST(req: NextRequest) {
   try {
     const { conectado } = await estaConectado()
     if (conectado && fechaHora) {
-      const { data: cli } = await supabase.from('clientes').select('nombre').eq('id', clienteId).single()
+      const { data: cli } = await supabase.from('clientes').select('nombre, correo').eq('id', clienteId).single()
       const paciente = (cli?.nombre as string) || 'Paciente'
+      const pacienteCorreo = (cli?.correo as string) || null
       const inicio = new Date(fechaHora)
       const fin = new Date(inicio.getTime() + duracionMin * 60000)
       const desc = [
-        `Paciente: ${paciente}`,
-        terapeutaNombre ? `Terapeuta: ${terapeutaNombre}` : '',
-        valor > 0 ? `Valor: $${valor.toLocaleString('es-CL')}` : '',
+        terapeutaNombre ? `Terapeuta: ${terapeutaNombre}` : 'Sesión de terapia',
         notas,
         '',
         '(Agendado desde Renovapp CRM)',
@@ -151,7 +150,7 @@ export async function POST(req: NextRequest) {
         descripcion: desc,
         inicioISO: inicio.toISOString(),
         finISO: fin.toISOString(),
-        invitado: terapeutaCorreo || null,
+        invitados: [terapeutaCorreo || null, pacienteCorreo],
       })
       if (eventId) await supabase.from('sesiones').update({ google_event_id: eventId }).eq('id', sesion.id)
     }

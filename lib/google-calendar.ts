@@ -87,8 +87,9 @@ export interface EventoInput {
   descripcion?: string
   inicioISO: string
   finISO: string
-  invitado?: string | null
+  invitados?: (string | null | undefined)[]
   recurrence?: string[] | null
+  colorId?: string
 }
 
 function buildBody(e: EventoInput): Record<string, unknown> {
@@ -98,9 +99,23 @@ function buildBody(e: EventoInput): Record<string, unknown> {
     end: { dateTime: e.finISO },
   }
   if (e.descripcion) body.description = e.descripcion
-  if (e.invitado) body.attendees = [{ email: e.invitado }]
+  const att = (e.invitados ?? []).filter((x): x is string => !!x)
+  if (att.length) body.attendees = att.map(email => ({ email }))
   if (e.recurrence && e.recurrence.length) body.recurrence = e.recurrence
+  if (e.colorId) body.colorId = e.colorId
   return body
+}
+
+// Marca un evento existente (cambia título + color) SIN borrarlo ni mover hora/invitados.
+// Se usa para 'anulada' / 'reagendada': deja el rastro visible en el calendario.
+export async function marcarEvento(eventId: string, titulo: string, colorId: string): Promise<void> {
+  const token = await getAccessToken()
+  const res = await fetch(eventsUrl(`/${encodeURIComponent(eventId)}?sendUpdates=all`), {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ summary: titulo, colorId }),
+  })
+  if (!res.ok) throw new Error(`marcar evento: ${await res.text()}`)
 }
 
 function eventsUrl(extra = ''): string {

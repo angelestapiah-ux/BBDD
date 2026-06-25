@@ -17,6 +17,7 @@ interface SesionRow {
   terapeuta_nombre: string | null
   terapeuta_correo: string | null
   valor: number | null
+  duracion_min: number | null
   estado: string
   notas: string | null
   clientes?: { nombre: string; correo: string | null; telefono: string | null } | null
@@ -40,6 +41,14 @@ const HORAS = Array.from({ length: 48 }, (_, i) => {
   const m = i % 2 ? '30' : '00'
   return `${h}:${m}`
 })
+
+const DURACIONES = [
+  { min: '30', label: '30 min' },
+  { min: '45', label: '45 min' },
+  { min: '60', label: '1 hora' },
+  { min: '90', label: '1 hora 30 min' },
+  { min: '120', label: '2 horas' },
+]
 
 function pad(n: number) { return String(n).padStart(2, '0') }
 function isoToLocalParts(iso: string) {
@@ -141,6 +150,8 @@ export default function SesionesPage() {
                 <span className={`text-xs font-medium rounded-full px-2 py-0.5 ${
                   s.estado === 'realizada' ? 'bg-green-100 text-green-700'
                   : s.estado === 'cancelada' ? 'bg-gray-100 text-gray-500'
+                  : s.estado === 'anulada' ? 'bg-red-100 text-red-700'
+                  : s.estado === 'reagendada' ? 'bg-amber-100 text-amber-700'
                   : 'bg-orange-100 text-orange-700'
                 }`}>{s.estado}</span>
                 <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-500 hover:text-orange-700" onClick={() => abrirEditar(s)}>
@@ -171,6 +182,7 @@ function SesionDialog({ open, onOpenChange, onSaved, sesion }: {
 
   const [fecha, setFecha] = useState('')
   const [hora, setHora] = useState('')
+  const [duracion, setDuracion] = useState('60')
   const [terapeutaCorreo, setTerapeutaCorreo] = useState('')
   const [terapeutaNombre, setTerapeutaNombre] = useState('')
   const [valor, setValor] = useState('')
@@ -201,9 +213,10 @@ function SesionDialog({ open, onOpenChange, onSaved, sesion }: {
       setValor(sesion.valor != null ? String(sesion.valor) : '')
       setNotas(sesion.notas ?? '')
       setEstado(sesion.estado || 'agendada')
+      setDuracion(sesion.duracion_min ? String(sesion.duracion_min) : '60')
     } else {
       setCliente(null); setBusqueda(''); setResultados([])
-      setFecha(''); setHora(''); setTerapeutaCorreo(''); setTerapeutaNombre(''); setValor(''); setNotas(''); setEstado('agendada')
+      setFecha(''); setHora(''); setDuracion('60'); setTerapeutaCorreo(''); setTerapeutaNombre(''); setValor(''); setNotas(''); setEstado('agendada')
     }
   }, [open, sesion])
 
@@ -257,6 +270,7 @@ function SesionDialog({ open, onOpenChange, onSaved, sesion }: {
       valor,
       notas,
       estado,
+      duracion_min: Number(duracion) || 60,
     }
     const res = editMode
       ? await fetch(`/api/sesiones/${sesion!.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
@@ -348,6 +362,18 @@ function SesionDialog({ open, onOpenChange, onSaved, sesion }: {
             </div>
           </div>
 
+          {/* Duración */}
+          <div>
+            <Label>Duración</Label>
+            <select
+              value={duracion}
+              onChange={e => setDuracion(e.target.value)}
+              className="w-full h-10 rounded-md border border-gray-200 px-3 text-sm"
+            >
+              {DURACIONES.map(d => <option key={d.min} value={d.min}>{d.label}</option>)}
+            </select>
+          </div>
+
           {/* Terapeuta */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -388,7 +414,9 @@ function SesionDialog({ open, onOpenChange, onSaved, sesion }: {
               >
                 <option value="agendada">Agendada</option>
                 <option value="realizada">Realizada</option>
-                <option value="cancelada">Cancelada (retira el cobro pendiente)</option>
+                <option value="cancelada">Cancelada (elimina el evento y el cobro)</option>
+                <option value="anulada">Anulada (marca el evento, retira el cobro)</option>
+                <option value="reagendada">Reagendada (marca el evento, retira el cobro)</option>
               </select>
             </div>
           )}
