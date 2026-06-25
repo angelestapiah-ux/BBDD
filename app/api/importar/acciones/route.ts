@@ -238,7 +238,46 @@ export async function POST(req: NextRequest) {
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })
       registrados = inserts.length
     }
-    return NextResponse.json({ ok: true, preview: false, registrados, resumen, problemas, noEncontradosLista })
+
+    // Funnel: al registrar el contacto masivo, mover las oportunidades de
+    // 'nuevo' a 'contactado' (baja el indicador de "nunca contactados").
+    // Best-effort: nunca debe frenar el registro de seguimientos.
+    let funnelContactados = 0
+    try {
+      const porActividad = new Map<string, Set<string>>()
+      const sinActividad = new Set<string>()
+      for (const s of inserts) {
+        if (s.actividad_nombre) {
+          if (!porActividad.has(s.actividad_nombre)) porActividad.set(s.actividad_nombre, new Set())
+          porActividad.get(s.actividad_nombre)!.add(s.cliente_id)
+        } else {
+          sinActividad.add(s.cliente_id)
+        }
+      }
+      for (const [act, ids] of porActividad) {
+        const { data } = await supabase
+          .from('oportunidades')
+          .update({ etapa: 'contactado' })
+          .eq('actividad_nombre', act)
+          .in('cliente_id', Array.from(ids))
+          .eq('etapa', 'nuevo')
+          .select('id')
+        funnelContactados += data?.length ?? 0
+      }
+      if (sinActividad.size > 0) {
+        const { data } = await supabase
+          .from('oportunidades')
+          .update({ etapa: 'contactado' })
+          .in('cliente_id', Array.from(sinActividad))
+          .eq('etapa', 'nuevo')
+          .select('id')
+        funnelContactados += data?.length ?? 0
+      }
+    } catch {
+      // el funnel es un extra; si algo falla, el registro masivo igual queda hecho
+    }
+
+    return NextResponse.json({ ok: true, preview: false, registrados, funnelContactados, resumen, problemas, noEncontradosLista })
   } catch (e) {
     console.error('importar/acciones error:', e)
     const msg = e instanceof Error ? e.message : 'Error al procesar la planilla'
