@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CalendarClock, Plus, Search, X, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
+import { VistaSemana } from '@/components/sesiones/VistaSemana'
 
 interface SesionRow {
   id: string
@@ -75,6 +76,9 @@ export default function SesionesPage() {
   const [open, setOpen] = useState(false)
   const [editando, setEditando] = useState<SesionRow | null>(null)
   const [googleConectado, setGoogleConectado] = useState<boolean | null>(null)
+  const [vista, setVista] = useState<'lista' | 'semana'>('lista')
+  const [inicialSlot, setInicialSlot] = useState<{ fecha: string; hora: string } | null>(null)
+  const [recargaSemana, setRecargaSemana] = useState(0)
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -97,8 +101,10 @@ export default function SesionesPage() {
     if (g) window.history.replaceState({}, '', '/sesiones')
   }, [])
 
-  function abrirNueva() { setEditando(null); setOpen(true) }
-  function abrirEditar(s: SesionRow) { setEditando(s); setOpen(true) }
+  function abrirNueva() { setEditando(null); setInicialSlot(null); setOpen(true) }
+  function abrirEditar(s: SesionRow) { setEditando(s); setInicialSlot(null); setOpen(true) }
+  function abrirSlot(fecha: string, hora: string) { setEditando(null); setInicialSlot({ fecha, hora }); setOpen(true) }
+  function alGuardar() { cargar(); setRecargaSemana(r => r + 1) }
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -108,6 +114,10 @@ export default function SesionesPage() {
           <h1 className="text-2xl font-bold text-gray-800">Sesiones</h1>
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
+            <button onClick={() => setVista('lista')} className={`px-3 py-1.5 ${vista === 'lista' ? 'bg-orange-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>Lista</button>
+            <button onClick={() => setVista('semana')} className={`px-3 py-1.5 ${vista === 'semana' ? 'bg-orange-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}>Semana</button>
+          </div>
           {googleConectado === false && (
             <a href="/api/google/auth" className="text-xs font-medium px-3 py-2 rounded-lg border border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-700">
               Conectar Google
@@ -126,7 +136,9 @@ export default function SesionesPage() {
         Al agendar, el paciente queda al día como <span className="font-medium">Paciente</span> y se genera el cobro por pagar en <span className="font-medium">Cobranza</span>.
       </p>
 
-      {loading ? (
+      {vista === 'semana' ? (
+        <VistaSemana onAgendar={abrirSlot} refreshKey={recargaSemana} />
+      ) : loading ? (
         <p className="text-sm text-gray-400">Cargando...</p>
       ) : sesiones.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 p-8 text-center text-gray-400 text-sm">
@@ -163,16 +175,17 @@ export default function SesionesPage() {
         </ul>
       )}
 
-      <SesionDialog open={open} onOpenChange={setOpen} onSaved={cargar} sesion={editando} />
+      <SesionDialog open={open} onOpenChange={setOpen} onSaved={alGuardar} sesion={editando} inicial={inicialSlot} />
     </div>
   )
 }
 
-function SesionDialog({ open, onOpenChange, onSaved, sesion }: {
+function SesionDialog({ open, onOpenChange, onSaved, sesion, inicial }: {
   open: boolean
   onOpenChange: (v: boolean) => void
   onSaved: () => void
   sesion: SesionRow | null
+  inicial: { fecha: string; hora: string } | null
 }) {
   const editMode = !!sesion
 
@@ -216,9 +229,9 @@ function SesionDialog({ open, onOpenChange, onSaved, sesion }: {
       setDuracion(sesion.duracion_min ? String(sesion.duracion_min) : '60')
     } else {
       setCliente(null); setBusqueda(''); setResultados([])
-      setFecha(''); setHora(''); setDuracion('60'); setTerapeutaCorreo(''); setTerapeutaNombre(''); setValor(''); setNotas(''); setEstado('agendada')
+      setFecha(inicial?.fecha ?? ''); setHora(inicial?.hora ?? ''); setDuracion('60'); setTerapeutaCorreo(''); setTerapeutaNombre(''); setValor(''); setNotas(''); setEstado('agendada')
     }
-  }, [open, sesion])
+  }, [open, sesion, inicial])
 
   useEffect(() => {
     if (!open) return

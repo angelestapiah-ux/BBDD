@@ -151,3 +151,43 @@ export async function eliminarEvento(eventId: string): Promise<void> {
     headers: { Authorization: `Bearer ${token}` },
   })
 }
+
+interface GCalEvent {
+  id?: string
+  summary?: string
+  start?: { dateTime?: string; date?: string }
+  end?: { dateTime?: string; date?: string }
+}
+
+export interface EventoLista {
+  id: string
+  titulo: string
+  inicio: string | null
+  fin: string | null
+  allDay: boolean
+}
+
+// Lista los eventos del calendario entre dos fechas (para la vista de semana).
+export async function listarEventos(timeMinISO: string, timeMaxISO: string): Promise<EventoLista[]> {
+  const token = await getAccessToken()
+  const params = new URLSearchParams({
+    timeMin: timeMinISO,
+    timeMax: timeMaxISO,
+    singleEvents: 'true',
+    orderBy: 'startTime',
+    maxResults: '250',
+  })
+  const res = await fetch(eventsUrl(`?${params.toString()}`), {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error(`listar eventos: ${await res.text()}`)
+  const j = await res.json()
+  const items = (j.items ?? []) as GCalEvent[]
+  return items.map(ev => ({
+    id: ev.id ?? '',
+    titulo: ev.summary ?? '(sin título)',
+    inicio: ev.start?.dateTime ?? ev.start?.date ?? null,
+    fin: ev.end?.dateTime ?? ev.end?.date ?? null,
+    allDay: !ev.start?.dateTime,
+  }))
+}
