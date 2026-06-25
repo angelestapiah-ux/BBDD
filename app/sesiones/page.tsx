@@ -65,6 +65,7 @@ export default function SesionesPage() {
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [editando, setEditando] = useState<SesionRow | null>(null)
+  const [googleConectado, setGoogleConectado] = useState<boolean | null>(null)
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -76,6 +77,17 @@ export default function SesionesPage() {
   }, [])
   useEffect(() => { cargar() }, [cargar])
 
+  // Estado de conexión con Google Calendar + avisos de vuelta del consentimiento
+  useEffect(() => {
+    fetch('/api/google/estado').then(r => r.json()).then(d => setGoogleConectado(!!d?.conectado)).catch(() => setGoogleConectado(false))
+    const g = new URLSearchParams(window.location.search).get('google')
+    if (g === 'ok') toast.success('Google Calendar conectado')
+    else if (g === 'cuenta') toast.error('Conectaste una cuenta distinta a la del calendario')
+    else if (g === 'sintoken') toast.error('Google no entregó el permiso; reintenta')
+    else if (g === 'error') toast.error('Inténtalo nuevamente para conectar Google')
+    if (g) window.history.replaceState({}, '', '/sesiones')
+  }, [])
+
   function abrirNueva() { setEditando(null); setOpen(true) }
   function abrirEditar(s: SesionRow) { setEditando(s); setOpen(true) }
 
@@ -86,9 +98,19 @@ export default function SesionesPage() {
           <CalendarClock className="h-6 w-6 text-orange-600" />
           <h1 className="text-2xl font-bold text-gray-800">Sesiones</h1>
         </div>
-        <Button onClick={abrirNueva} className="bg-orange-600 hover:bg-orange-700">
-          <Plus className="h-4 w-4 mr-1" /> Agendar sesión
-        </Button>
+        <div className="flex items-center gap-2">
+          {googleConectado === false && (
+            <a href="/api/google/auth" className="text-xs font-medium px-3 py-2 rounded-lg border border-gray-200 text-gray-600 hover:border-orange-400 hover:text-orange-700">
+              Conectar Google
+            </a>
+          )}
+          {googleConectado && (
+            <span className="text-xs font-medium px-2 py-1 rounded-full bg-green-100 text-green-700">Calendar conectado</span>
+          )}
+          <Button onClick={abrirNueva} className="bg-orange-600 hover:bg-orange-700">
+            <Plus className="h-4 w-4 mr-1" /> Agendar sesión
+          </Button>
+        </div>
       </div>
 
       <p className="text-sm text-gray-500 mb-4">
