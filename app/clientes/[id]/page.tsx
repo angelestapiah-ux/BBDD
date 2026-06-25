@@ -395,9 +395,15 @@ export default function ClienteDetailPage() {
 
       {/* ─── Header ────────────────────────────────────────────────────── */}
       <div className="flex items-start gap-3 mb-6">
-        <Link href="/clientes" className="text-gray-400 hover:text-gray-600 mt-1">
+        <button
+          type="button"
+          onClick={() => { if (typeof window !== 'undefined' && window.history.length > 1) router.back(); else router.push('/clientes') }}
+          className="flex items-center gap-1 text-gray-400 hover:text-gray-600 mt-1"
+          title="Volver al lugar desde donde entraste"
+        >
           <ArrowLeft className="h-5 w-5" />
-        </Link>
+          <span className="text-sm font-medium">Volver</span>
+        </button>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
