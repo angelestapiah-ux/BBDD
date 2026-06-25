@@ -1,16 +1,18 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { CalendarClock, Plus, Search, X } from 'lucide-react'
+import { CalendarClock, Plus, Search, X, Pencil } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface SesionRow {
   id: string
+  cliente_id: string
   fecha_hora: string
   terapeuta_nombre: string | null
   terapeuta_correo: string | null
@@ -32,6 +34,21 @@ interface ClienteLite {
 
 interface TerapeutaLite { correo: string; nombre: string | null; tarifa_default: number | null }
 
+// Opciones de hora cada 30 minutos (00:00 … 23:30)
+const HORAS = Array.from({ length: 48 }, (_, i) => {
+  const h = String(Math.floor(i / 2)).padStart(2, '0')
+  const m = i % 2 ? '30' : '00'
+  return `${h}:${m}`
+})
+
+function pad(n: number) { return String(n).padStart(2, '0') }
+function isoToLocalParts(iso: string) {
+  const d = new Date(iso)
+  return {
+    fecha: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    hora: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  }
+}
 function fmtFechaHora(iso: string) {
   const d = new Date(iso)
   const fecha = d.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -47,6 +64,7 @@ export default function SesionesPage() {
   const [sesiones, setSesiones] = useState<SesionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
+  const [editando, setEditando] = useState<SesionRow | null>(null)
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -58,6 +76,9 @@ export default function SesionesPage() {
   }, [])
   useEffect(() => { cargar() }, [cargar])
 
+  function abrirNueva() { setEditando(null); setOpen(true) }
+  function abrirEditar(s: SesionRow) { setEditando(s); setOpen(true) }
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-5">
@@ -65,7 +86,7 @@ export default function SesionesPage() {
           <CalendarClock className="h-6 w-6 text-orange-600" />
           <h1 className="text-2xl font-bold text-gray-800">Sesiones</h1>
         </div>
-        <Button onClick={() => setOpen(true)} className="bg-orange-600 hover:bg-orange-700">
+        <Button onClick={abrirNueva} className="bg-orange-600 hover:bg-orange-700">
           <Plus className="h-4 w-4 mr-1" /> Agendar sesión
         </Button>
       </div>
@@ -85,7 +106,9 @@ export default function SesionesPage() {
           {sesiones.map(s => (
             <li key={s.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-100 bg-white px-4 py-3">
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-800 truncate">{s.clientes?.nombre ?? 'Paciente'}</p>
+                <Link href={`/clientes/${s.cliente_id}`} className="text-sm font-semibold text-gray-800 truncate hover:text-orange-700 hover:underline">
+                  {s.clientes?.nombre ?? 'Paciente'}
+                </Link>
                 <p className="text-xs text-gray-500">
                   {fmtFechaHora(s.fecha_hora)}
                   {s.terapeuta_nombre && ` · con ${s.terapeuta_nombre}`}
@@ -98,40 +121,78 @@ export default function SesionesPage() {
                   : s.estado === 'cancelada' ? 'bg-gray-100 text-gray-500'
                   : 'bg-orange-100 text-orange-700'
                 }`}>{s.estado}</span>
+                <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-500 hover:text-orange-700" onClick={() => abrirEditar(s)}>
+                  <Pencil className="h-3.5 w-3.5 mr-1" /> Editar
+                </Button>
               </div>
             </li>
           ))}
         </ul>
       )}
 
-      <AgendarSesionDialog open={open} onOpenChange={setOpen} onSaved={cargar} />
+      <SesionDialog open={open} onOpenChange={setOpen} onSaved={cargar} sesion={editando} />
     </div>
   )
 }
 
-function AgendarSesionDialog({ open, onOpenChange, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; onSaved: () => void }) {
+function SesionDialog({ open, onOpenChange, onSaved, sesion }: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  onSaved: () => void
+  sesion: SesionRow | null
+}) {
+  const editMode = !!sesion
+
   const [busqueda, setBusqueda] = useState('')
   const [resultados, setResultados] = useState<ClienteLite[]>([])
   const [cliente, setCliente] = useState<ClienteLite | null>(null)
 
-  const [fechaHora, setFechaHora] = useState('')
+  const [fecha, setFecha] = useState('')
+  const [hora, setHora] = useState('')
   const [terapeutaCorreo, setTerapeutaCorreo] = useState('')
   const [terapeutaNombre, setTerapeutaNombre] = useState('')
   const [valor, setValor] = useState('')
   const [notas, setNotas] = useState('')
+  const [estado, setEstado] = useState('agendada')
 
   const [terapeutas, setTerapeutas] = useState<TerapeutaLite[]>([])
   const [saving, setSaving] = useState(false)
 
-  // Cargar terapeutas (preguardados + registrados como clientes), todo server-side
+  // Prefill al abrir (modo crear = limpio, modo editar = datos de la sesión)
+  useEffect(() => {
+    if (!open) return
+    if (sesion) {
+      const { fecha: f, hora: h } = isoToLocalParts(sesion.fecha_hora)
+      setCliente({
+        id: sesion.cliente_id,
+        nombre: sesion.clientes?.nombre ?? 'Paciente',
+        correo: sesion.clientes?.correo ?? null,
+        telefono: sesion.clientes?.telefono ?? null,
+        tipos_cliente: ['Paciente'],
+        terapeuta: null,
+        modalidad_paciente: null,
+      })
+      setBusqueda(sesion.clientes?.nombre ?? '')
+      setFecha(f); setHora(h)
+      setTerapeutaCorreo(sesion.terapeuta_correo ?? '')
+      setTerapeutaNombre(sesion.terapeuta_nombre ?? '')
+      setValor(sesion.valor != null ? String(sesion.valor) : '')
+      setNotas(sesion.notas ?? '')
+      setEstado(sesion.estado || 'agendada')
+    } else {
+      setCliente(null); setBusqueda(''); setResultados([])
+      setFecha(''); setHora(''); setTerapeutaCorreo(''); setTerapeutaNombre(''); setValor(''); setNotas(''); setEstado('agendada')
+    }
+  }, [open, sesion])
+
   useEffect(() => {
     if (!open) return
     fetch('/api/terapeutas').then(r => r.json()).then(d => setTerapeutas(Array.isArray(d) ? d : [])).catch(() => {})
   }, [open])
 
-  // Buscar pacientes/clientes por nombre (server-side, evita la RLS del navegador)
+  // Buscar pacientes por nombre (solo en modo crear)
   useEffect(() => {
-    if (cliente) return
+    if (editMode || cliente) return
     if (busqueda.trim().length < 2) { setResultados([]); return }
     let cancel = false
     const t = setTimeout(async () => {
@@ -140,7 +201,7 @@ function AgendarSesionDialog({ open, onOpenChange, onSaved }: { open: boolean; o
       if (!cancel) setResultados(Array.isArray(data) ? (data as ClienteLite[]) : [])
     }, 250)
     return () => { cancel = true; clearTimeout(t) }
-  }, [busqueda, cliente])
+  }, [busqueda, cliente, editMode])
 
   function elegirCliente(c: ClienteLite) {
     setCliente(c); setBusqueda(c.nombre); setResultados([])
@@ -159,47 +220,42 @@ function AgendarSesionDialog({ open, onOpenChange, onSaved }: { open: boolean; o
     }
   }
 
-  function reset() {
-    setBusqueda(''); setResultados([]); setCliente(null)
-    setFechaHora(''); setTerapeutaCorreo(''); setTerapeutaNombre(''); setValor(''); setNotas('')
-  }
-
   async function guardar(e: React.FormEvent) {
     e.preventDefault()
     if (!cliente) { toast.error('Elige el paciente'); return }
-    if (!fechaHora) { toast.error('Indica la fecha y hora de la sesión'); return }
+    if (!fecha || !hora) { toast.error('Indica la fecha y la hora de la sesión'); return }
     setSaving(true)
-    const res = await fetch('/api/sesiones', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cliente_id: cliente.id,
-        fecha_hora: new Date(fechaHora).toISOString(),
-        fecha_dia: fechaHora.slice(0, 10),
-        terapeuta_nombre: terapeutaNombre,
-        terapeuta_correo: terapeutaCorreo,
-        valor,
-        notas,
-      }),
-    })
+    const fechaHoraLocal = `${fecha}T${hora}`
+    const payload = {
+      cliente_id: cliente.id,
+      fecha_hora: new Date(fechaHoraLocal).toISOString(),
+      fecha_dia: fecha,
+      terapeuta_nombre: terapeutaNombre,
+      terapeuta_correo: terapeutaCorreo,
+      valor,
+      notas,
+      estado,
+    }
+    const res = editMode
+      ? await fetch(`/api/sesiones/${sesion!.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      : await fetch('/api/sesiones', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
     setSaving(false)
     if (res.ok) {
-      toast.success('Sesión agendada · cobro generado en Cobranza')
-      reset(); onOpenChange(false); onSaved()
+      toast.success(editMode ? 'Sesión actualizada' : 'Sesión agendada · cobro generado en Cobranza')
+      onOpenChange(false); onSaved()
     } else {
       const err = await res.json().catch(() => ({}))
       toast.error(err.error || 'Inténtalo nuevamente')
     }
   }
 
-  // Correos sugeridos: preguardados + terapeutas registrados como clientes (sin repetir)
   const correosSugeridos = Array.from(new Set(terapeutas.map(t => t.correo).filter(Boolean)))
-
   const esPaciente = cliente?.tipos_cliente?.includes('Paciente')
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Agendar sesión</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{editMode ? 'Editar sesión' : 'Agendar sesión'}</DialogTitle></DialogHeader>
         <form onSubmit={guardar} className="space-y-4">
           {/* Paciente */}
           <div>
@@ -209,12 +265,14 @@ function AgendarSesionDialog({ open, onOpenChange, onSaved }: { open: boolean; o
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-800 truncate">{cliente.nombre}</p>
                   <p className="text-xs text-gray-500">
-                    {esPaciente ? 'Paciente' : 'Se marcará como Paciente al agendar'}
+                    {editMode ? 'Paciente' : (esPaciente ? 'Paciente' : 'Se marcará como Paciente al agendar')}
                   </p>
                 </div>
-                <button type="button" onClick={quitarCliente} className="text-gray-400 hover:text-gray-600 shrink-0">
-                  <X className="h-4 w-4" />
-                </button>
+                {!editMode && (
+                  <button type="button" onClick={quitarCliente} className="text-gray-400 hover:text-gray-600 shrink-0">
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             ) : (
               <div className="relative">
@@ -247,10 +305,25 @@ function AgendarSesionDialog({ open, onOpenChange, onSaved }: { open: boolean; o
             )}
           </div>
 
-          {/* Fecha y hora */}
-          <div>
-            <Label>Fecha y hora *</Label>
-            <Input type="datetime-local" value={fechaHora} onChange={e => setFechaHora(e.target.value)} />
+          {/* Fecha + Hora */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Fecha *</Label>
+              <Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} />
+            </div>
+            <div>
+              <Label>Hora *</Label>
+              <Input
+                list="horas-lista"
+                value={hora}
+                onChange={e => setHora(e.target.value)}
+                placeholder="HH:mm"
+              />
+              <datalist id="horas-lista">
+                {HORAS.map(h => <option key={h} value={h} />)}
+              </datalist>
+              <p className="text-xs text-gray-400 mt-0.5">Cada 30 min, o escríbela</p>
+            </div>
           </div>
 
           {/* Terapeuta */}
@@ -267,7 +340,7 @@ function AgendarSesionDialog({ open, onOpenChange, onSaved }: { open: boolean; o
               <datalist id="terapeutas-correos">
                 {correosSugeridos.map(c => <option key={c} value={c} />)}
               </datalist>
-              <p className="text-xs text-gray-400 mt-0.5">Queda guardado para la próxima</p>
+              <p className="text-xs text-gray-400 mt-0.5">Elígelo o escríbelo a mano</p>
             </div>
             <div>
               <Label>Nombre del terapeuta</Label>
@@ -282,6 +355,22 @@ function AgendarSesionDialog({ open, onOpenChange, onSaved }: { open: boolean; o
             <p className="text-xs text-gray-400 mt-0.5">Genera el cobro por pagar. Tarifa del terapeuta, editable.</p>
           </div>
 
+          {/* Estado (solo al editar) */}
+          {editMode && (
+            <div>
+              <Label>Estado</Label>
+              <select
+                value={estado}
+                onChange={e => setEstado(e.target.value)}
+                className="w-full h-10 rounded-md border border-gray-200 px-3 text-sm"
+              >
+                <option value="agendada">Agendada</option>
+                <option value="realizada">Realizada</option>
+                <option value="cancelada">Cancelada (retira el cobro pendiente)</option>
+              </select>
+            </div>
+          )}
+
           {/* Notas */}
           <div>
             <Label>Notas</Label>
@@ -290,8 +379,8 @@ function AgendarSesionDialog({ open, onOpenChange, onSaved }: { open: boolean; o
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button type="submit" disabled={saving || !cliente || !fechaHora} className="bg-orange-600 hover:bg-orange-700">
-              {saving ? 'Agendando...' : 'Agendar'}
+            <Button type="submit" disabled={saving || !cliente || !fecha || !hora} className="bg-orange-600 hover:bg-orange-700">
+              {saving ? 'Guardando...' : (editMode ? 'Guardar cambios' : 'Agendar')}
             </Button>
           </DialogFooter>
         </form>
