@@ -3,6 +3,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { requireEscritura } from '@/lib/permisos-server'
 import { auditar } from '@/lib/auditoria'
 import { sincronizarAsistencias } from '@/lib/sincronizar-asistencias'
+import { traerTodo } from '@/lib/traer-todo'
 
 export async function GET(req: NextRequest) {
   const supabase = createSupabaseAdminClient()
@@ -26,6 +27,17 @@ export async function GET(req: NextRequest) {
     data = (resData.data as Record<string, unknown>[] | null) ?? []
     errorMsg = resData.error?.message ?? resCount.error?.message ?? null
     count = resCount.data == null ? data.length : Number(resCount.data)
+  } else if (limit > 1000) {
+    // Exportación (PDF/planilla): traer la base COMPLETA paginando, sin el
+    // techo de 1.000 filas por pedido de Supabase.
+    const todo = await traerTodo(() => {
+      let q2 = supabase.from('clientes').select('*').order('created_at', { ascending: false })
+      if (etapa) q2 = q2.eq('etapa', etapa)
+      return q2
+    })
+    data = (todo.data as Record<string, unknown>[] | null) ?? []
+    count = data.length
+    errorMsg = todo.error
   } else {
     let query = supabase
       .from('clientes')
@@ -41,8 +53,10 @@ export async function GET(req: NextRequest) {
 
   if (errorMsg) return NextResponse.json({ error: errorMsg }, { status: 500 })
 
-  // Enriquecer con ultimo seguimiento (semaforo) y oportunidades por actividad (chips en la lista)
-  if (data.length > 0) {
+  // Enriquecer con ultimo seguimiento (semaforo) y oportunidades por actividad (chips en la lista).
+  // Solo en la vista normal paginada (limit <= 1000); en exportaciones se omite
+  // para traer la base completa sin armar consultas con miles de IDs.
+  if (data.length > 0 && limit <= 1000) {
     const clientIds = data.map((c) => c.id as string)
     const [segsRes, opsRes] = await Promise.all([
       supabase.from('seguimientos').select('cliente_id, created_at').in('cliente_id', clientIds).order('created_at', { ascending: false }),

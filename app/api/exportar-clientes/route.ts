@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { requirePermiso } from '@/lib/permisos-server'
 import { auditar } from '@/lib/auditoria'
+import { traerTodo } from '@/lib/traer-todo'
 import ExcelJS from 'exceljs'
 
 const TIPOS = '"llamada,whatsapp,correo,visita,otro"'
@@ -20,12 +21,14 @@ export async function GET() {
   if (bloqueo) return bloqueo
   auditar('exportar', 'clientes', null, 'Exportación Excel de clientes')
   const supabase = createSupabaseAdminClient()
+  // traerTodo pagina en bloques de 1.000: trae la base COMPLETA sin el techo
+  // por defecto de Supabase (clientes y asistencias pueden superar 1.000 filas).
   const [clientesRes, asistenciasRes] = await Promise.all([
-    supabase.from('clientes').select('*').order('nombre'),
-    supabase.from('asistencias').select('cliente_id, actividad_nombre').order('fecha_asistencia'),
+    traerTodo(() => supabase.from('clientes').select('*').order('nombre')),
+    traerTodo(() => supabase.from('asistencias').select('cliente_id, actividad_nombre').order('fecha_asistencia')),
   ])
 
-  if (clientesRes.error) return NextResponse.json({ error: clientesRes.error.message }, { status: 500 })
+  if (clientesRes.error) return NextResponse.json({ error: clientesRes.error }, { status: 500 })
 
   const clientes = clientesRes.data ?? []
   const asistencias = asistenciasRes.data ?? []
