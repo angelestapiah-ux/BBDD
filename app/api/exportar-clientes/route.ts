@@ -8,6 +8,35 @@ import ExcelJS from 'exceljs'
 const TIPOS = '"llamada,whatsapp,correo,visita,otro"'
 const RESPONSABLES = '"Ángeles Tapia,Miriam Torres,Álvaro Valdés"'
 
+interface FilaCliente {
+  id: string
+  nombre?: string | null
+  correo?: string | null
+  correo2?: string | null
+  telefono?: string | null
+  telefono2?: string | null
+  documento_identidad?: string | null
+  edad?: number | null
+  genero?: string | null
+  estado_civil?: string | null
+  profesion?: string | null
+  ciudad?: string | null
+  pais?: string | null
+  procedencia?: string | null
+  etapa?: string | null
+  modalidad_paciente?: string | null
+  terapeuta?: string | null
+  tipos_cliente?: string[] | null
+  fecha_incorporacion?: string | null
+  cumpleanos?: string | null
+  comentario?: string | null
+}
+
+interface FilaAsistencia {
+  cliente_id: string
+  actividad_nombre: string
+}
+
 const CLIENTE_COLS = 22 // columnas de datos del cliente (A..V)
 
 // Columnas de tipo y responsable por seguimiento (1-indexed)
@@ -24,8 +53,8 @@ export async function GET() {
   // traerTodo pagina en bloques de 1.000: trae la base COMPLETA sin el techo
   // por defecto de Supabase (clientes y asistencias pueden superar 1.000 filas).
   const [clientesRes, asistenciasRes] = await Promise.all([
-    traerTodo(() => supabase.from('clientes').select('*').order('nombre')),
-    traerTodo(() => supabase.from('asistencias').select('cliente_id, actividad_nombre').order('fecha_asistencia')),
+    traerTodo<FilaCliente>(() => supabase.from('clientes').select('*').order('nombre')),
+    traerTodo<FilaAsistencia>(() => supabase.from('asistencias').select('cliente_id, actividad_nombre').order('fecha_asistencia')),
   ])
 
   if (clientesRes.error) return NextResponse.json({ error: clientesRes.error }, { status: 500 })
