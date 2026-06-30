@@ -1,20 +1,23 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { traerTodo } from '@/lib/traer-todo'
 
-// Clientes sin ningún dato de contacto (ni teléfono ni correo, ni secundarios)
+// Clientes sin ningún dato de contacto (ni teléfono ni correo, ni secundarios).
+// Pagina con traerTodo para escanear la base COMPLETA (sin el techo de 1.000).
 export async function GET() {
   const supabase = createSupabaseAdminClient()
-  const { data, error } = await supabase
-    .from('clientes')
-    .select('id, nombre, telefono, telefono2, correo, correo2, procedencia')
-    .order('nombre', { ascending: true })
-    .range(0, 9999)
+  const { data, error } = await traerTodo<Record<string, unknown>>(
+    () =>
+      supabase
+        .from('clientes')
+        .select('id, nombre, telefono, telefono2, correo, correo2, procedencia')
+        .order('nombre', { ascending: true }),
+  )
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) return NextResponse.json({ error }, { status: 500 })
 
-  const rows = (data ?? []) as Record<string, unknown>[]
   const vacio = (v: unknown) => v == null || String(v).trim() === ''
-  const clientes = rows.filter(
+  const clientes = data.filter(
     (c) => vacio(c.telefono) && vacio(c.telefono2) && vacio(c.correo) && vacio(c.correo2),
   )
 

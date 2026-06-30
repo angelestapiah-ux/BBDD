@@ -31,17 +31,15 @@ export async function GET(req: NextRequest) {
 
   if (tipo === 'cumpleanos_mes') {
     const mes = searchParams.get('mes') || String(new Date().getMonth() + 1)
-    const { data, error } = await supabase
-      .from('clientes')
-      .select('id, nombre, correo, telefono, cumpleanos')
-      .not('cumpleanos', 'is', null)
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const filtrados = (data || []).filter((c: any) => {
+    let rows: Record<string, unknown>[]
+    try {
+      rows = await traerTodo(supabase, 'clientes', 'id, nombre, correo, telefono, cumpleanos')
+    } catch (e) {
+      return NextResponse.json({ error: (e as Error).message }, { status: 500 })
+    }
+    const filtrados = rows.filter((c) => {
       if (!c.cumpleanos) return false
-      const d = new Date(c.cumpleanos)
+      const d = new Date(c.cumpleanos as string)
       return d.getMonth() + 1 === parseInt(mes)
     })
     return NextResponse.json(filtrados)
@@ -80,19 +78,18 @@ export async function GET(req: NextRequest) {
   }
 
   if (tipo === 'procedencias') {
-    const { data, error } = await supabase
-      .from('clientes')
-      .select('procedencia')
-      .not('procedencia', 'is', null)
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
+    let rows: Record<string, unknown>[]
+    try {
+      rows = await traerTodo(supabase, 'clientes', 'procedencia')
+    } catch (e) {
+      return NextResponse.json({ error: (e as Error).message }, { status: 500 })
+    }
     const conteo: Record<string, number> = {}
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(data || []).forEach((c: any) => {
-      const p = c.procedencia || 'Sin datos'
+    for (const c of rows) {
+      if (c.procedencia == null) continue
+      const p = String(c.procedencia).trim() === '' ? 'Sin datos' : String(c.procedencia)
       conteo[p] = (conteo[p] || 0) + 1
-    })
+    }
     const resultado = Object.entries(conteo)
       .map(([procedencia, cantidad]) => ({ procedencia, cantidad }))
       .sort((a, b) => b.cantidad - a.cantidad)
@@ -100,49 +97,47 @@ export async function GET(req: NextRequest) {
   }
 
   if (tipo === 'pagos_pendientes') {
-    const { data, error } = await supabase
-      .from('pagos')
-      .select('*, clientes(id, nombre, correo, telefono)')
-      .in('estado', ['pendiente', 'parcial'])
-      .order('monto', { ascending: false })
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const total = (data || []).reduce((sum: number, p: any) => sum + (p.monto || 0), 0)
-    return NextResponse.json({ pagos: data, total })
+    let rows: Record<string, unknown>[]
+    try {
+      rows = await traerTodo(supabase, 'pagos', '*, clientes(id, nombre, correo, telefono)', 'monto')
+    } catch (e) {
+      return NextResponse.json({ error: (e as Error).message }, { status: 500 })
+    }
+    const pagos = rows.filter((p) => p.estado === 'pendiente' || p.estado === 'parcial')
+    const total = pagos.reduce((sum: number, p) => sum + ((p.monto as number) || 0), 0)
+    return NextResponse.json({ pagos, total })
   }
 
   if (tipo === 'facturacion') {
     // Comprobantes con factura: PAGOS (factura solicitada/emitida/folio) +
     // CUOTAS de plan que tengan número de factura (registro SII unificado).
-    const [pagosRes, cuotasRes] = await Promise.all([
-      supabase
-        .from('pagos')
-        .select('*, clientes(id, nombre, correo, telefono, documento_identidad)')
-        .or('requiere_factura.eq.true,numero_factura.not.is.null,factura_interna.not.is.null')
-        .order('fecha_pago', { ascending: false }),
-      supabase
-        .from('cuotas')
-        .select('*, clientes(id, nombre, correo, telefono, documento_identidad)')
-        .or('numero_factura.not.is.null,factura_interna.not.is.null')
-        .order('fecha_pago', { ascending: false }),
-    ])
-    if (pagosRes.error) return NextResponse.json({ error: pagosRes.error.message }, { status: 500 })
-    if (cuotasRes.error) return NextResponse.json({ error: cuotasRes.error.message }, { status: 500 })
+    let pagosRows: Record<string, unknown>[]
+    let cuotasRows: Record<string, unknown>[]
+    try {
+      ;[pagosRows, cuotasRows] = await Promise.all([
+        traerTodo(supabase, 'pagos', '*, clientes(id, nombre, correo, telefono, documento_identidad)', 'fecha_pago'),
+        traerTodo(supabase, 'cuotas', '*, clientes(id, nombre, correo, telefono, documento_identidad)', 'fecha_pago'),
+      ])
+    } catch (e) {
+      return NextResponse.json({ error: (e as Error).message }, { status: 500 })
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pagos = (pagosRes.data || []) as any[]
+    const pagos = (pagosRows as any[]).filter(
+      (p) => p.requiere_factura === true || p.numero_factura != null || p.factura_interna != null,
+    )
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const cuotasFact = ((cuotasRes.data || []) as any[]).map((c) => ({
-      ...c,
-      requiere_factura: true,
-      fecha_actividad: null,
-      es_cuota: true,
-      actividad_nombre: c.actividad_nombre
-        ? `${c.actividad_nombre} (cuota ${c.numero_cuota}/${c.total_cuotas})`
-        : `Cuota ${c.numero_cuota}/${c.total_cuotas}`,
-    }))
+    const cuotasFact = (cuotasRows as any[])
+      .filter((c) => c.numero_factura != null || c.factura_interna != null)
+      .map((c) => ({
+        ...c,
+        requiere_factura: true,
+        fecha_actividad: null,
+        es_cuota: true,
+        actividad_nombre: c.actividad_nombre
+          ? `${c.actividad_nombre} (cuota ${c.numero_cuota}/${c.total_cuotas})`
+          : `Cuota ${c.numero_cuota}/${c.total_cuotas}`,
+      }))
     const todos = [...pagos, ...cuotasFact].sort(
       (a, b) => String(b.fecha_pago || '').localeCompare(String(a.fecha_pago || '')),
     )
