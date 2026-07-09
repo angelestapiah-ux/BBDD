@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { Users, Calendar, FileText, Upload, DollarSign, BookOpen, Settings, LayoutDashboard, LogOut, Sun, GraduationCap, FileSignature, Wallet, CalendarClock, CalendarDays } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getSupabase } from '@/lib/supabase'
@@ -27,18 +27,29 @@ const navItems: { href: string; label: string; icon: typeof Sun; permiso?: Permi
 
 export function Sidebar() {
   const pathname = usePathname()
-  const router = useRouter()
   const perfil = usePerfil()
   const items = navItems.filter(i => !i.permiso || perfil.permisos.has(i.permiso))
 
   async function handleLogout() {
+    // logout-robusto-v2: cierre local garantizado + respaldo + redireccion dura
     try {
       const supabase = getSupabase()
-      await supabase.auth.signOut()
+      // scope 'local' cierra la sesion de ESTE navegador sin depender de una
+      // respuesta del servidor. Asi el boton avanza aunque el token este vencido.
+      await supabase.auth.signOut({ scope: 'local' })
     } catch {
       // continuar aunque falle
     }
-    router.push('/login')
+    // Respaldo: si quedo algun token de Supabase en el navegador, lo soltamos.
+    try {
+      Object.keys(window.localStorage)
+        .filter((k) => k.startsWith('sb-') || k.includes('supabase'))
+        .forEach((k) => window.localStorage.removeItem(k))
+    } catch {
+      // continuar aunque falle
+    }
+    // Redireccion dura: el guard reevalua la sesion desde cero, sin estado viejo.
+    window.location.replace('/login')
   }
 
   return (
