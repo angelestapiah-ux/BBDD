@@ -21,6 +21,7 @@ import { SeguimientoForm } from '@/components/clientes/SeguimientoForm'
 import { getSupabase } from '@/lib/supabase'
 import { PagoForm } from '@/components/clientes/PagoForm'
 import { AsistenciaForm } from '@/components/clientes/AsistenciaForm'
+import ProgramasAlumni from '@/components/programas-alumni'
 import { usePerfil } from '@/components/shared/usePerfil'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -580,6 +581,12 @@ export default function ClienteDetailPage() {
           </button>
         </CardContent>
       </Card>
+
+      {/* ─── Programas cursados (solo Alumni) ──────────────────────────── */}
+      <ProgramasAlumni
+        clienteId={cliente.id}
+        esAlumni={(cliente.tipos_cliente ?? []).some(t => (t ?? '').toString().toLowerCase() === 'alumni')}
+      />
 
       {/* ─── Tabs ──────────────────────────────────────────────────────── */}
       <Tabs value={tab} onValueChange={v => setTab(v ?? 'oportunidades')}>

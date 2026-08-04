@@ -190,6 +190,21 @@ export async function GET(req: NextRequest) {
     filtrados.sort((a, b) =>
       String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es', { sensitivity: 'base' }),
     )
+    // Adjuntar los programas cursados (Alumni) de cada cliente.
+    try {
+      const progs = await traerTodo(supabase, 'alumni_programas', 'cliente_id, programa, anio')
+      const byCli: Record<string, string[]> = {}
+      for (const p of progs) {
+        const cid = p.cliente_id as string
+        const txt = `${p.programa as string}${p.anio ? ' ' + (p.anio as number) : ''}`
+        ;(byCli[cid] ||= []).push(txt)
+      }
+      for (const c of filtrados) {
+        c.programas = (byCli[c.id as string] || []).join(', ')
+      }
+    } catch {
+      // Si algo falla al traer programas, devolvemos el listado igual.
+    }
     return NextResponse.json(filtrados)
   }
 

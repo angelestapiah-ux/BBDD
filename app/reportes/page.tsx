@@ -163,6 +163,7 @@ export default function ReportesPage() {
       'Ciudad': (c.ciudad as string) || '',
       'País': (c.pais as string) || '',
       'Procedencia': (c.procedencia as string) || '',
+      'Programas (Alumni)': (c.programas as string) || '',
       'Tipos': Array.isArray(c.tipos_cliente) ? (c.tipos_cliente as string[]).join(', ') : '',
     }))
     const ws = XLSX.utils.json_to_sheet(filas)
@@ -606,7 +607,7 @@ export default function ReportesPage() {
             <CardHeader>
               <CardTitle className="text-base">Clientes por tipo / etiqueta</CardTitle>
               <p className="text-xs text-gray-400 mt-0.5">
-                Lista los clientes según su etiqueta (Alumni, Paciente, Asistente a talleres…). Con o sin datos de contacto.
+                Lista los clientes según su etiqueta (Alumni, Paciente, Asistente a talleres…). Para Alumni incluye programas cursados y país.
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -644,7 +645,8 @@ export default function ReportesPage() {
                           <th className="text-left p-2 font-medium text-gray-600">Cliente</th>
                           <th className="text-left p-2 font-medium text-gray-600">Correo</th>
                           <th className="text-left p-2 font-medium text-gray-600">Teléfono</th>
-                          <th className="text-left p-2 font-medium text-gray-600">Ciudad</th>
+                          <th className="text-left p-2 font-medium text-gray-600">País</th>
+                          <th className="text-left p-2 font-medium text-gray-600">Programas (Alumni)</th>
                           <th className="text-left p-2 font-medium text-gray-600">Etiquetas</th>
                         </tr>
                       </thead>
@@ -660,7 +662,8 @@ export default function ReportesPage() {
                             </td>
                             <td className="p-2 text-gray-500">{(c.correo as string) || '—'}</td>
                             <td className="p-2 text-gray-500">{(c.telefono as string) || '—'}</td>
-                            <td className="p-2 text-gray-500">{(c.ciudad as string) || '—'}</td>
+                            <td className="p-2 text-gray-500">{(c.pais as string) || '—'}</td>
+                            <td className="p-2 text-gray-600 text-xs">{(c.programas as string) || '—'}</td>
                             <td className="p-2 text-gray-400 text-xs">{Array.isArray(c.tipos_cliente) ? (c.tipos_cliente as string[]).join(', ') : '—'}</td>
                           </tr>
                         ))}
