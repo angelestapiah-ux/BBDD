@@ -28,6 +28,33 @@ export const MANUAL: EntradaManual[] = [
     tip: 'No te detengas a llenar todos los campos: con nombre y teléfono basta para empezar. Si el cliente es paciente, asigna su Terapeuta — así cada pago genera la boleta de honorarios automáticamente.',
   },
   {
+    id: 'programas-alumni',
+    titulo: 'Registrar los programas cursados de un Alumni',
+    categoria: 'Clientes',
+    keywords: 'alumni programa programas cursado año diplomado practitioner master trainer nivel egresado formacion perfil ficha agregar comunidad',
+    pasos: [
+      'Abre la ficha del cliente. La tarjeta "Programas cursados (Alumni)" aparece solo si el cliente tiene la etiqueta "Alumni".',
+      'Los programas ya registrados se ven como etiquetas naranjas con su año (ej: "Practitioner · 2018").',
+      'Para sumar uno nuevo, elige el "Programa cursado" del menú (Practitioner, Máster, Trainer, Nivel 1) o "Otro" para escribir uno distinto.',
+      'Elige el "Año" en que lo cursó y haz click en "Agregar". Puedes sumar tantos como haga falta: una persona puede haber cursado varios.',
+      'Para quitar un programa, pulsa la ✕ en su etiqueta.',
+    ],
+    tip: 'Si la persona aún no es Alumni, agrégale primero la etiqueta "Alumni" desde "Editar" y la tarjeta de programas aparecerá sola.',
+  },
+  {
+    id: 'reporte-por-tipo',
+    titulo: 'Sacar el listado de Alumni (o cualquier tipo de cliente) con sus programas',
+    categoria: 'Reportes',
+    keywords: 'alumni listado reporte por tipo etiqueta tipos cliente paciente prospecto exportar excel programas año pais base egresados comunidad',
+    pasos: [
+      'Ve a "Reportes" y abre la pestaña "🏷️ Por tipo / etiqueta".',
+      'En el selector elige la etiqueta (por ejemplo "Alumni"); al lado ves cuántos hay.',
+      'Haz click en "Buscar": aparece el listado con correo, teléfono, país y, para los Alumni, la columna "Programas (Alumni)" con sus años.',
+      'Con "Exportar Excel" bajas esa misma lista para trabajarla o enviarla.',
+    ],
+    tip: 'Los Alumni de Argentina quedaron con su país en la columna "País". Así tienes la comunidad Alumni completa y a la mano para activarla.',
+  },
+  {
     id: 'kpi-comercial',
     titulo: 'Ver el KPI Comercial por campaña',
     categoria: 'Reportes',

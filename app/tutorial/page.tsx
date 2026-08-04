@@ -83,6 +83,20 @@ const CAPITULOS = [
     tip: 'El semáforo de la lista (verde/ámbar/rojo) indica cuánto hace que no contactas a cada cliente. Rojo = más de 72 horas.',
   },
   {
+    id: 'alumni',
+    icono: GraduationCap,
+    titulo: 'Comunidad Alumni: programas y años',
+    resumen: 'Guarda qué programa y en qué año cursó cada egresado, y saca la lista completa para activar la comunidad.',
+    pasos: [
+      { t: 'La tarjeta aparece sola en los Alumni', d: 'En la ficha de un cliente con la etiqueta "Alumni" verás la tarjeta naranja "Programas cursados (Alumni)". En quienes no son Alumni, no aparece.' },
+      { t: 'Agrega un programa cursado', d: 'Elige el programa (Practitioner, Máster, Trainer, Nivel 1 u "Otro" para escribir uno), el año, y pulsa "Agregar". Puedes sumar varios: mucha gente cursó más de un programa.' },
+      { t: 'Quita con la ✕', d: 'Cada programa se ve como una etiqueta con su año; la ✕ lo elimina.' },
+      { t: 'Saca la lista de Alumni', d: 'En Reportes → "🏷️ Por tipo / etiqueta" elige "Alumni" y pulsa Buscar: sale el listado con contacto, país y la columna "Programas (Alumni)". Con "Exportar Excel" te lo llevas.' },
+      { t: 'Los Alumni de Argentina', d: 'Su país quedó registrado como Argentina (columna País del reporte), ya que Argentina es una sede, no un programa.' },
+    ],
+    tip: 'Objetivo: tener la base de egresados lo más completa posible — con sus programas y datos a mano — para activar la comunidad Alumni con campañas y reencuentros.',
+  },
+  {
     id: 'pagos',
     icono: Receipt,
     titulo: 'Pagos y cobranza',
