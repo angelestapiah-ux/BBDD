@@ -146,5 +146,52 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ pagos: todos, total, pendientes: pendientes.length })
   }
 
+  if (tipo === 'tipos_cliente_catalogo') {
+    // Catálogo dinámico de etiquetas (tipos_cliente) con su conteo, para el selector.
+    let rows: Record<string, unknown>[]
+    try {
+      rows = await traerTodo(supabase, 'clientes', 'tipos_cliente')
+    } catch (e) {
+      return NextResponse.json({ error: (e as Error).message }, { status: 500 })
+    }
+    const conteo: Record<string, number> = {}
+    for (const c of rows) {
+      const arr = Array.isArray(c.tipos_cliente) ? (c.tipos_cliente as string[]) : []
+      for (const t of arr) {
+        if (!t) continue
+        conteo[t] = (conteo[t] || 0) + 1
+      }
+    }
+    const resultado = Object.entries(conteo)
+      .map(([tipo, cantidad]) => ({ tipo, cantidad }))
+      .sort((a, b) => b.cantidad - a.cantidad)
+    return NextResponse.json(resultado)
+  }
+
+  if (tipo === 'clientes_por_tipo') {
+    // Listado de clientes que tienen una ETIQUETA (tipos_cliente) determinada.
+    const etiqueta = searchParams.get('etiqueta') || ''
+    const todos = !etiqueta || etiqueta === '__todos__'
+    let rows: Record<string, unknown>[]
+    try {
+      rows = await traerTodo(
+        supabase,
+        'clientes',
+        'id, nombre, correo, telefono, procedencia, ciudad, pais, tipos_cliente',
+      )
+    } catch (e) {
+      return NextResponse.json({ error: (e as Error).message }, { status: 500 })
+    }
+    const filtrados = todos
+      ? rows
+      : rows.filter(
+          (c) => Array.isArray(c.tipos_cliente) && (c.tipos_cliente as string[]).includes(etiqueta),
+        )
+    filtrados.sort((a, b) =>
+      String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es', { sensitivity: 'base' }),
+    )
+    return NextResponse.json(filtrados)
+  }
+
   return NextResponse.json({ error: 'Tipo de reporte no válido' }, { status: 400 })
 }

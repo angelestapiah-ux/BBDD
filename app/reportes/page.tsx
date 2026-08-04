@@ -45,9 +45,13 @@ export default function ReportesPage() {
   const [loading, setLoading] = useState<string | null>(null)
   const [actividades, setActividades] = useState<Actividad[]>([])
   const [kpi, setKpi] = useState<KpiRow[]>([])
+  const [tiposCatalogo, setTiposCatalogo] = useState<{ tipo: string; cantidad: number }[]>([])
+  const [tipoCli, setTipoCli] = useState('')
+  const [clientesTipo, setClientesTipo] = useState<Record<string, unknown>[]>([])
 
   useEffect(() => {
     fetch('/api/actividades').then(r => r.json()).then(d => setActividades(Array.isArray(d) ? d : []))
+    fetch('/api/reportes?tipo=tipos_cliente_catalogo').then(r => r.json()).then(d => setTiposCatalogo(Array.isArray(d) ? d : []))
   }, [])
 
   async function buscarAsistentes() {
@@ -141,6 +145,30 @@ export default function ReportesPage() {
     const data = await res.json()
     setKpi(Array.isArray(data) ? data : [])
     setLoading(null)
+  }
+
+  async function buscarClientesPorTipo() {
+    setLoading('por_tipo')
+    const res = await fetch(`/api/reportes?tipo=clientes_por_tipo&etiqueta=${encodeURIComponent(tipoCli)}`)
+    const data = await res.json()
+    setClientesTipo(Array.isArray(data) ? data : [])
+    setLoading(null)
+  }
+
+  function exportarClientesPorTipo(data: Record<string, unknown>[], nombre: string) {
+    const filas = data.map(c => ({
+      'Cliente': (c.nombre as string) || '—',
+      'Correo': (c.correo as string) || '',
+      'Teléfono': (c.telefono as string) || '',
+      'Ciudad': (c.ciudad as string) || '',
+      'País': (c.pais as string) || '',
+      'Procedencia': (c.procedencia as string) || '',
+      'Tipos': Array.isArray(c.tipos_cliente) ? (c.tipos_cliente as string[]).join(', ') : '',
+    }))
+    const ws = XLSX.utils.json_to_sheet(filas)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Reporte')
+    XLSX.writeFile(wb, `${nombre}.xlsx`)
   }
 
   // Totales del consolidado (suma de todas las campañas)
@@ -270,6 +298,7 @@ export default function ReportesPage() {
         <TabsList className="mb-4 flex-wrap h-auto gap-1">
           <TabsTrigger value="pendientes" className="text-orange-700 data-[state=active]:bg-orange-600 data-[state=active]:text-white">💰 Por cobrar</TabsTrigger>
           <TabsTrigger value="kpi" className="text-orange-700 data-[state=active]:bg-orange-600 data-[state=active]:text-white">📊 KPI Comercial</TabsTrigger>
+          <TabsTrigger value="por_tipo">🏷️ Por tipo / etiqueta</TabsTrigger>
           <TabsTrigger value="asistentes">Asistentes por actividad</TabsTrigger>
           <TabsTrigger value="pagos">Pagos por actividad</TabsTrigger>
           <TabsTrigger value="cumpleanos">Cumpleaños del mes</TabsTrigger>
@@ -566,6 +595,82 @@ export default function ReportesPage() {
                     </table>
                   </div>
                 </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ─── Clientes por tipo / etiqueta ───────────────────────────── */}
+        <TabsContent value="por_tipo">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Clientes por tipo / etiqueta</CardTitle>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Lista los clientes según su etiqueta (Alumni, Paciente, Asistente a talleres…). Con o sin datos de contacto.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2 flex-wrap">
+                <div className="flex-1 min-w-48">
+                  <Select value={tipoCli || '__todos__'} onValueChange={v => setTipoCli(v === '__todos__' ? '' : (v || ''))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar etiqueta..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__todos__">— Todos los clientes —</SelectItem>
+                      {tiposCatalogo.map(t => (
+                        <SelectItem key={t.tipo} value={t.tipo}>{t.tipo} ({t.cantidad})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={buscarClientesPorTipo} disabled={loading === 'por_tipo'}>
+                  <Search className="h-4 w-4 mr-2" /> {loading === 'por_tipo' ? 'Buscando...' : 'Buscar'}
+                </Button>
+              </div>
+              {loading === 'por_tipo' && <p className="text-sm text-gray-400">Buscando...</p>}
+              {clientesTipo.length > 0 && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-gray-500">{clientesTipo.length} cliente(s){tipoCli ? ` · ${tipoCli}` : ''}</p>
+                    <Button size="sm" variant="outline" onClick={() => exportarClientesPorTipo(clientesTipo, `clientes_${tipoCli || 'todos'}`)}>
+                      <Download className="h-3 w-3 mr-1" /> Exportar Excel
+                    </Button>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="text-left p-2 font-medium text-gray-600">Cliente</th>
+                          <th className="text-left p-2 font-medium text-gray-600">Correo</th>
+                          <th className="text-left p-2 font-medium text-gray-600">Teléfono</th>
+                          <th className="text-left p-2 font-medium text-gray-600">Ciudad</th>
+                          <th className="text-left p-2 font-medium text-gray-600">Etiquetas</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {clientesTipo.map((c, i) => (
+                          <tr key={i} className="hover:bg-orange-50/40 transition-colors">
+                            <td className="p-2 font-medium">
+                              {c.id ? (
+                                <a href={`/clientes/${c.id as string}`} className="hover:text-orange-600 hover:underline">
+                                  {(c.nombre as string) || '—'}
+                                </a>
+                              ) : ((c.nombre as string) || '—')}
+                            </td>
+                            <td className="p-2 text-gray-500">{(c.correo as string) || '—'}</td>
+                            <td className="p-2 text-gray-500">{(c.telefono as string) || '—'}</td>
+                            <td className="p-2 text-gray-500">{(c.ciudad as string) || '—'}</td>
+                            <td className="p-2 text-gray-400 text-xs">{Array.isArray(c.tipos_cliente) ? (c.tipos_cliente as string[]).join(', ') : '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+              {clientesTipo.length === 0 && loading !== 'por_tipo' && (
+                <p className="text-sm text-gray-400">Elige una etiqueta y haz clic en Buscar.</p>
               )}
             </CardContent>
           </Card>
