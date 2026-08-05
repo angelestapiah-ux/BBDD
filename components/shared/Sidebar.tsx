@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Users, Calendar, FileText, Upload, DollarSign, BookOpen, Settings, LayoutDashboard, LogOut, Sun, GraduationCap, FileSignature, Wallet, CalendarClock, CalendarDays } from 'lucide-react'
+import { Users, Calendar, FileText, Upload, DollarSign, BookOpen, Settings, LayoutDashboard, LogOut, Sun, GraduationCap, FileSignature, Wallet, CalendarClock, CalendarDays, Target } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getSupabase } from '@/lib/supabase'
 import { usePerfil } from './usePerfil'
@@ -11,6 +11,8 @@ import { Permiso } from '@/lib/permisos'
 const navItems: { href: string; label: string; icon: typeof Sun; permiso?: Permiso }[] = [
   { href: '/hoy', label: 'Hoy', icon: Sun },
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permiso: 'dashboard' },
+  // metas-marketing-v1: torre de control del plan anual de marketing
+  { href: '/dashboard/metas', label: 'Metas marketing', icon: Target, permiso: 'dashboard' },
   { href: '/clientes', label: 'Clientes', icon: Users },
   { href: '/actividades', label: 'Actividades', icon: BookOpen },
   { href: '/seguimientos', label: 'Seguimientos', icon: Calendar },
