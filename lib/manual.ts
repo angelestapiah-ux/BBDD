@@ -452,4 +452,47 @@ export const MANUAL: EntradaManual[] = [
     ],
     tip: 'Regla simple: el tipo describe a la persona; la actividad describe lo que hace. No mezcles uno en el otro.',
   },
+  {
+    // metas-marketing-v1
+    id: 'metas-ver',
+    titulo: 'Ver el plan de metas de marketing',
+    categoria: 'Marketing',
+    keywords: 'metas marketing plan anual objetivos arbol jerarquia negocio embudo canal producto presupuesto agencia torre control kpi meta',
+    pasos: [
+      'Ve a "Metas marketing" en el menú lateral, justo bajo Dashboard.',
+      'Arriba tienes cuatro tarjetas: ingresos meta del año, matrículas meta, presupuesto de marketing (la suma de los canales) y el porcentaje de metas con medición.',
+      'El árbol muestra la jerarquía completa: la meta de negocio arriba y, colgando de ella, las de embudo, canal y producto.',
+      'Usa la flecha de cada fila para abrir o cerrar su rama, o los botones "Expandir todo" y "Contraer todo".',
+      'Cada fila trae tres etiquetas: el nivel (Negocio, Embudo, Canal, Producto), la clase de dato (verificado, modelo, estimado) y quién la mueve (Renova o Agencia).',
+    ],
+    tip: 'La clase de dato es la clave de lectura: verde es histórico medido, azul es proyección del modelo financiero y ámbar es un supuesto declarado.',
+  },
+  {
+    id: 'metas-semaforo',
+    titulo: 'Entender el semáforo de las metas',
+    categoria: 'Marketing',
+    keywords: 'semaforo metas verde amarillo rojo gris umbral riesgo sin medicion prorrata proporcional periodo mensual anual medir avance',
+    pasos: [
+      'Verde: la meta va cumplida para el tiempo transcurrido. Amarillo: va sobre el umbral de riesgo. Rojo: va bajo el umbral.',
+      'Gris "Sin medición": la meta tiene objetivo y aún queda por cargar el dato real. Gris "Meta por definir": el objetivo está en construcción (Trainer y la comunidad Alumni). Gris "Por comenzar": la ventana del plan arranca más adelante.',
+      'Las metas anuales se leen a prorrata: a mitad de año se compara contra la mitad del camino, partiendo de su línea base real.',
+      'Las metas mensuales, trimestrales y semanales se comparan contra su objetivo del periodo completo, sin prorratear.',
+      'Mientras la carga de resultados esté en construcción, todas se ven grises: eso significa "aún sin dato".',
+    ],
+    tip: 'Un gris jamás es una alerta. Cuando algo requiera atención, aparecerá en amarillo o rojo con su número al lado.',
+  },
+  {
+    id: 'metas-actualizar',
+    titulo: 'Cargar una versión nueva del set de metas',
+    categoria: 'Marketing',
+    keywords: 'actualizar metas json version importar recargar cambiar objetivos set nuevo v1.4 supabase reimportar historial',
+    pasos: [
+      'El set completo vive en Supabase, en la tabla metas_config bajo la clave "json_origen".',
+      'Para cargar una versión nueva, pega el JSON en esa clave desde el editor SQL de Supabase (la plantilla está en migracion-metas-importador.sql).',
+      'Luego corre: select * from importar_metas_desde_config();',
+      'La importación actualiza cada meta por su id. Correrla dos veces deja el mismo estado, así que repetirla queda sin riesgo.',
+      'Cada cambio queda guardado campo a campo en metas_historial, con el valor anterior y el nuevo.',
+    ],
+    tip: 'La reimportación refresca los campos del JSON y respeta las notas internas que escribas en cada meta.',
+  },
 ]

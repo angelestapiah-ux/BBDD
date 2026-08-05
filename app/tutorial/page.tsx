@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { CheckCircle2, ChevronRight, GraduationCap, Sun, Users, Receipt, Keyboard, MessageSquare, RotateCcw, Lightbulb, LayoutDashboard, Bell } from 'lucide-react'
+import { CheckCircle2, ChevronRight, GraduationCap, Sun, Users, Receipt, Keyboard, MessageSquare, RotateCcw, Lightbulb, LayoutDashboard, Bell, Target } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 
@@ -128,6 +128,23 @@ const CAPITULOS = [
     tip: 'Empieza el día por el Dashboard: te dice en 30 segundos dónde está el dinero y a quién contactar ya.',
   },
   {
+    // metas-marketing-v1
+    id: 'metas',
+    icono: Target,
+    titulo: 'Metas de marketing: la torre de control',
+    resumen: 'El plan anual de marketing vive en el CRM. Aquí ves qué se prometió y cómo vamos.',
+    pasos: [
+      { t: 'Entra a "Metas marketing"', d: 'Está en el menú lateral, bajo Dashboard (ícono de diana 🎯). Muestra el set anual aprobado: 34 metas para la ventana septiembre 2026 → agosto 2027.' },
+      { t: 'Lee las cuatro tarjetas de arriba', d: 'Ingresos meta del año, matrículas meta, presupuesto de marketing repartido en los canales, y el porcentaje de metas que ya tienen medición real.' },
+      { t: 'Recorre el árbol', d: 'Las metas cuelgan unas de otras: la meta de negocio arriba, y bajo ella las de embudo, canal y producto. Con la flecha de cada fila abres o cierras su rama, y los botones "Expandir todo" / "Contraer todo" mueven el árbol completo.' },
+      { t: 'Las etiquetas de color te dicen de dónde sale cada número', d: 'Verde "verificado" = dato histórico real medido. Azul "modelo" = proyección del modelo financiero. Ámbar "estimado" = supuesto declarado. Y la etiqueta naranja o violeta indica quién mueve esa meta: Renova o la Agencia.' },
+      { t: 'El semáforo compara plan contra realidad', d: 'Verde va en meta, amarillo va sobre el umbral de riesgo, rojo va bajo el umbral. El gris significa que aún queda por medir: mientras la carga de resultados esté en construcción, todas se ven grises, así el gris se lee como "aún sin dato" y jamás como "vamos mal".' },
+      { t: 'Las metas anuales se leen a prorrata', d: 'Una meta de $291 millones al año se compara con lo que corresponde al tiempo transcurrido, partiendo de su línea base. Las metas mensuales y semanales se comparan con su objetivo del periodo completo.' },
+      { t: 'Abajo están las líneas base y los pendientes', d: 'Las líneas base son el punto de partida real medido en agosto 2026 (seguidores, lista de correo, contactos). Los pendientes son las definiciones que al cerrarse desbloquean metas, cada una con su prioridad y las metas que mueve.' },
+    ],
+    tip: 'Este módulo mide el plan, y la agencia sigue publicando con sus propias herramientas. Renova define la estrategia y lee aquí cómo avanza.',
+  },
+  {
     id: 'atajos',
     icono: Keyboard,
     titulo: 'Atajos y trucos de velocidad',
@@ -186,7 +203,7 @@ export default function TutorialPage() {
         <h2 className="text-2xl font-bold text-gray-900">Tutorial del CRM</h2>
       </div>
       <p className="text-sm text-gray-500 mb-5">
-        6 capítulos · ~15 minutos. Al terminar sabrás operar el CRM completo.
+        {CAPITULOS.length} capítulos · ~20 minutos. Al terminar sabrás operar el CRM completo.
       </p>
 
       {/* Barra de progreso */}
