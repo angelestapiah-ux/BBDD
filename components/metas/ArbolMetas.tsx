@@ -8,6 +8,8 @@ import {
   type Meta, type NodoMeta, type Semaforo,
 } from '@/lib/metas'
 
+type Valores = Record<string, number>
+
 const PROFUNDIDAD_MAXIMA = 12
 
 const SEMAFORO_PUNTO: Record<Semaforo, string> = {
@@ -48,18 +50,20 @@ function Badge({ texto, clases }: { texto: string; clases: string }) {
 }
 
 function Fila({
-  nodo, profundidad, abiertos, alternar, hoy,
+  nodo, profundidad, abiertos, alternar, hoy, valores,
 }: {
   nodo: NodoMeta
   profundidad: number
   abiertos: Set<string>
   alternar: (id: string) => void
   hoy: Date
+  valores: Valores
 }) {
   const { meta, hijos } = nodo
   const tieneHijos = hijos.length > 0
   const abierto = abiertos.has(meta.id)
-  const evaluacion = evaluarMeta(meta, null, hoy)
+  const real = meta.id in valores ? valores[meta.id] : null
+  const evaluacion = evaluarMeta(meta, real, hoy)
 
   return (
     <>
@@ -108,6 +112,11 @@ function Fila({
           <p className="text-sm font-semibold break-words text-gray-900">
             {formatearValor(meta.valor_meta, meta.unidad)}
           </p>
+          {real !== null && (
+            <p className="text-xs font-medium text-gray-700">
+              real {formatearValor(real, meta.unidad)}
+            </p>
+          )}
           <p className={cn('text-xs', SEMAFORO_TEXTO[evaluacion.semaforo])}>
             {evaluacion.etiqueta}
             {evaluacion.objetivoALaFecha !== null && meta.periodicidad === 'anual' && (
@@ -128,13 +137,16 @@ function Fila({
             abiertos={abiertos}
             alternar={alternar}
             hoy={hoy}
+            valores={valores}
           />
         ))}
     </>
   )
 }
 
-export default function ArbolMetas({ metas, hoyISO }: { metas: Meta[]; hoyISO: string }) {
+export default function ArbolMetas(
+  { metas, hoyISO, valores = {} }: { metas: Meta[]; hoyISO: string; valores?: Valores },
+) {
   const arbol = useMemo(() => construirArbol(metas), [metas])
   const conHijos = useMemo(() => {
     const ids: string[] = []
@@ -191,7 +203,7 @@ export default function ArbolMetas({ metas, hoyISO }: { metas: Meta[]; hoyISO: s
 
       <div className="border-t border-gray-100">
         {arbol.map((n) => (
-          <Fila key={n.meta.id} nodo={n} profundidad={0} abiertos={abiertos} alternar={alternar} hoy={hoy} />
+          <Fila key={n.meta.id} nodo={n} profundidad={0} abiertos={abiertos} alternar={alternar} hoy={hoy} valores={valores} />
         ))}
       </div>
     </div>

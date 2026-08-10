@@ -477,7 +477,7 @@ export const MANUAL: EntradaManual[] = [
       'Gris "Sin medición": la meta tiene objetivo y aún queda por cargar el dato real. Gris "Meta por definir": el objetivo está en construcción (Trainer y la comunidad Alumni). Gris "Por comenzar": la ventana del plan arranca más adelante.',
       'Las metas anuales se leen a prorrata: a mitad de año se compara contra la mitad del camino, partiendo de su línea base real.',
       'Las metas mensuales, trimestrales y semanales se comparan contra su objetivo del periodo completo, sin prorratear.',
-      'Mientras la carga de resultados esté en construcción, todas se ven grises: eso significa "aún sin dato".',
+      'Antes del 1 de septiembre, cuando la ventana del plan aún no abre, todas se ven grises "Por comenzar": el plan está aprobado y la medición llega con la ventana.',
     ],
     tip: 'Un gris jamás es una alerta. Cuando algo requiera atención, aparecerá en amarillo o rojo con su número al lado.',
   },
@@ -494,5 +494,19 @@ export const MANUAL: EntradaManual[] = [
       'Cada cambio queda guardado campo a campo en metas_historial, con el valor anterior y el nuevo.',
     ],
     tip: 'La reimportación refresca los campos del JSON y respeta las notas internas que escribas en cada meta.',
+  },
+  {
+    id: 'metas-cargar',
+    titulo: 'Cargar y recalcular las mediciones (encender el semáforo)',
+    categoria: 'Marketing',
+    keywords: 'cargar medicion resultado valor real recalcular crm ingresos ventas leads manual periodo mes semana semaforo encender torre',
+    pasos: [
+      'En "Metas marketing" toca el botón "Cargar mediciones" (arriba a la derecha) para ir a la pantalla de carga.',
+      'Cada meta muestra su origen: "CRM" (se calcula sola) o "manual" (la cargas tú).',
+      'El botón "Recalcular desde el CRM" refresca de una vez las metas automáticas: ingresos, ventas pagadas y leads nuevos del periodo en curso.',
+      'Para una meta manual (seguidores, alcance, suscriptores…), escribe el valor en su fila y toca "Guardar". Con el selector de fecha eliges en qué periodo entra.',
+      'El valor real aparece en la fila y enciende el semáforo del árbol. Un valor manual pisa el cálculo hasta el próximo recálculo.',
+    ],
+    tip: 'Las metas automáticas leen el propio CRM (modelo cuota a cuota y el funnel), así que basta con recalcular. Las de redes y plataformas se cargan a mano con el dato de cada panel.',
   },
 ]

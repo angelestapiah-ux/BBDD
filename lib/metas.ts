@@ -343,3 +343,71 @@ export const ETIQUETA_NIVEL: Record<number, string> = {
   3: 'Canal',
   4: 'Producto',
 }
+
+// ---------------------------------------------------------------------------
+// Resultados (mediciones que encienden el semáforo · Fase 4)
+// ---------------------------------------------------------------------------
+
+export type FuenteResultado = 'manual' | 'crm' | 'agencia'
+
+export type Resultado = {
+  meta_id: string
+  periodicidad: Periodicidad
+  periodo_etiqueta: string
+  periodo_inicio: string
+  periodo_fin: string
+  valor: number
+  fuente: FuenteResultado
+  metodo_crm: string | null
+  nota: string | null
+  updated_at: string | null
+}
+
+export function aResultado(fila: Record<string, unknown>): Resultado {
+  return {
+    meta_id: texto(fila.meta_id),
+    periodicidad: (['anual', 'trimestral', 'mensual', 'semanal', 'campana'] as const)
+      .find((p) => p === fila.periodicidad) ?? 'anual',
+    periodo_etiqueta: texto(fila.periodo_etiqueta),
+    periodo_inicio: texto(fila.periodo_inicio),
+    periodo_fin: texto(fila.periodo_fin),
+    valor: numeroOpcional(fila.valor) ?? 0,
+    fuente: (['manual', 'crm', 'agencia'] as const).find((f) => f === fila.fuente) ?? 'manual',
+    metodo_crm: textoOpcional(fila.metodo_crm),
+    nota: textoOpcional(fila.nota),
+    updated_at: textoOpcional(fila.updated_at),
+  }
+}
+
+/**
+ * Índice meta_id → valor real de la casilla de periodo que contiene a `hoy`.
+ *
+ * Cada meta tiene, para un día dado, una sola casilla que lo contiene (las
+ * casillas de una misma meta no se solapan; la anual es la única de su meta).
+ * Si por alguna razón hubiera solape, gana la casilla más específica: la de
+ * inicio más reciente. Las metas sin medición vigente quedan fuera del mapa,
+ * así `evaluarMeta` las lee como 'sin_medicion' (gris), jamás rojo.
+ */
+export function valoresVigentes(resultados: Resultado[], hoyISO: string): Record<string, number> {
+  const hoy = fecha(hoyISO).getTime()
+  const elegido: Record<string, { valor: number; ini: number }> = {}
+  for (const r of resultados) {
+    const ini = fecha(r.periodo_inicio).getTime()
+    const fin = fecha(r.periodo_fin).getTime()
+    if (!Number.isFinite(ini) || !Number.isFinite(fin)) continue
+    if (hoy < ini || hoy > fin) continue
+    const previo = elegido[r.meta_id]
+    if (previo === undefined || ini > previo.ini) {
+      elegido[r.meta_id] = { valor: r.valor, ini }
+    }
+  }
+  const salida: Record<string, number> = {}
+  for (const id of Object.keys(elegido)) salida[id] = elegido[id].valor
+  return salida
+}
+
+export const ETIQUETA_FUENTE: Record<FuenteResultado, string> = {
+  manual:  'carga manual',
+  crm:     'desde el CRM',
+  agencia: 'carga Agencia',
+}

@@ -1,11 +1,11 @@
 import Link from 'next/link'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Target, Users, Wallet, Activity, AlertCircle, ListChecks } from 'lucide-react'
+import { Target, Users, Wallet, Activity, AlertCircle, ListChecks, SlidersHorizontal } from 'lucide-react'
 import ArbolMetas from '@/components/metas/ArbolMetas'
 import {
-  aMeta, aPendiente, evaluarMeta, formatearValor, formatearCLP,
-  type Meta, type Pendiente,
+  aMeta, aPendiente, aResultado, evaluarMeta, valoresVigentes, formatearValor, formatearCLP,
+  type Meta, type Pendiente, type Resultado,
 } from '@/lib/metas'
 
 export const dynamic = 'force-dynamic'
@@ -68,16 +68,18 @@ function Tarjeta({
 export default async function MetasMarketingPage() {
   const supabase = createSupabaseAdminClient()
 
-  const [resMetas, resPendientes, resConfig] = await Promise.all([
+  const [resMetas, resPendientes, resConfig, resResultados] = await Promise.all([
     supabase.from('metas').select('*').order('nivel').order('id'),
     supabase.from('metas_pendientes').select('*').order('prioridad').order('id'),
     supabase.from('metas_config').select('clave, valor, descripcion'),
+    supabase.from('resultados').select('meta_id, periodicidad, periodo_etiqueta, periodo_inicio, periodo_fin, valor, fuente, metodo_crm, nota, updated_at'),
   ])
 
   const mensajeError =
     (resMetas.error?.message as string | undefined) ??
     (resPendientes.error?.message as string | undefined) ??
     (resConfig.error?.message as string | undefined) ??
+    (resResultados.error?.message as string | undefined) ??
     null
 
   if (mensajeError !== null) {
@@ -111,6 +113,12 @@ export default async function MetasMarketingPage() {
   const hoyISO = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Santiago' })
   const hoy = new Date(`${hoyISO}T12:00:00`)
 
+  // Mediciones vigentes: por meta, el valor de la casilla de periodo que
+  // contiene a hoy. Las metas sin medición vigente quedan fuera del mapa.
+  const resultados: Resultado[] =
+    ((resResultados.data ?? []) as unknown as Record<string, unknown>[]).map(aResultado)
+  const valores = valoresVigentes(resultados, hoyISO)
+
   // --- estado vacío --------------------------------------------------------
   if (metas.length === 0) {
     return (
@@ -137,12 +145,12 @@ export default async function MetasMarketingPage() {
     .filter((m) => m.nivel === 3)
     .reduce((suma, m) => suma + (m.presupuesto_asociado ?? 0), 0)
 
-  // Mientras la tabla `resultados` esté en construcción el valor real llega en
-  // null, así que ninguna meta cuenta como medida. La cuenta ya queda escrita
-  // para el día en que ese dato exista.
+  // Una meta cuenta como "medida" cuando su casilla vigente ya trae un valor
+  // real y el semáforo deja de ser gris. Antes del 1-sep todo es 'por_comenzar'.
   const conMeta = metas.filter((m) => m.valor_meta !== null)
   const conMedicion = conMeta.filter((m) => {
-    const s = evaluarMeta(m, null, hoy).semaforo
+    const real = m.id in valores ? valores[m.id] : null
+    const s = evaluarMeta(m, real, hoy).semaforo
     return s !== 'sin_medicion' && s !== 'por_comenzar' && s !== 'sin_meta'
   })
   const pctMedicion = conMeta.length === 0 ? 0 : Math.round((conMedicion.length / conMeta.length) * 100)
@@ -164,12 +172,21 @@ export default async function MetasMarketingPage() {
 
   return (
     <div className="max-w-5xl p-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Metas de marketing</h2>
-        <p className="mt-0.5 text-sm text-gray-400">
-          Torre de control · {ventana === '' ? 'plan anual' : ventana}
-          {version === '' ? '' : ` · set v${version}`}
-        </p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Metas de marketing</h2>
+          <p className="mt-0.5 text-sm text-gray-400">
+            Torre de control · {ventana === '' ? 'plan anual' : ventana}
+            {version === '' ? '' : ` · set v${version}`}
+          </p>
+        </div>
+        <Link
+          href="/dashboard/metas/resultados"
+          className="inline-flex items-center gap-2 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm font-medium text-orange-700 hover:bg-orange-100"
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          Cargar mediciones
+        </Link>
       </div>
 
       {aunPorComenzar && (
@@ -209,7 +226,7 @@ export default async function MetasMarketingPage() {
         <Tarjeta
           titulo="Metas con medición"
           valor={`${pctMedicion}%`}
-          detalle={`${conMedicion.length} de ${conMeta.length} metas con meta definida · la carga de resultados queda en construcción`}
+          detalle={`${conMedicion.length} de ${conMeta.length} metas con meta definida · la medición se carga a mano o se calcula desde el CRM`}
           color="border-l-gray-300"
           icono={Activity}
         />
@@ -225,7 +242,7 @@ export default async function MetasMarketingPage() {
           </p>
         </CardHeader>
         <CardContent>
-          <ArbolMetas metas={metas} hoyISO={hoyISO} />
+          <ArbolMetas metas={metas} hoyISO={hoyISO} valores={valores} />
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-gray-100 pt-3 text-xs text-gray-500">
             <span className="font-medium text-gray-600">Semáforo:</span>
             <span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-full bg-green-500" /> en meta</span>
@@ -304,7 +321,8 @@ export default async function MetasMarketingPage() {
       </Card>
 
       <p className="mt-6 text-xs text-gray-400">
-        La medición real llega con la carga de resultados, en construcción ·{' '}
+        <Link href="/dashboard/metas/resultados" className="text-orange-600 hover:underline">cargar o recalcular mediciones</Link>
+        {' '}·{' '}
         <Link href="/dashboard" className="text-orange-600 hover:underline">volver al dashboard comercial</Link>
       </p>
     </div>
