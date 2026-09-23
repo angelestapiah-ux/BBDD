@@ -11,6 +11,7 @@ export function normalizarActividad(n: string | null | undefined): string | null
   if (n == null) return null
   const s = n.trim()
   const l = s.toLowerCase()
+  if (l.includes('masterclass') || l.includes('biblioteca viva')) return 'Masterclass Biblioteca Viva'
   if (l.includes('master') || l.includes('máster')) return 'Diplomado Máster'
   if (l.includes('trainer')) return 'Diplomado Trainer'
   if (l.includes('practitioner') || l.includes('prectitioner')) return 'Diplomado Practitioner'
