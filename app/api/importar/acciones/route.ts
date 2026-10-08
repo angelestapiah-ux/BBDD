@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import * as XLSX from 'xlsx'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { requireEscritura } from '@/lib/permisos-server'
 
 // POST /api/importar/acciones
 // Importa acciones de seguimiento masivas desde la plantilla por actividad.
@@ -120,6 +121,8 @@ type SegInsert = {
 }
 
 export async function POST(req: NextRequest) {
+  const bloqueo = await requireEscritura()
+  if (bloqueo) return bloqueo
   try {
     const supabase = createSupabaseAdminClient()
 

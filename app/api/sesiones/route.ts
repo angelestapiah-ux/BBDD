@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
-import { requireEscritura } from '@/lib/permisos-server'
+import { requireEscritura, requireSesion } from '@/lib/permisos-server'
 import { auditar } from '@/lib/auditoria'
 import { crearEvento, estaConectado } from '@/lib/google-calendar'
 
 // GET: lista de sesiones (próximas primero), con datos del cliente.
 export async function GET(req: NextRequest) {
+  const bloqueo = await requireSesion()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { searchParams } = new URL(req.url)
   const desde = searchParams.get('desde') // opcional: ISO date para filtrar

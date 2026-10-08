@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
-import { requireEscritura } from '@/lib/permisos-server'
+import { requireEscritura, requireSesion } from '@/lib/permisos-server'
 
 export async function GET() {
+  const bloqueo = await requireSesion()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase
     .from('actividades')

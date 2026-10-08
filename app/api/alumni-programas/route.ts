@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requireEscritura, requireSesion } from '@/lib/permisos-server'
 
 // Programas cursados por un Alumni (tabla alumni_programas).
 export async function GET(req: NextRequest) {
+  const bloqueo = await requireSesion()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { searchParams } = new URL(req.url)
   const clienteId = searchParams.get('cliente_id')
@@ -17,6 +20,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const bloqueo = await requireEscritura()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const body = await req.json()
   const cliente_id = body?.cliente_id
@@ -36,6 +41,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const bloqueo = await requireEscritura()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')

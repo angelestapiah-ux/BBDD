@@ -5,6 +5,7 @@
 //         por nombre canónico, marca un lote para poder deshacer.
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requireEscritura, requireSesion } from '@/lib/permisos-server'
 
 // Las funciones SQL "returns setof text" pueden llegar como strings sueltos o
 // como objetos { columna: valor } según la versión de PostgREST. Normalizamos.
@@ -16,6 +17,8 @@ function aTextos(data: unknown): string[] {
 }
 
 export async function GET() {
+  const bloqueo = await requireSesion()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { data, error } = await supabase.rpc('procedencias_distinct')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -23,6 +26,8 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const bloqueo = await requireEscritura()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const body = await req.json()
   const actividad = String(body?.actividad_nombre || '').trim()

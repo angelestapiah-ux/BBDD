@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient, createSupabaseAdminClient } from './supabase-server'
-import { Permiso, Rol, permisosDeRol, permisosEfectivos } from './permisos'
+import { Permiso, Rol, permisosEfectivos } from './permisos'
 
 export interface PerfilActual {
   userId: string
@@ -9,13 +9,16 @@ export interface PerfilActual {
 }
 
 // Obtiene el perfil del usuario logueado (sesión por cookie).
-// Si la tabla perfiles_usuario aún no existe (migración pendiente),
-// devuelve admin para no bloquear el sistema.
+// Si no se puede leer su perfil (error de base de datos) o el usuario no tiene
+// fila en perfiles_usuario, queda como "visor" SIN permisos: puede ver la
+// información operativa pero no modificar nada ni entrar a secciones protegidas,
+// hasta que una administradora le asigne un rol en Configuración.
 export async function getPerfilActual(): Promise<PerfilActual | null> {
   const supa = await createSupabaseServerClient()
   const { data: { user } } = await supa.auth.getUser()
   if (!user) return null
 
+  const restringido: PerfilActual = { userId: user.id, rol: 'visor', permisos: new Set() }
   try {
     const admin = createSupabaseAdminClient()
     const { data, error } = await admin
@@ -24,17 +27,25 @@ export async function getPerfilActual(): Promise<PerfilActual | null> {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (error) {
-      // Tabla inexistente u otro problema: no bloquear (compatibilidad pre-migración)
-      return { userId: user.id, rol: 'admin', permisos: permisosDeRol('admin') }
-    }
+    if (error || !data) return restringido
 
-    const rol = (data?.rol ?? 'operacion') as Rol
-    const extra = Array.isArray(data?.permisos_extra) ? (data.permisos_extra as Permiso[]) : []
+    const rol = data.rol as Rol
+    if (!['admin', 'operacion', 'visor'].includes(rol)) return restringido
+    const extra = Array.isArray(data.permisos_extra) ? (data.permisos_extra as Permiso[]) : []
     return { userId: user.id, rol, permisos: permisosEfectivos(rol, extra) }
   } catch {
-    return { userId: user.id, rol: 'admin', permisos: permisosDeRol('admin') }
+    return restringido
   }
+}
+
+// Exige una sesión válida. Las rutas /api/* NO pasan por proxy.ts, así que
+// cada ruta debe verificar la sesión por sí misma. Devuelve 401 si no hay
+// usuario logueado; null si puede continuar.
+export async function requireSesion(): Promise<NextResponse | null> {
+  const supa = await createSupabaseServerClient()
+  const { data: { user } } = await supa.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+  return null
 }
 
 // Devuelve una respuesta de error si el usuario NO tiene el permiso; null si puede continuar.

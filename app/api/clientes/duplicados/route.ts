@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requireSesion } from '@/lib/permisos-server'
 
 // Detección de duplicados al crear/editar un cliente.
 // Compara teléfono (solo dígitos, últimos 8 — ignora +56, espacios y guiones),
@@ -20,6 +21,8 @@ function normalizar(s: string | null) {
 }
 
 export async function GET(req: NextRequest) {
+  const bloqueo = await requireSesion()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { searchParams } = new URL(req.url)
   const telefono = searchParams.get('telefono') || ''

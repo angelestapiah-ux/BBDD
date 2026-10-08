@@ -8,11 +8,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { normalizarActividad } from '@/lib/normalizar-actividad'
+import { requireEscritura, requireSesion } from '@/lib/permisos-server'
+
+const CAMPOS_INSERT = ['cliente_id', 'fecha', 'tipo', 'notas', 'usuario', 'actividad_nombre'] as const
 
 export async function POST(req: NextRequest) {
+    const bloqueo = await requireEscritura()
+    if (bloqueo) return bloqueo
     const supabase = createSupabaseAdminClient()
     const body = await req.json()
-    const { data, error } = await supabase.from('seguimientos').insert(body).select().single()
+    // Solo se guardan las columnas conocidas: nunca el body tal cual.
+    const payload: Record<string, unknown> = {}
+    for (const k of CAMPOS_INSERT) {
+        if (body?.[k] !== undefined) payload[k] = body[k]
+    }
+    if (!payload.cliente_id) return NextResponse.json({ error: 'Falta el cliente.' }, { status: 400 })
+    const { data, error } = await supabase.from('seguimientos').insert(payload).select().single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     // Auto-registrar la actividad como asistencia si el cliente aún no la tiene.
@@ -47,6 +58,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+    const bloqueo = await requireSesion()
+    if (bloqueo) return bloqueo
     const supabase = createSupabaseAdminClient()
     const { searchParams } = new URL(req.url)
     const cliente_id   = searchParams.get('cliente_id')

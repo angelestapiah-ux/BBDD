@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requireSesion } from '@/lib/permisos-server'
 
 // Vista "Hoy": a quién contactar ahora.
 // - agendados: proximo_contacto <= hoy (vencidos + de hoy)
 // - enfriandose: clientes en etapas calientes sin contacto hace 7+ días y sin próximo contacto agendado a futuro
 export async function GET() {
+  const bloqueo = await requireSesion()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const hoy = new Date().toISOString().slice(0, 10)
 

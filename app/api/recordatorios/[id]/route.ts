@@ -3,6 +3,7 @@
 // Al marcar HECHO uno recurrente, genera automáticamente la próxima ocurrencia.
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requireEscritura } from '@/lib/permisos-server'
 
 const CAMPOS_PATCH = [
   'titulo', 'fecha_hora', 'cliente_id', 'notas',
@@ -21,6 +22,8 @@ function siguienteFecha(iso: string, recurrencia: string): string | null {
 }
 
 export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const bloqueo = await requireEscritura()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { id } = await ctx.params
   const body = await req.json()
@@ -69,6 +72,8 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
 }
 
 export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const bloqueo = await requireEscritura()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { id } = await ctx.params
   const { error } = await supabase.from('recordatorios').delete().eq('id', id)

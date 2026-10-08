@@ -251,7 +251,9 @@ export default function ConfiguracionPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {usuarios.map(u => {
-                  const p = perfiles[u.id] || { user_id: u.id, rol: 'operacion' as Rol, permisos_extra: [] as Permiso[] }
+                  // Sin fila en perfiles_usuario: el servidor lo trata como solo lectura sin permisos.
+                  const sinRol = !perfiles[u.id]
+                  const p = perfiles[u.id] || { user_id: u.id, rol: 'visor' as Rol, permisos_extra: [] as Permiso[] }
                   const base = permisosDeRol(p.rol)
                   const personalizables = PERMISOS.filter(perm => !base.has(perm.key))
                   const abierto = permisosAbiertos === u.id
@@ -262,16 +264,17 @@ export default function ConfiguracionPage() {
                         <td className="px-3 py-3">
                           <div className="flex items-center gap-2">
                             <select
-                              value={p.rol}
+                              value={sinRol ? '' : p.rol}
                               onChange={e => guardarPerfil(u.id, e.target.value as Rol, [])}
                               className="h-7 pl-2 pr-6 rounded border border-gray-200 text-xs text-gray-700 bg-white focus:outline-none focus:border-orange-400 cursor-pointer"
-                              title={ROLES.find(r => r.value === p.rol)?.descripcion}
+                              title={sinRol ? 'Sin rol asignado: solo lectura hasta que elijas uno' : ROLES.find(r => r.value === p.rol)?.descripcion}
                             >
+                              {sinRol && <option value="" disabled>Sin rol (solo lectura)</option>}
                               {ROLES.map(r => (
                                 <option key={r.value} value={r.value}>{r.label}</option>
                               ))}
                             </select>
-                            {p.rol !== 'admin' && (
+                            {!sinRol && p.rol !== 'admin' && (
                               <button
                                 onClick={() => setPermisosAbiertos(abierto ? null : u.id)}
                                 className={`text-xs underline transition-colors ${

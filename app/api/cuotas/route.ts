@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requireSesion } from '@/lib/permisos-server'
 
 // Lista las cuotas (opcionalmente de un cliente o de un pago), ordenadas por vencimiento.
 export async function GET(req: NextRequest) {
+  const bloqueo = await requireSesion()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { searchParams } = new URL(req.url)
   const cliente_id = searchParams.get('cliente_id')

@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
+import { requireSesion } from '@/lib/permisos-server'
 
 export async function GET() {
+  const bloqueo = await requireSesion()
+  if (bloqueo) return bloqueo
   const encabezados = [
     'Nombre',
     'Correo',

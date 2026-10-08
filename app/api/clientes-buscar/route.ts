@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requireSesion } from '@/lib/permisos-server'
 
 // GET ?q=  → busca clientes por nombre (server-side, service role) para el
 // autocompletado del paciente al agendar una sesión. Evita la RLS del cliente.
 export async function GET(req: NextRequest) {
+  const bloqueo = await requireSesion()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { searchParams } = new URL(req.url)
   const q = (searchParams.get('q') ?? '').trim()

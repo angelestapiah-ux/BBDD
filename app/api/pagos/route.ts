@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
-import { requireEscritura } from '@/lib/permisos-server'
+import { requireEscritura, requireSesion } from '@/lib/permisos-server'
 import { auditar } from '@/lib/auditoria'
 
 export async function POST(req: NextRequest) {
@@ -94,6 +94,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+    const bloqueo = await requireSesion()
+    if (bloqueo) return bloqueo
     const supabase = createSupabaseAdminClient()
     const { searchParams } = new URL(req.url)
     const cliente_id   = searchParams.get('cliente_id')

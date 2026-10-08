@@ -2,6 +2,7 @@
 // Lista y crea recordatorios manuales. Acceso vía service_role (omite RLS).
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requireEscritura, requireSesion } from '@/lib/permisos-server'
 
 const CAMPOS_INSERT = [
   'titulo', 'fecha_hora', 'cliente_id', 'notas',
@@ -9,6 +10,8 @@ const CAMPOS_INSERT = [
 ] as const
 
 export async function GET(req: NextRequest) {
+  const bloqueo = await requireSesion()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { searchParams } = new URL(req.url)
   const incluirHechos = searchParams.get('incluir_hechos') === '1'
@@ -30,6 +33,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const bloqueo = await requireEscritura()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const body = await req.json()
 

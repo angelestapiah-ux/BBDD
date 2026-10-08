@@ -86,9 +86,27 @@ export async function POST(req: NextRequest) {
   const telKey = claveTelefono(telefono)
   const correoKey = (correo || '').toLowerCase().trim()
 
-  const { data: candidatos } = await supabase
-    .from('clientes')
-    .select('id, nombre, telefono, telefono2, correo, correo2')
+  // Se filtra en la consulta (antes se traía toda la base y PostgREST corta en
+  // 1.000 filas, así que los clientes más allá de esa fila no se detectaban).
+  // El filtro es amplio a propósito (los teléfonos están guardados con espacios,
+  // guiones o +56): trae candidatos y la comparación exacta se hace abajo en JS.
+  const filtros: string[] = []
+  if (telKey) {
+    const patron = '*' + telKey.split('').join('*') + '*'
+    filtros.push(`telefono.ilike.${patron}`, `telefono2.ilike.${patron}`)
+  }
+  if (correoKey && !/[,()"\*%]/.test(correoKey)) {
+    filtros.push(`correo.ilike.*${correoKey}*`, `correo2.ilike.*${correoKey}*`)
+  }
+
+  const { data: candidatos, error: errBusqueda } = filtros.length
+    ? await supabase
+        .from('clientes')
+        .select('id, nombre, telefono, telefono2, correo, correo2')
+        .or(filtros.join(','))
+        .limit(200)
+    : { data: [], error: null }
+  if (errBusqueda) return NextResponse.json({ error: errBusqueda.message }, { status: 500, headers })
 
   type Candidato = { id: string; nombre: string; telefono: string | null; telefono2: string | null; correo: string | null; correo2: string | null }
   const existente = ((candidatos ?? []) as Candidato[]).find(c =>

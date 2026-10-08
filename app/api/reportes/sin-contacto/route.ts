@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
 import { traerTodo } from '@/lib/traer-todo'
+import { requirePermiso } from '@/lib/permisos-server'
 
 // Clientes sin ningún dato de contacto (ni teléfono ni correo, ni secundarios).
 // Pagina con traerTodo para escanear la base COMPLETA (sin el techo de 1.000).
 export async function GET() {
+  const bloqueo = await requirePermiso('reportes')
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { data, error } = await traerTodo<Record<string, unknown>>(
     () =>

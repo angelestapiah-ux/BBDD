@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
-import { requirePermiso, requireEscritura } from '@/lib/permisos-server'
+import { requirePermiso, requireEscritura, requireSesion } from '@/lib/permisos-server'
 import { auditar } from '@/lib/auditoria'
 import { sincronizarAsistencias } from '@/lib/sincronizar-asistencias'
 
@@ -22,6 +22,8 @@ async function registrarCambioEtapa(supabase: any, clienteId: string, etapaNueva
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const bloqueo = await requireSesion()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { id } = await params
   const [clienteRes, asistenciasRes, pagosRes, seguimientosRes, historialRes, boletasRes, oportunidadesRes, oportunidadHistorialRes] = await Promise.all([

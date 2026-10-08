@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exchangeCode, guardarRefreshToken } from '@/lib/google-calendar'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 // Lee el email del id_token (JWT) para confirmar que conectó la cuenta correcta.
 function emailFromIdToken(idToken?: string): string | null {
@@ -17,6 +18,11 @@ function emailFromIdToken(idToken?: string): string | null {
 // y guarda el refresh_token. Vuelve a /sesiones con el resultado.
 export async function GET(req: NextRequest) {
   const { searchParams, origin } = new URL(req.url)
+  // Solo un usuario logueado del CRM puede completar la conexión
+  // (Google vuelve aquí con una navegación normal, así que la cookie de sesión viaja).
+  const supa = await createSupabaseServerClient()
+  const { data: { user } } = await supa.auth.getUser()
+  if (!user) return NextResponse.redirect(`${origin}/login`)
   const code = searchParams.get('code')
   const error = searchParams.get('error')
   if (error || !code) return NextResponse.redirect(`${origin}/sesiones?google=error`)

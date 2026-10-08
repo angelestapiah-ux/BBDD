@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
-import { requireEscritura } from '@/lib/permisos-server'
+import { requireEscritura, requireSesion } from '@/lib/permisos-server'
 import { auditar } from '@/lib/auditoria'
 
 // GET /api/oportunidades?cliente_id=...  → lista las oportunidades (funnel por actividad)
 export async function GET(req: NextRequest) {
+  const bloqueo = await requireSesion()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
   const { searchParams } = new URL(req.url)
   const cliente_id = searchParams.get('cliente_id')

@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-server'
+import { requireSesion } from '@/lib/permisos-server'
 
 // GET: terapeutas para autocompletar al agendar.
 // Combina (a) los preguardados (con su tarifa) y (b) los clientes marcados
 // como terapeuta (es_terapeuta). Todo server-side para evitar la RLS del cliente.
 export async function GET() {
+  const bloqueo = await requireSesion()
+  if (bloqueo) return bloqueo
   const supabase = createSupabaseAdminClient()
 
   const { data: pre } = await supabase
