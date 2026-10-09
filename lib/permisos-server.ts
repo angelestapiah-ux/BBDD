@@ -9,10 +9,10 @@ export interface PerfilActual {
 }
 
 // Obtiene el perfil del usuario logueado (sesión por cookie).
-// Si no se puede leer su perfil (error de base de datos) o el usuario no tiene
-// fila en perfiles_usuario, queda como "visor" SIN permisos: puede ver la
-// información operativa pero no modificar nada ni entrar a secciones protegidas,
-// hasta que una administradora le asigne un rol en Configuración.
+// Solo entra al CRM quien tiene fila en perfiles_usuario. Una cuenta sin perfil
+// (por ejemplo, una asesora de Pulso Renova, que comparte el mismo Supabase) o un
+// error al leer el perfil devuelven null: sin acceso. Un rol fuera de la lista
+// (ej. agencia) queda como visor sin permisos.
 export async function getPerfilActual(): Promise<PerfilActual | null> {
   const supa = await createSupabaseServerClient()
   const { data: { user } } = await supa.auth.getUser()
@@ -27,24 +27,26 @@ export async function getPerfilActual(): Promise<PerfilActual | null> {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    if (error || !data) return restringido
+    if (error || !data) return null
 
     const rol = data.rol as Rol
     if (!['admin', 'operacion', 'visor'].includes(rol)) return restringido
     const extra = Array.isArray(data.permisos_extra) ? (data.permisos_extra as Permiso[]) : []
     return { userId: user.id, rol, permisos: permisosEfectivos(rol, extra) }
   } catch {
-    return restringido
+    return null
   }
 }
 
-// Exige una sesión válida. Las rutas /api/* NO pasan por proxy.ts, así que
-// cada ruta debe verificar la sesión por sí misma. Devuelve 401 si no hay
-// usuario logueado; null si puede continuar.
+// Exige una sesión válida de alguien del equipo CRM (con perfil). Las rutas /api/*
+// NO pasan por proxy.ts, así que cada ruta debe verificar la sesión por sí misma.
+// Devuelve 401 sin sesión, 403 si la cuenta no tiene perfil; null si puede continuar.
 export async function requireSesion(): Promise<NextResponse | null> {
   const supa = await createSupabaseServerClient()
   const { data: { user } } = await supa.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autenticado' }, { status: 401 })
+  const perfil = await getPerfilActual()
+  if (!perfil) return NextResponse.json({ error: 'Esta cuenta no tiene acceso al CRM' }, { status: 403 })
   return null
 }
 

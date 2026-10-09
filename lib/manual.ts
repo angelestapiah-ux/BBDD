@@ -351,7 +351,7 @@ export const MANUAL: EntradaManual[] = [
       'Ingresa el correo y una contraseña (mínimo 6 caracteres).',
       'Comparte las credenciales con la persona — podrá cambiar su contraseña después.',
     ],
-    tip: 'Revisa que el usuario tenga un rol asignado (Administradora, Operación o Visor). Si una persona no tiene rol, el sistema la deja en solo lectura y sin acceso a secciones protegidas hasta que se lo asignes.',
+    tip: 'Revisa que el usuario tenga un rol asignado (Administradora, Operación o Visor). Si una persona no tiene rol, queda fuera del CRM hasta que se lo asignes. Así trabajan las asesoras de Pulso Renova: entran solo a Pulso, y lo que registran llega igual al CRM.',
   },
   {
     id: 'sin-permiso',
@@ -362,7 +362,7 @@ export const MANUAL: EntradaManual[] = [
       '"No autenticado" significa que tu sesión se cerró: vuelve a entrar con tu correo y contraseña.',
       '"Tu perfil es de solo lectura" o "Tu perfil no tiene permiso" significa que tu rol no permite esa acción.',
       'Pídele a una administradora que abra "Configuración" → "Usuarios" y revise tu rol.',
-      'Si tu usuario aparece sin rol, el sistema te deja en solo lectura por seguridad hasta que te asignen uno.',
+      'Si tu usuario aparece sin rol, el CRM te muestra un aviso en el login y queda cerrado hasta que te asignen uno.',
     ],
     tip: 'Toda la información del CRM se protege con la sesión: nadie puede verla desde fuera sin entrar con un usuario.',
   },

@@ -251,7 +251,7 @@ export default function ConfiguracionPage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {usuarios.map(u => {
-                  // Sin fila en perfiles_usuario: el servidor lo trata como solo lectura sin permisos.
+                  // Sin fila en perfiles_usuario: la cuenta queda fuera del CRM (p. ej. asesoras de Pulso) hasta que se le asigne un rol.
                   const sinRol = !perfiles[u.id]
                   const p = perfiles[u.id] || { user_id: u.id, rol: 'visor' as Rol, permisos_extra: [] as Permiso[] }
                   const base = permisosDeRol(p.rol)
@@ -267,9 +267,9 @@ export default function ConfiguracionPage() {
                               value={sinRol ? '' : p.rol}
                               onChange={e => guardarPerfil(u.id, e.target.value as Rol, [])}
                               className="h-7 pl-2 pr-6 rounded border border-gray-200 text-xs text-gray-700 bg-white focus:outline-none focus:border-orange-400 cursor-pointer"
-                              title={sinRol ? 'Sin rol asignado: solo lectura hasta que elijas uno' : ROLES.find(r => r.value === p.rol)?.descripcion}
+                              title={sinRol ? 'Sin rol asignado: esta cuenta queda fuera del CRM hasta que elijas uno' : ROLES.find(r => r.value === p.rol)?.descripcion}
                             >
-                              {sinRol && <option value="" disabled>Sin rol (solo lectura)</option>}
+                              {sinRol && <option value="" disabled>Sin acceso al CRM</option>}
                               {ROLES.map(r => (
                                 <option key={r.value} value={r.value}>{r.label}</option>
                               ))}

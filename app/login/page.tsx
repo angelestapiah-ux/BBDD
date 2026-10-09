@@ -1,8 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,7 +18,14 @@ export default function LoginPage() {
   const [recoveryEmail, setRecoveryEmail] = useState('')
   const [recoverySent, setRecoverySent] = useState(false)
   const [recoveryLoading, setRecoveryLoading] = useState(false)
-  const router = useRouter()
+  const [accesoPendiente, setAccesoPendiente] = useState(false)
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('acceso') === 'pendiente') {
+      setAccesoPendiente(true)
+      getSupabase().auth.signOut({ scope: 'local' })
+    }
+  }, [])
 
   function getSupabase() {
     return createBrowserClient(
@@ -37,8 +43,8 @@ export default function LoginPage() {
       setError('Correo o contraseña incorrectos')
       setLoading(false)
     } else {
-      router.push('/')
-      router.refresh()
+      // Recarga completa: el proxy valida que la cuenta tenga perfil en el CRM.
+      window.location.assign('/')
     }
   }
 
@@ -120,6 +126,13 @@ export default function LoginPage() {
             <CardTitle className="text-lg">Iniciar sesión</CardTitle>
           </CardHeader>
           <CardContent>
+            {accesoPendiente && (
+              <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                Esta cuenta trabaja en <strong>Pulso Renova</strong>{' '}
+                (<a href="https://pulso-renova.vercel.app" className="underline">pulso-renova.vercel.app</a>).
+                El acceso al CRM lo habilita una administradora en Configuración.
+              </div>
+            )}
             <form onSubmit={handleLogin} className="space-y-4">
               <div>
                 <Label htmlFor="email">Correo electrónico</Label>
